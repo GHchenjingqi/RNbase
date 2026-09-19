@@ -1,0 +1,174 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+/**
+ * This is the configuration block to customize your React Native Android app.
+ * By default you don't need to apply any configuration, just uncomment the lines you need.
+ */
+react {
+    /* Folders */
+    //  android 工程已移至 platforms/android，项目根（package.json 所在）位于 app 的上三级：
+    //  platforms/android/app -> ../../../ = 项目根。默认值为 ../..，若不显式设置会导致
+    //  RN 插件把根误判为 platforms/。
+    root = file("../../../")
+    //   The folder where the react-native NPM package is. Default is ../../node_modules/react-native
+    // reactNativeDir = file("../../node_modules/react-native")
+    //   The folder where the react-native Codegen package is. Default is ../../node_modules/@react-native/codegen
+    // codegenDir = file("../../node_modules/@react-native/codegen")
+    //   The cli.js file which is the React Native CLI entrypoint. Default is ../../node_modules/react-native/cli.js
+    // cliFile = file("../../node_modules/react-native/cli.js")
+
+    /* Variants */
+    //   The list of variants to that are debuggable. For those we're going to
+    //   skip the bundling of the JS bundle and the assets. Default is "debug", "debugOptimized".
+    //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
+    // 注意：这里只保留 debugOptimized，让 debug 变体也打包 JS bundle（index.android.bundle），
+    // 这样打 debug APK 后也能在设备上独立运行，不需要连接 Metro。
+    debuggableVariants = ["debugOptimized"]
+
+    /* Bundling */
+    //   A list containing the node command and its flags. Default is just 'node'.
+    // nodeExecutableAndArgs = ["node"]
+    //
+    //   The command to run when bundling. By default is 'bundle'
+    // bundleCommand = "ram-bundle"
+    //
+    //   The path to the CLI configuration file. Default is empty.
+    // bundleConfig = file(../rn-cli.config.js)
+    //
+    //   The name of the generated asset file containing your JS bundle
+    // bundleAssetName = "MyApplication.android.bundle"
+    //
+    //   The entry file for bundle generation. Default is 'index.android.js' or 'index.js'
+    // entryFile = file("../js/MyApplication.android.js")
+    //
+    //   A list of extra flags to pass to the 'bundle' commands.
+    //   See https://github.com/react-native-community/cli/blob/main/docs/commands.md#bundle
+    // extraPackagerArgs = []
+
+    /* Hermes Commands */
+    //   The hermes compiler command to run. By default it is 'hermesc'
+    // hermesCommand = "$rootDir/my-custom-hermesc/bin/hermesc"
+    //
+    //   The list of flags to pass to the Hermes compiler. By default is "-O", "-output-source-map"
+    // hermesFlags = ["-O", "-output-source-map"]
+
+    /* Autolinking */
+    autolinkLibrariesWithApp()
+}
+
+/**
+ * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+ */
+def enableProguardInReleaseBuilds = false
+
+/**
+ * The preferred build flavor of JavaScriptCore (JSC)
+ *
+ * For example, to use the international variant, you can use:
+ * `def jscFlavor = io.github.react-native-community:jsc-android-intl:2026004.+`
+ *
+ * The international variant includes ICU i18n library and necessary data
+ * allowing to use e.g. `Date.toLocaleString` and `String.localeCompare` that
+ * give correct results when using with locales other than en-US. Note that
+ * this variant is about 6MiB larger per architecture than default.
+ */
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace "com.qux"
+
+    // App 参数（应用名 / 包名 / 英文名 / 版本）统一由 H5 子应用在执行
+    // `npm run build:base` 时写入项目根 version.json（见各 H5 工程 scripts/apply-app-meta.js）。
+    // 基座保持通用：这里只读取、不内置任何具体 App 值；缺省时给出中性兜底，保证独立可构建。
+    // 注意：namespace 固定为源码包名 com.qux（Kotlin 类/R 类位置不变），仅 applicationId 可变，
+    // 从而让不同 H5 子应用打出可并排安装、互不覆盖的 APK。
+    def appMeta = new groovy.json.JsonSlurper().parse(file("../../../version.json"))
+    def appDisplayName = String.valueOf(appMeta.appName != null ? appMeta.appName : "app")
+    def appApkName = String.valueOf(appMeta.apkName != null && appMeta.apkName.toString().trim() ? appMeta.apkName : "app")
+    def appApplicationId = String.valueOf(appMeta.applicationId != null && appMeta.applicationId.toString().trim() ? appMeta.applicationId : "com.qux")
+
+    defaultConfig {
+        applicationId appApplicationId
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode Integer.parseInt(String.valueOf(appMeta.versionCode != null ? appMeta.versionCode : 1))
+        versionName String.valueOf(appMeta.versionName != null ? appMeta.versionName : "1.0")
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            if (project.hasProperty('QUX_UPLOAD_STORE_FILE')) {
+                storeFile file(QUX_UPLOAD_STORE_FILE)
+                storePassword QUX_UPLOAD_STORE_PASSWORD
+                keyAlias QUX_UPLOAD_KEY_ALIAS
+                keyPassword QUX_UPLOAD_KEY_PASSWORD
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // 正式发布签名，见 gradle.properties 的 QUX_UPLOAD_* 配置
+            signingConfig signingConfigs.release
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+    sourceSets {
+        main {
+            // 将整个 h5 前端目录打进 APK assets，WebView 通过 file:///android_asset/index.html 加载，
+            // 相对资源（css/js/图片/其他页面/glb 模型）才能正确解析；
+            // assets.srcDirs 将 H5 目录内容合并到 assets 根，故入口为 file:///android_asset/index.html
+            assets.srcDirs += ["../../../h5"]
+        }
+    }
+
+    // APK 输出文件名用 H5 下发的英文 apkName + 版本：英文名-版本名-变体.apk
+    // （如 QingYanCamera-1.0.0-debug.apk）；清洗文件系统非法字符。
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            def safeName = appApkName.replaceAll(/[\\/:*?"<>|\r\n\t]/, '_')
+            outputFileName = "${safeName}-${variant.versionName}-${variant.name}.apk"
+        }
+    }
+}
+
+dependencies {
+    // The version of react-native is set by the React Native Gradle Plugin
+    implementation("com.facebook.react:react-android")
+
+    // ZXing 扫码（保留，ML Kit 识别失败时可降级）
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    // Google ML Kit 条码扫描（bundled 版本，不依赖 Google Play Services，国内手机可用）
+    // 基于机器学习，对纸质码弯曲/反光/低对比度容忍度远高于 ZXing
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+
+    // CameraX（ML Kit 扫码页的相机预览 + 帧分析）
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+
+    // 桌面角标（兼容小米/华为/OPPO/vivo/三星/索尼等主流厂商）
+    implementation("me.leolin:ShortcutBadger:1.1.22")
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}

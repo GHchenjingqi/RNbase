@@ -1,0 +1,4 @@
+{
+  "extends": "@react-native/typescript-config",
+  "exclude": ["h5", "__tests__"]
+}

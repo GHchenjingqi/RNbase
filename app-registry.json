@@ -1,0 +1,13 @@
+{
+  "activeApp": "cammer_h5",
+  "apps": {
+    "cammer_h5": {
+      "dir": "../cammer_h5",
+      "dist": "dist-file"
+    },
+    "app_h5": {
+      "dir": "../app_h5",
+      "dist": "dist"
+    }
+  }
+}

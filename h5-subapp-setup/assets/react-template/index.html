@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>H5 子应用 (React)</title>
+    <!-- Bridge 中间件：相对路径引入，随子包分发。生产直接用基座 h5/js/api.js 保持协议一致 -->
+    <script src="./js/api.js"></script>
+    <!-- 安全区适配（状态栏/导航栏重叠修复，勿删）：
+         RN 在 WebView 加载前注入 window.RN_SAFE_AREA 并在 URL query 拼 safeTop；
+         打包 CSS 在 body 上定义 env(safe-area-inset-top)（Android WebView 恒为 0）会遮蔽注入值，
+         故此处同步把真实值写入 html/body 的 inline 变量，并让 .nut-navbar 全局让出状态栏。 -->
+    <style data-saferea-fix>
+      :root { --status-bar-height: env(safe-area-inset-top, 0px); }
+      .nut-navbar {
+        height: auto !important;
+        min-height: calc(44px * var(--nut-scale-f, 1));
+        padding-top: var(--status-bar-height) !important;
+      }
+      .nut-navbar-safe-area-inset-top {
+        padding-top: var(--status-bar-height) !important;
+      }
+    </style>
+    <script data-saferea-fix>
+      (function () {
+        // RN->H5 兜底：RN WebView 的 postMessage 在 document 上派发【不冒泡】的 MessageEvent，
+        // 而 H5 api.js 只监听 window 的 message 事件，导致 Bridge 响应永远收不到（全部超时）。
+        // 这里把 document 上收到的消息重派到 window，保证响应可达。
+        if (typeof document !== 'undefined' && document.addEventListener) {
+          document.addEventListener('message', function (evt) {
+            try {
+              if (evt && evt.data) {
+                window.dispatchEvent(new MessageEvent('message', { data: evt.data }));
+              }
+            } catch (err) {}
+          });
+        }
+        var top = 0;
+        try {
+          var m = location.search.match(/[?&]safeTop=(\d+)/);
+          if (m) top = parseInt(m[1], 10);
+        } catch (e) {}
+        try {
+          var s = window.RN_SAFE_AREA;
+          if (!top && s && Number(s.top) > 0) top = Number(s.top);
+        } catch (e) {}
+        function applyBody(v) {
+          try {
+            if (v > 0 && document.body) {
+              document.body.style.setProperty('--status-bar-height', v + 'px');
+            }
+          } catch (e) {}
+        }
+        if (top > 0) {
+          document.documentElement.style.setProperty('--status-bar-height', top + 'px');
+          applyBody(top);
+          document.addEventListener('DOMContentLoaded', function () { applyBody(top); });
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
