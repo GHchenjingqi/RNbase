@@ -1,5 +1,5 @@
 {
-  "name": "cammer.qux",
+  "name": "rn-base",
   "version": "1.2.2",
   "private": true,
   "description": "RN + WebView + H5 混合架构基座（Native Container + Bridge 能力边界），能力测试子应用见 RN_h5",
