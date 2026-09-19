@@ -2,6 +2,12 @@
   "name": "cammer.qux",
   "version": "1.2.2",
   "private": true,
+  "description": "RN + WebView + H5 混合架构基座（Native Container + Bridge 能力边界），能力测试子应用见 RN_h5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GHchenjingqi/RNbase.git"
+  },
+  "homepage": "https://github.com/GHchenjingqi/RNbase",
   "scripts": {
     "emulator": "node scripts/emulator.js",
     "dev": "node scripts/dev.js",

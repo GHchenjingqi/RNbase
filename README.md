@@ -2,6 +2,23 @@
 
 React Native + WebView + H5 混合架构。RN 作为稳定的 App Runtime / Native Container，WebView 承载 H5 子应用，Native Bridge 是两者之间唯一受控的能力边界。本项目为通用基座，不承载业务功能，仅持续扩展 RN 设备能力。
 
+## 配套仓库（两仓配合使用）
+
+| 仓库 | 角色 | 与基座的关系 |
+|---|---|---|
+| **RNbase**（本仓库） | RN 基座 / Native Container | 提供 WebView 容器、Bridge 服务端与全部原生能力 |
+| [RN_h5](https://github.com/GHchenjingqi/RN_h5) | **能力测试子应用**（`base_h5`） | 构建产物同步进本仓库 `h5/`，随 APK 打进 assets，WebView 以 `file:///android_asset/index.html` 加载 |
+
+约束与契约：
+
+- H5 侧**只能**通过 `window.RN` 中间件调原生，能力清单的唯一真源是本仓库 `scripts/api.js`；
+  子应用的 `public/js/api.js` 与产物 `dist/js/api.js` 都由它同步而来，**md5 必须一致**
+  （`npm run sync:api` / `node scripts/inject-h5-api.js <dist>`）。
+- 本地开发请把两仓放在同级目录，基座名 `app_base`、子应用名 `app_h5`；
+  子应用侧的注入/下发脚本按同级 `app_base` 定位基座，目录名不同或缺失时用 `BASE_DIR` 指定。
+- 子应用的品牌与版本（应用名/包名/图标/闪屏）由子应用自己持有，基座不内置具体 App 值，
+  详见「子应用品牌与版本」。
+
 ## 功能模块
 
 ### M1 基座能力（P2-P6）
@@ -313,7 +330,7 @@ npm run build:android              # 得到 BaseH5-x.y.z-debug.apk（application
 ## Release 签名
 
 - keystore 与签名口令**不入库**（`.gitignore` 已忽略 `*.keystore`，`gradle.properties` 只提交注释掉的模板）：
-  本仓库公开，任何口令一旦提交即视为泄露。
+  仓库对外共享时，任何口令一旦提交即视为泄露。
 - 本地出正式包时补齐两件事，且保持这两项处于未提交状态：
   1. 密钥库文件放到 `platforms/android/app/QUX-release.keystore`；
   2. 在 `platforms/android/gradle.properties` 末尾取消注释并填入 `QUX_UPLOAD_STORE_FILE`
