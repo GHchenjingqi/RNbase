@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": ""
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": ""
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "RN 基座"
+    },
+    {
+      "name": "permission_location_reason",
+      "value": "用于打卡、巡检等场景区分设备所在位置"
+    }
+  ]
+}

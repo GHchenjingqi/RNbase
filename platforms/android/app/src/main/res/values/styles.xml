@@ -1,0 +1,17 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+    </style>
+
+    <!-- 启动闪屏主题：仅在 MainActivity 启动瞬间使用 windowBackground（@drawable/splash_screen），
+         Activity 创建后在 onCreate 中切回 AppTheme。背景与 logo 由 H5 子应用下发，保持基座通用。 -->
+    <style name="AppTheme.Splash" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+</resources>

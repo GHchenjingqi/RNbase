@@ -1,0 +1,41 @@
+# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+/build-profile.json5
+
+# ---
+
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+/oh_modules
+hvigorw
+hvigorw.bat
+hvigor/hvigor-wrapper.js
+/build-profile.json5
+
+# ---
+
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+.clangd
+.clang-format
+.clang-tidy
+
+# 签名材料（本地自签的假链已清走；真材料的密码/私钥一律不入库）
+/.signing
+
+# ohpm 依赖锁定文件与 IDE 生成的代码索引，本机各自生成，不入库
+/oh-package-lock.json5
+/.codegenie
+

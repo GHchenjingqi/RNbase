@@ -1,0 +1,9 @@
+{
+  "license": "ISC",
+  "devDependencies": {},
+  "name": "entry",
+  "description": "qux HarmonyOS entry module",
+  "version": "1.0.0",
+  "dependencies": {
+  }
+}
