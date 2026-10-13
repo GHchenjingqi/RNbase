@@ -8,7 +8,7 @@
 namespace rnoh {
 
 /**
- * 自研 ERP* TurboModule 的 C++ 半边（实现全在 ArkTS 侧的 erp/ 目录）。
+ * 自研 Base* TurboModule 的 C++ 半边（实现全在 ArkTS 侧的 base/ 目录）。
  *
  * 只有一个 `ArkTSTurboModule` 壳是不够的：RN 核心的 `TurboModule::create` 仅查
  * `methodMap_`，查不到的属性一律返回 `undefined`，壳只保证拿得到 ArkTS 实例。
@@ -16,15 +16,15 @@ namespace rnoh {
  * （模板见 `RNOHCorePackage/TurboModules/ShareTurboModule.cpp`）。
  *
  * 全部按 async 登记，ArkTS 侧对应方法一律是 `async`（返回 Promise）：
- * `ERPLog.write` 在安卓是同步 void，RN 侧不取返回值，这里改成 async 是为了
+ * `BaseLog.write` 在安卓是同步 void，RN 侧不取返回值，这里改成 async 是为了
  * 避免「JS 线程同步等主线程」的死锁风险。
  *
- * 没走 codegen：这四个模块在 RN 侧是 `NativeModules.ERP*` 直取（与安卓共用），
+ * 没走 codegen：这四个模块在 RN 侧是 `NativeModules.Base*` 直取（与安卓共用），
  * 加 spec 会牵动安卓侧的 TurboModule 注册。
  */
-class ERPSystemTurboModule : public ArkTSTurboModule {
+class BaseSystemTurboModule : public ArkTSTurboModule {
  public:
-  ERPSystemTurboModule(Context ctx, std::string name)
+  BaseSystemTurboModule(Context ctx, std::string name)
       : ArkTSTurboModule(ctx, std::move(name)) {
     methodMap_ = {
         ARK_ASYNC_METHOD_METADATA(getDeviceInfo, 0),
@@ -33,9 +33,9 @@ class ERPSystemTurboModule : public ArkTSTurboModule {
   }
 };
 
-class ERPLogTurboModule : public ArkTSTurboModule {
+class BaseLogTurboModule : public ArkTSTurboModule {
  public:
-  ERPLogTurboModule(Context ctx, std::string name)
+  BaseLogTurboModule(Context ctx, std::string name)
       : ArkTSTurboModule(ctx, std::move(name)) {
     methodMap_ = {
         ARK_ASYNC_METHOD_METADATA(write, 2),
@@ -47,9 +47,9 @@ class ERPLogTurboModule : public ArkTSTurboModule {
   }
 };
 
-class ERPNetworkTurboModule : public ArkTSTurboModule {
+class BaseNetworkTurboModule : public ArkTSTurboModule {
  public:
-  ERPNetworkTurboModule(Context ctx, std::string name)
+  BaseNetworkTurboModule(Context ctx, std::string name)
       : ArkTSTurboModule(ctx, std::move(name)) {
     methodMap_ = {
         ARK_ASYNC_METHOD_METADATA(getStatus, 0),
@@ -57,12 +57,12 @@ class ERPNetworkTurboModule : public ArkTSTurboModule {
   }
 };
 
-class ERPCapabilitiesTurboModule : public ArkTSTurboModule {
+class BaseCapabilitiesTurboModule : public ArkTSTurboModule {
  public:
-  ERPCapabilitiesTurboModule(Context ctx, std::string name)
+  BaseCapabilitiesTurboModule(Context ctx, std::string name)
       : ArkTSTurboModule(ctx, std::move(name)) {
-    // 名单必须与 ArkTS 侧 ERPCapabilitiesTurboModule 的 public async 方法逐一对应，
-    // 且与 RNbase `capability-native-adapters.ts` 的 ERPCapabilitiesNative 同名：
+    // 名单必须与 ArkTS 侧 BaseCapabilitiesTurboModule 的 public async 方法逐一对应，
+    // 且与 RNbase `capability-native-adapters.ts` 的 BaseCapabilitiesNative 同名：
     // 鸿蒙做不到的项（appInstalled / appOpen / appOpenStore / NFC 三件套）这里
     // 干脆不登记，JS 侧取不到方法即报 DEVICE_UNSUPPORTED，比留 reject 空壳更诚实。
     methodMap_ = {

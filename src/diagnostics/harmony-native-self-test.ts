@@ -2,7 +2,7 @@
  * 鸿蒙原生能力自检（Phase 4 验收通道）。
  *
  * 只在 harmony 启动时跑一次，结果经 deviceLogger 落到 `<filesDir>/logs/device-*.log`；
- * 用 `hdc file recv` 把这个文件拉出来就能逐项验收 ERP* 是否真的通了。
+ * 用 `hdc file recv` 把这个文件拉出来就能逐项验收 Base* 是否真的通了。
  * 为什么不复用 H5 的能力测试页：那个入口在登录之后，而模拟器验证要在登录前就看到结果。
  *
  * 只测不需要人点的项。会拉系统面板或抢前台的一律不自动触发：share（分享面板）、
@@ -50,7 +50,7 @@ let started = false;
  * 否则日志里只会看到「前几条 OK、后几条消失」这种无法定位的现象。
  */
 function runDetached(task: () => Promise<void>): void {
-  task().catch(e => deviceLogger.error(`${TAG} 批次异常 ${fmt(e)}`));
+  task().catch((e) => deviceLogger.error(`${TAG} 批次异常 ${fmt(e)}`));
 }
 
 export function runHarmonyNativeSelfTest(): void {
@@ -59,20 +59,20 @@ export function runHarmonyNativeSelfTest(): void {
   }
   started = true;
 
-  const system = NativeModules.ERPSystem as AnyModule | undefined;
-  const network = NativeModules.ERPNetwork as AnyModule | undefined;
-  const capabilities = NativeModules.ERPCapabilities as AnyModule | undefined;
+  const system = NativeModules.BaseSystem as AnyModule | undefined;
+  const network = NativeModules.BaseNetwork as AnyModule | undefined;
+  const capabilities = NativeModules.BaseCapabilities as AnyModule | undefined;
 
-  probe('ERPSystem.getDeviceInfo', () => {
+  probe('BaseSystem.getDeviceInfo', () => {
     const call = system?.getDeviceInfo;
-    return call ? call.call(system) : Promise.reject('ERPSystem 未注册');
+    return call ? call.call(system) : Promise.reject('BaseSystem 未注册');
   });
-  probe('ERPNetwork.getStatus', () => {
+  probe('BaseNetwork.getStatus', () => {
     const call = network?.getStatus;
-    return call ? call.call(network) : Promise.reject('ERPNetwork 未注册');
+    return call ? call.call(network) : Promise.reject('BaseNetwork 未注册');
   });
-  probe('ERPLog.getLogDir', () => deviceLogStore.getLogDir());
-  probe('ERPLog.listLogs', () => deviceLogStore.listLogs());
+  probe('BaseLog.getLogDir', () => deviceLogStore.getLogDir());
+  probe('BaseLog.listLogs', () => deviceLogStore.listLogs());
 
   // 批次 2：文件读取 / 下载 / 角标。sendNotification（弹通知条）、getCurrentPosition
   // （弹授权框）、fileOpen（跳外部应用）会抢前台或需用户点，留给能力测试页人工验。
@@ -82,13 +82,13 @@ export function runHarmonyNativeSelfTest(): void {
       const logs = await deviceLogStore.listLogs();
       logPath = logs?.[0]?.path ?? '';
     } catch {
-      // 上面的 ERPLog.listLogs 探针已经记过一次失败原因
+      // 上面的 BaseLog.listLogs 探针已经记过一次失败原因
     }
     const read = capabilities?.readFileAsBase64;
     if (!logPath || !read) {
-      deviceLogger.error(`${TAG} ERPCapabilities.readFileAsBase64 FAIL 缺少日志文件路径或方法`);
+      deviceLogger.error(`${TAG} BaseCapabilities.readFileAsBase64 FAIL 缺少日志文件路径或方法`);
     } else {
-      await probe('ERPCapabilities.readFileAsBase64', async () => {
+      await probe('BaseCapabilities.readFileAsBase64', async () => {
         const info = (await read.call(capabilities, logPath)) as {
           base64?: string;
           mimeType?: string;
@@ -105,18 +105,18 @@ export function runHarmonyNativeSelfTest(): void {
     }
     const download = capabilities?.fileDownload;
     if (download) {
-      await probe('ERPCapabilities.fileDownload', () =>
-        download.call(capabilities, 'http://127.0.0.1:5173/index.html'),
+      await probe('BaseCapabilities.fileDownload', () =>
+        download.call(capabilities, 'http://127.0.0.1:5173/index.html')
       );
     }
     const badge = capabilities?.setBadge;
     if (badge) {
-      await probe('ERPCapabilities.setBadge(3)', () => badge.call(capabilities, 3));
-      await probe('ERPCapabilities.setBadge(0)', () => badge.call(capabilities, 0));
+      await probe('BaseCapabilities.setBadge(3)', () => badge.call(capabilities, 3));
+      await probe('BaseCapabilities.setBadge(0)', () => badge.call(capabilities, 0));
     }
     const sound = capabilities?.playSound;
     if (sound) {
-      await probe('ERPCapabilities.playSound(200)', () => sound.call(capabilities, 200));
+      await probe('BaseCapabilities.playSound(200)', () => sound.call(capabilities, 200));
     }
   });
 
@@ -125,7 +125,7 @@ export function runHarmonyNativeSelfTest(): void {
     const getString = capabilities?.clipboardGetString;
     const setString = capabilities?.clipboardSetString;
     if (!getString || !setString) {
-      deviceLogger.error(`${TAG} clipboard FAIL ERPCapabilities 未注册`);
+      deviceLogger.error(`${TAG} clipboard FAIL BaseCapabilities 未注册`);
       return;
     }
     const marker = `qux-selftest-${Date.now()}`;
@@ -136,21 +136,21 @@ export function runHarmonyNativeSelfTest(): void {
     } catch (e) {
       deviceLogger.warn(`${TAG} clipboardGetString(初始读取) FAIL ${fmt(e)}`);
     }
-    await probe('ERPCapabilities.clipboardSetString', () => setString.call(capabilities, marker));
-    await probe('ERPCapabilities.clipboardGetString', async () => {
+    await probe('BaseCapabilities.clipboardSetString', () => setString.call(capabilities, marker));
+    await probe('BaseCapabilities.clipboardGetString', async () => {
       const after = (await getString.call(capabilities)) as { text?: string };
       return { expected: marker, got: after?.text ?? '', match: after?.text === marker };
     });
     const hasString = capabilities?.clipboardHasString;
     if (hasString) {
-      await probe('ERPCapabilities.clipboardHasString', async () => {
+      await probe('BaseCapabilities.clipboardHasString', async () => {
         const r = (await hasString.call(capabilities)) as { has?: boolean };
         return { has: r?.has };
       });
     }
     if (original) {
-      await probe('ERPCapabilities.clipboardSetString(还原)', () =>
-        setString.call(capabilities, original),
+      await probe('BaseCapabilities.clipboardSetString(还原)', () =>
+        setString.call(capabilities, original)
       );
     }
   });

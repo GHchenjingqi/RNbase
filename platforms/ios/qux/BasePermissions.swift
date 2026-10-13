@@ -2,10 +2,10 @@
  * iOS 权限原生模块（Skill 规则 50/51）。
  *
  * 对应 RN 侧 src/permissions/adapters/iosPermissionAdapter.ts 调用的
- * NativeModules.ERPPermissions。
+ * NativeModules.BasePermissions。
  *
  * 注册方式：将本文件加入 Xcode 的 App Target（Build Phases -> Compile Sources）。
- * 模块名导出的 JS 名为 "ERPPermissions"。
+ * 模块名导出的 JS 名为 "BasePermissions"。
  *
  * check/request 返回统一状态字符串：
  *   authorized | limited | notDetermined | restricted | denied | unavailable
@@ -16,10 +16,10 @@ import Photos
 import React
 import UserNotifications
 
-@objc(ERPPermissions)
-class ERPPermissions: NSObject, RCTBridgeModule {
+@objc(BasePermissions)
+class BasePermissions: NSObject, RCTBridgeModule {
   static func moduleName() -> String! {
-    "ERPPermissions"
+    "BasePermissions"
   }
 
   static func requiresMainQueueSetup() -> Bool {

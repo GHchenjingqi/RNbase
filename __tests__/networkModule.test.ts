@@ -8,7 +8,7 @@ import { registerNetworkModule } from '../src/middleware/network/network-module'
 import { resolveNativeNetworkAdapter } from '../src/middleware/network/native-network-adapter';
 
 function installMockNative(overrides: Record<string, unknown> = {}) {
-  (NativeModules as Record<string, unknown>).ERPNetwork = {
+  (NativeModules as Record<string, unknown>).BaseNetwork = {
     getStatus: jest.fn(async () => ({ connected: true, type: 'wifi' })),
     ...overrides,
   };
@@ -16,7 +16,7 @@ function installMockNative(overrides: Record<string, unknown> = {}) {
 
 describe('registerNetworkModule', () => {
   afterEach(() => {
-    delete (NativeModules as Record<string, unknown>).ERPNetwork;
+    delete (NativeModules as Record<string, unknown>).BaseNetwork;
   });
 
   it('getStatus forwards to native adapter', async () => {

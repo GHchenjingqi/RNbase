@@ -2,11 +2,11 @@
  * 原生签名校验适配器（P2 安全闭环的 RN 运行时实现）。
  *
  * 背景：defaultSignatureVerifier 依赖 Web Crypto subtle，RN/Hermes 运行时不可用。
- * 本适配器探测原生模块 ERPH5（iOS：platforms/ios/qux/ERPH5.swift）并包装为
+ * 本适配器探测原生模块 BaseH5（iOS：platforms/ios/qux/BaseH5.swift）并包装为
  * SignatureVerifier；Android 侧同名模块落地后无需改动本文件（契约：base64 进、{valid} 出）。
  *
- * 桥接契约（与 ERPH5.swift 一致）：
- *   ERPH5.verifyPackageSignature(base64Data, signature, publicKeyPem)
+ * 桥接契约（与 BaseH5.swift 一致）：
+ *   BaseH5.verifyPackageSignature(base64Data, signature, publicKeyPem)
  *     -> Promise<{ valid: boolean, error?: string }>
  *   输入非法 / 模块缺失时原生 reject 或方法不存在。
  *
@@ -18,10 +18,10 @@ import { NativeModules } from 'react-native';
 
 import type { SignatureVerifier } from './verifier';
 
-/** 原生模块名：iOS 已实现（ERPH5.swift）；Android 落地时保持同名。 */
-const NATIVE_MODULE_NAME = 'ERPH5';
+/** 原生模块名：iOS 已实现（BaseH5.swift）；Android 落地时保持同名。 */
+const NATIVE_MODULE_NAME = 'BaseH5';
 
-type ERPH5Native = {
+type BaseH5Native = {
   verifyPackageSignature?: (
     base64Data: string,
     signature: string,
@@ -73,7 +73,7 @@ export function bytesToBase64(bytes: Uint8Array): string {
  */
 export function createNativeSignatureVerifier(): SignatureVerifier | null {
   const mod = (NativeModules as Record<string, unknown>)[NATIVE_MODULE_NAME] as
-    | ERPH5Native
+    | BaseH5Native
     | undefined;
   if (!mod || typeof mod.verifyPackageSignature !== 'function') {
     return null;

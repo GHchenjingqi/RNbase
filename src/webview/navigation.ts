@@ -4,7 +4,7 @@
  * 决策表：
  *  - 白名单内 http/https  → allow（容器内加载）
  *  - 白名单外 http/https  → open-external（系统浏览器，不继承 Bridge 权限）
- *  - 自定义 scheme（erp:// 等） → block（交 Deep Link 模块，本阶段安全拦截）
+ *  - 自定义 scheme（base:// 等） → block（交 Deep Link 模块，本阶段安全拦截）
  *  - about:blank / data:   → allow（内部使用）
  *  - file:///android_asset/ → allow（APK 内置 assets，安全）
  *  - file:///android_res/   → allow（APK 内置 res/raw，H5 入口，安全）
@@ -27,7 +27,7 @@ function normalizeOrigin(url: string): string | null {
 function isTrustedOrigin(url: string, whitelist: string[]): boolean {
   const origin = normalizeOrigin(url);
   if (!origin) return false;
-  return whitelist.some(w => {
+  return whitelist.some((w) => {
     try {
       const wOrigin = normalizeOrigin(w);
       return wOrigin === origin;
@@ -44,7 +44,7 @@ function isTrustedOrigin(url: string, whitelist: string[]): boolean {
  */
 export function decideNavigation(
   url: string,
-  whitelist: string[] = DOMAIN_WHITELIST,
+  whitelist: string[] = DOMAIN_WHITELIST
 ): NavigationDecision {
   if (!url || url.trim() === '') {
     return { action: 'block', reason: 'empty_url' };

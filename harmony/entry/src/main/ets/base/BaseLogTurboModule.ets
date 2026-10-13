@@ -1,5 +1,5 @@
 /**
- * 鸿蒙侧 ERPLog TurboModule：与 Android `ERPLogModule.kt` 对齐 —— 追加写入
+ * 鸿蒙侧 BaseLog TurboModule：与 Android `BaseLogModule.kt` 对齐 —— 追加写入
  * `<filesDir>/logs/device-YYYY-MM-DD.log`，供 deviceLogger / 诊断页导出使用。
  *
  * 私有目录写入无需权限。任何一步失败都只记 hilog、不抛出（日志不能拖垮业务）。
@@ -8,14 +8,14 @@ import fs from '@ohos.file.fs';
 import type { UITurboModuleContext } from '@rnoh/react-native-openharmony';
 import { UITurboModule } from '@rnoh/react-native-openharmony';
 
-export interface ERPLogFileInfo {
+export interface BaseLogFileInfo {
   name: string;
   date: string;
   size: number;
   path: string;
 }
 
-export interface ERPClearLogsResult {
+export interface BaseClearLogsResult {
   cleared: number;
 }
 
@@ -38,8 +38,8 @@ function isLogFile(name: string): boolean {
   return name.startsWith(PREFIX) && name.endsWith(SUFFIX);
 }
 
-export class ERPLogTurboModule extends UITurboModule {
-  public static readonly NAME: string = 'ERPLog';
+export class BaseLogTurboModule extends UITurboModule {
+  public static readonly NAME: string = 'BaseLog';
 
   private logsDir: string;
 
@@ -110,7 +110,7 @@ export class ERPLogTurboModule extends UITurboModule {
         fs.closeSync(file);
       }
     } catch (error) {
-      this.ctx.logger.error(`[ERPLog] 写入失败: ${error}`);
+      this.ctx.logger.error(`[BaseLog] 写入失败: ${error}`);
     }
   }
 
@@ -118,16 +118,16 @@ export class ERPLogTurboModule extends UITurboModule {
     try {
       this.ensureDir();
     } catch (error) {
-      this.ctx.logger.error(`[ERPLog] 目录创建失败: ${error}`);
+      this.ctx.logger.error(`[BaseLog] 目录创建失败: ${error}`);
     }
     return this.logsDir;
   }
 
-  async listLogs(): Promise<ERPLogFileInfo[]> {
-    const result: ERPLogFileInfo[] = [];
+  async listLogs(): Promise<BaseLogFileInfo[]> {
+    const result: BaseLogFileInfo[] = [];
     for (const name of this.logNames()) {
       const path: string = `${this.logsDir}/${name}`;
-      const info: ERPLogFileInfo = {
+      const info: BaseLogFileInfo = {
         name: name,
         date: name.substring(PREFIX.length, name.length - SUFFIX.length),
         size: this.statSize(path),
@@ -149,17 +149,17 @@ export class ERPLogTurboModule extends UITurboModule {
     return fs.readTextSync(path);
   }
 
-  async clearLogs(): Promise<ERPClearLogsResult> {
+  async clearLogs(): Promise<BaseClearLogsResult> {
     let cleared: number = 0;
     for (const name of this.logNames()) {
       try {
         fs.unlinkSync(`${this.logsDir}/${name}`);
         cleared += 1;
       } catch (error) {
-        this.ctx.logger.error(`[ERPLog] 删除失败 ${name}: ${error}`);
+        this.ctx.logger.error(`[BaseLog] 删除失败 ${name}: ${error}`);
       }
     }
-    const result: ERPClearLogsResult = { cleared: cleared };
+    const result: BaseClearLogsResult = { cleared: cleared };
     return result;
   }
 }

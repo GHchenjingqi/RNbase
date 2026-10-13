@@ -7,7 +7,7 @@ export const FALLBACK_H5_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>ERP Mobile</title>
+  <title>Base Mobile</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; color: #111; }
     h2 { margin-top: 0; }
@@ -16,7 +16,7 @@ export const FALLBACK_H5_HTML = `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <h2>ERP Mobile</h2>
+  <h2>Base Mobile</h2>
   <p>这是内置兜底页面（离线可用）。</p>
   <p id="status">就绪</p>
   <button id="permBtn">请求相机权限</button>

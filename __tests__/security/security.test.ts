@@ -17,23 +17,23 @@ describe('P2-3 设备完整性', () => {
   beforeEach(() => resetDeviceIntegrityCache());
 
   test('原生未实现 → 降级 unknown（不阻断）', () => {
-    nativeCaps.ERPCapabilities = undefined;
+    nativeCaps.BaseCapabilities = undefined;
     expect(getDeviceIntegrity()).toBe('unknown');
   });
 
   test('原生返回 compromised → 判定已攻破', () => {
-    nativeCaps.ERPCapabilities = { getDeviceIntegrity: () => 'compromised' };
+    nativeCaps.BaseCapabilities = { getDeviceIntegrity: () => 'compromised' };
     expect(getDeviceIntegrity()).toBe('compromised');
     expect(isCompromised('compromised')).toBe(true);
   });
 
   test('原生返回布尔 true → 归一为 compromised', () => {
-    nativeCaps.ERPCapabilities = { getDeviceIntegrity: () => true };
+    nativeCaps.BaseCapabilities = { getDeviceIntegrity: () => true };
     expect(getDeviceIntegrity()).toBe('compromised');
   });
 
   test('原生返回 Promise → 异步版本可用', async () => {
-    nativeCaps.ERPCapabilities = { getDeviceIntegrity: () => Promise.resolve('secure') };
+    nativeCaps.BaseCapabilities = { getDeviceIntegrity: () => Promise.resolve('secure') };
     const res = await getDeviceIntegrityAsync();
     expect(res).toBe('secure');
   });

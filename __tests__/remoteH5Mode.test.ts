@@ -99,7 +99,7 @@ describe('version.json 的 remoteUrl 归一化', () => {
 });
 
 describe('decideNavigation 远程模式', () => {
-  const whitelist = ['https://mobile-erp.example.com', SITE_ORIGIN];
+  const whitelist = ['https://mobile-base.example.com', SITE_ORIGIN];
 
   it('站内跳转留在容器内', () => {
     expect(decideNavigation(`${SITE_ORIGIN}/poem/123`, whitelist)).toEqual({
@@ -122,6 +122,6 @@ describe('decideNavigation 远程模式', () => {
   it('远程模式下危险 scheme 仍被拦下', () => {
     expect(decideNavigation(SCRIPT_URL, whitelist).action).toBe('block');
     expect(decideNavigation('file:///sdcard/x.html', whitelist).action).toBe('block');
-    expect(decideNavigation('erp://open', whitelist).action).toBe('block');
+    expect(decideNavigation('base://open', whitelist).action).toBe('block');
   });
 });

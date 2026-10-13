@@ -1,17 +1,17 @@
 /**
- * Android 系统信息模块注册包。
+ * 远程全量升级模块注册包（需手动加入 MainApplication 的 packageList）。
  */
-package com.qux.erp
+package com.qux.base
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
 
-class ERPSystemPackage : ReactPackage {
+class BaseUpdatePackage : ReactPackage {
     override fun createNativeModules(
         reactContext: ReactApplicationContext,
-    ): List<NativeModule> = listOf(ERPSystemModule(reactContext))
+    ): List<NativeModule> = listOf(BaseUpdateModule(reactContext))
 
     override fun createViewManagers(
         reactContext: ReactApplicationContext,

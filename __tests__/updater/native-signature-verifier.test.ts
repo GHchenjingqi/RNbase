@@ -10,7 +10,7 @@ import {
   MAX_BRIDGE_BYTES,
 } from '../../src/updater/native-signature-verifier';
 
-type ERPH5Mock = {
+type BaseH5Mock = {
   verifyPackageSignature: jest.Mock<
     Promise<{ valid?: boolean; error?: string }>,
     [string, string, string]
@@ -19,16 +19,16 @@ type ERPH5Mock = {
 
 const native = NativeModules as Record<string, unknown>;
 
-function mockErph5(): ERPH5Mock {
-  const mock: ERPH5Mock = {
+function mockErph5(): BaseH5Mock {
+  const mock: BaseH5Mock = {
     verifyPackageSignature: jest.fn(async () => ({ valid: true })),
   };
-  native.ERPH5 = mock;
+  native.BaseH5 = mock;
   return mock;
 }
 
 afterEach(() => {
-  delete native.ERPH5;
+  delete native.BaseH5;
 });
 
 describe('createNativeSignatureVerifier', () => {
@@ -37,7 +37,7 @@ describe('createNativeSignatureVerifier', () => {
   });
 
   test('模块存在但方法缺失时返回 null', () => {
-    native.ERPH5 = {};
+    native.BaseH5 = {};
     expect(createNativeSignatureVerifier()).toBeNull();
   });
 

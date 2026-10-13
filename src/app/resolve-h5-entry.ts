@@ -10,7 +10,7 @@
  *
  * iOS：本地模式从 App bundle 内资源加载（iOS 没有 android_asset）。
  *  - 基座需要原生侧把 h5/ 作为 folder reference 加进 Xcode target（见 scripts/ios.js）；
- *  - ERPCapabilities 通过 constantsToExport 暴露 H5BundleBasePath（= Bundle.main.bundlePath）；
+ *  - BaseCapabilities 通过 constantsToExport 暴露 H5BundleBasePath（= Bundle.main.bundlePath）；
  *  - JS 侧拼出 file://{H5BundleBasePath}/h5/index.html 交给 WebView。
  *    WKWebView 加载本地 file:// 时自动以父目录作为 allowingReadAccessToURL，
  *    故子资源（h5/assets、h5/js）均可访问。
@@ -45,7 +45,7 @@ const IOS_H5_BUNDLE_SUBDIR = 'h5';
  * 返回 null 表示无法解析（原生未暴露 H5BundleBasePath 且未配置远程站点）。
  */
 function getIosLocalH5EntryUri(): string | null {
-  const base = (NativeModules.ERPCapabilities as { H5BundleBasePath?: string } | undefined)
+  const base = (NativeModules.BaseCapabilities as { H5BundleBasePath?: string } | undefined)
     ?.H5BundleBasePath;
   if (base) {
     // 本地内置资源不需要防缓存随机参数（file:// 带 query 在 WKWebView 下有边缘问题，

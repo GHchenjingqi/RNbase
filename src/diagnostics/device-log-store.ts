@@ -1,7 +1,7 @@
 /**
  * 设备日志文件存取（RN 侧），用于排查/导出按日期分包的日志。
  *
- * 底层为原生日志模块 ERPLog（写入 <filesDir>/logs/device-YYYY-MM-DD.log）。
+ * 底层为原生日志模块 BaseLog（写入 <filesDir>/logs/device-YYYY-MM-DD.log）。
  * 原生模块未接入时返回结构化错误 DEVICE_UNSUPPORTED。
  */
 import { NativeModules } from 'react-native';
@@ -17,21 +17,21 @@ export type DeviceLogFileInfo = {
   path: string;
 };
 
-type ERPLogNative = {
+type BaseLogNative = {
   getLogDir: () => Promise<string>;
   listLogs: () => Promise<DeviceLogFileInfo[]>;
   readLog: (name: string) => Promise<string>;
   clearLogs: () => Promise<{ cleared: number }>;
 };
 
-function getNative(): ERPLogNative | null {
-  return ((NativeModules as Record<string, unknown>).ERPLog as ERPLogNative | undefined) ?? null;
+function getNative(): BaseLogNative | null {
+  return ((NativeModules as Record<string, unknown>).BaseLog as BaseLogNative | undefined) ?? null;
 }
 
 function unsupported(): Promise<never> {
   return Promise.reject({
     code: 'DEVICE_UNSUPPORTED',
-    message: '原生日志模块 ERPLog 未接入',
+    message: '原生日志模块 BaseLog 未接入',
   });
 }
 

@@ -8,7 +8,7 @@
  * 回答「这条链路在鸿蒙上能不能走通」。
  *
  * 例外是 location 与 notification：它们确实是应用级权限，弹窗已经内聚在原生方法
- * 里（`ERPCapabilities.getCurrentPosition` 走 `requestPermissionsFromUser`、
+ * 里（`BaseCapabilities.getCurrentPosition` 走 `requestPermissionsFromUser`、
  * `sendNotification` 走 `requestEnableNotification`）。这里先放行，用户在真正取值时
  * 才看到系统弹窗；拒绝由原生抛错回给 H5，文案自带「请在设置中开启」。
  *

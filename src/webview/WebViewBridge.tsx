@@ -102,11 +102,11 @@ const NATIVE_BACK_ACK_TIMEOUT_MS = 400;
  * 退出容器。Android 走 RN 的 BackHandler.exitApp（NativeModules.ExitApp）；
  * iOS 无硬件返回键，BackHandler 在 iOS 侧是空实现，调过去也是无害空操作。
  * RNOH 既没有 ExitApp 也没实现它，调过去是 `undefined is not a function`，
- * 所以鸿蒙走自研的 ERPSystem.exitApp（ArkTS 侧 terminateSelf）。
+ * 所以鸿蒙走自研的 BaseSystem.exitApp（ArkTS 侧 terminateSelf）。
  */
 function exitContainer(): void {
   if (isHarmony()) {
-    const mod = NativeModules.ERPSystem as { exitApp?: () => Promise<void> } | undefined;
+    const mod = NativeModules.BaseSystem as { exitApp?: () => Promise<void> } | undefined;
     // 后台执行：terminateSelf 返回时窗口已经没了，await 只会让返回键卡住。
     mod?.exitApp?.().catch(() => undefined);
     return;

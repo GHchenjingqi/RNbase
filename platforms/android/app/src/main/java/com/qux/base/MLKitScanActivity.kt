@@ -1,4 +1,4 @@
-package com.qux.erp
+package com.qux.base
 
 import android.app.Activity
 import android.content.Intent

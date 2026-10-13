@@ -7,7 +7,7 @@
  */
 jest.mock('react-native', () => ({
   Platform: { OS: 'ios' },
-  NativeModules: { ERPCapabilities: { H5BundleBasePath: '/fake/bundle' } },
+  NativeModules: { BaseCapabilities: { H5BundleBasePath: '/fake/bundle' } },
 }));
 
 import { getH5EntryUri, appendCacheBustQuery } from '../src/app/resolve-h5-entry';
@@ -16,7 +16,7 @@ const RN = require('react-native');
 
 describe('getH5EntryUri', () => {
   beforeEach(() => {
-    RN.NativeModules.ERPCapabilities = { H5BundleBasePath: '/fake/bundle' };
+    RN.NativeModules.BaseCapabilities = { H5BundleBasePath: '/fake/bundle' };
   });
 
   test('iOS 本地模式使用 H5BundleBasePath 拼出 bundle 内 h5 入口', () => {
@@ -26,7 +26,7 @@ describe('getH5EntryUri', () => {
 
   test('iOS 未暴露 H5BundleBasePath 且无远程配置时返回 null（触发配置缺失错误页）', () => {
     RN.Platform.OS = 'ios';
-    RN.NativeModules.ERPCapabilities = {};
+    RN.NativeModules.BaseCapabilities = {};
     expect(getH5EntryUri()).toBeNull();
   });
 

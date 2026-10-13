@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ERPTurboModules.h"
+#include "BaseTurboModules.h"
 #include "RNOH/ArkTSTurboModule.h"
 #include "RNOH/Package.h"
 
@@ -16,9 +16,9 @@ namespace rnoh {
  * `react-native-safe-area-context` 的鸿蒙移植包只有 ArkTS 实现（HAR 里没有 cpp），
  * 所以在这里手工补壳。
  *
- * 自研的 ERP* 模块不能只补壳：壳的 `methodMap_` 是空的，JS 取任何方法名都会拿到
+ * 自研的 Base* 模块不能只补壳：壳的 `methodMap_` 是空的，JS 取任何方法名都会拿到
  * `undefined`（RN 核心 `TurboModule::create` 只查这张表）。它们的 C++ 半边在
- * `ERPTurboModules.h` 里逐个登记了方法名。
+ * `BaseTurboModules.h` 里逐个登记了方法名。
  */
 class ManualArkTSPackage : public Package {
  public:
@@ -33,17 +33,17 @@ class ManualArkTSPackage : public Package {
         if (name == "RNCSafeAreaContext") {
           return std::make_shared<ArkTSTurboModule>(ctx, name);
         }
-        if (name == "ERPSystem") {
-          return std::make_shared<ERPSystemTurboModule>(ctx, name);
+        if (name == "BaseSystem") {
+          return std::make_shared<BaseSystemTurboModule>(ctx, name);
         }
-        if (name == "ERPLog") {
-          return std::make_shared<ERPLogTurboModule>(ctx, name);
+        if (name == "BaseLog") {
+          return std::make_shared<BaseLogTurboModule>(ctx, name);
         }
-        if (name == "ERPNetwork") {
-          return std::make_shared<ERPNetworkTurboModule>(ctx, name);
+        if (name == "BaseNetwork") {
+          return std::make_shared<BaseNetworkTurboModule>(ctx, name);
         }
-        if (name == "ERPCapabilities") {
-          return std::make_shared<ERPCapabilitiesTurboModule>(ctx, name);
+        if (name == "BaseCapabilities") {
+          return std::make_shared<BaseCapabilitiesTurboModule>(ctx, name);
         }
         return nullptr;
       }

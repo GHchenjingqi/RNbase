@@ -1,5 +1,5 @@
 /**
- * ERP Mobile App 入口（组合根）。
+ * Base Mobile App 入口（组合根）。
  *
  * 权限体系与 Bridge 由子模块承载；此处仅做生命周期容器与组合装配，
  * H5 业务运行时通过 WebView 加载（规则 4：业务代码不外溢到 RN）。

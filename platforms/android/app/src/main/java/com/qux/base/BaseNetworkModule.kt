@@ -2,12 +2,12 @@
  * Android 网络状态原生模块（Skill 规则 46/51）。
  *
  * 对应 RN 侧 src/network/nativeNetworkAdapter.ts 调用的
- * NativeModules.ERPNetwork。
+ * NativeModules.BaseNetwork。
  *
  * 注册方式：在 android/app/src/main/java/com/qux/MainApplication.kt 的
- * packageList.apply { add(ERPNetworkPackage()) } 中添加本 Package。
+ * packageList.apply { add(BaseNetworkPackage()) } 中添加本 Package。
  */
-package com.qux.erp
+package com.qux.base
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -20,10 +20,10 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableNativeMap
 
-class ERPNetworkModule(private val reactContext: ReactApplicationContext) :
+class BaseNetworkModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "ERPNetwork"
+    override fun getName(): String = "BaseNetwork"
 
     private val connectivityManager: ConnectivityManager by lazy {
         reactContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager

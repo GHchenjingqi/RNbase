@@ -2,7 +2,7 @@
  * iOS 权限适配器。
  *
  * iOS 的相机/相册/定位等权限需要原生侧实现，因此通过约定的
- * TurboModule / NativeModule `ERPPermissions` 暴露。
+ * TurboModule / NativeModule `BasePermissions` 暴露。
  * 若原生模块未链接，安全降级为 `unavailable`，避免运行时崩溃。
  *
  * 与 Skill 规则 5（禁止 H5 直接依赖具体原生实现）一致：差异集中在 adapter。
@@ -11,13 +11,13 @@ import { Linking, NativeModules, Platform } from 'react-native';
 import type { Permission, PermissionStatus } from '../permissions.types';
 import type { PermissionAdapter } from './permission-adapter';
 
-interface ERPPermissionsNativeModule {
+interface BasePermissionsNativeModule {
   check(permission: Permission): Promise<string>;
   request(permission: Permission): Promise<string>;
 }
 
-const nativeModule = (NativeModules as Record<string, unknown>).ERPPermissions as
-  | ERPPermissionsNativeModule
+const nativeModule = (NativeModules as Record<string, unknown>).BasePermissions as
+  | BasePermissionsNativeModule
   | undefined;
 
 function normalizeNativeStatus(status: string): PermissionStatus {

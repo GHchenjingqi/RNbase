@@ -111,4 +111,4 @@ hvigor/
 *.tmp
 *.temp
 .tmp/
-.temp/
+.temp/.workbuddy/

@@ -14,7 +14,7 @@ import type {
 } from '@rnoh/react-native-openharmony';
 import { RNOHPackage as RNOHPackageBase } from '@rnoh/react-native-openharmony';
 import { SafeAreaViewPackage } from '@react-native-ohos/react-native-safe-area-context';
-import { ERPPackage } from './erp/ERPPackage';
+import { BasePackage } from './erp/BasePackage';
 import { createRNOHPackages as createRNOHPackagesAutolinking } from './RNOHPackagesFactory';
 
 /**
@@ -50,6 +50,6 @@ export function getRNOHPackages(ctx: RNPackageContext): RNOHPackage[] {
   return [
     ...createRNOHPackagesAutolinking(ctx),
     new SafeAreaContextPackage(ctx),
-    new ERPPackage(ctx),
+    new BasePackage(ctx),
   ];
 }

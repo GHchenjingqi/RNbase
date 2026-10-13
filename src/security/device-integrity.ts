@@ -2,7 +2,7 @@
  * 设备完整性（root / jailbreak 检测，P2 安全闭环）。
  *
  * 真实检测依赖原生能力：
- *  - Android：集成 RootBeer / 读 `Build.TAGS`、su 二进制探测等（ERPCapabilities.getDeviceIntegrity）
+ *  - Android：集成 RootBeer / 读 `Build.TAGS`、su 二进制探测等（BaseCapabilities.getDeviceIntegrity）
  *  - iOS：jailbreak 探针（文件存在性 / 越狱沙盒 / 私有 API 可用性）
  *  - 鸿蒙：系统完整性校验接口
  *
@@ -27,7 +27,7 @@ export const DEVICE_INTEGRITY_ENFORCE: boolean =
     .__APP_CONFIG__?.deviceIntegrityEnforce ?? false;
 
 function getNativeIntegrity(): NativeIntegrityResult | Promise<NativeIntegrityResult> {
-  const caps = (NativeModules as Record<string, unknown>).ERPCapabilities as
+  const caps = (NativeModules as Record<string, unknown>).BaseCapabilities as
     | { getDeviceIntegrity?: () => NativeIntegrityResult | Promise<NativeIntegrityResult> }
     | undefined;
   if (caps && typeof caps.getDeviceIntegrity === 'function') {

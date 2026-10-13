@@ -21,7 +21,7 @@
 
 ### 2. h5 资源加入 App Target（folder reference） ⬜
 
-- 背景：iOS 本地模式入口为 `.app/h5/index.html`（经 `ERPCapabilities.H5BundleBasePath` 拼接），
+- 背景：iOS 本地模式入口为 `.app/h5/index.html`（经 `BaseCapabilities.H5BundleBasePath` 拼接），
   资源必须随包分发；工程侧 `npm run ios:sync-h5` 已把 `h5/` 同步到 `platforms/ios/qux/h5/`。
 - 步骤：
   1. Xcode 打开 `platforms/ios/qux.xcodeproj`；
@@ -35,10 +35,10 @@
 - 本轮在无 Mac 环境下预写了三个原生改动，**全部待 Xcode 编译验证**：
   | 文件 | 改动 | 验收 |
   |---|---|---|
-  | `ERPCapabilities.swift` | 新增 `getDeviceIntegrity` 越狱探针（文件存在性 + 沙盒外写入探测） | 编译通过；真机返回 `secure`；越狱设备（如有）返回 `compromised` |
-  | `ERPCapabilities.m` | 对应 `RCT_EXTERN_METHOD(getDeviceIntegrity...)` | JS 侧 `NativeModules.ERPCapabilities.getDeviceIntegrity()` 可调用 |
-  | `ERPH5.swift` / `ERPH5.m` | 新模块：`verifyPackageSignature(base64Data, signature, publicKey)`（SecKey RSASSA-PKCS1v15-SHA256，PEM/SPKI 公钥） | 编译通过；用 Node 测试向量（见 `__tests__/updater/signature-verify.test.ts` 同源密钥）验证 valid=true；篡改数据后 valid=false |
-- 注意：`ERPH5` 若与现有类名冲突（全仓 grep `class ERPH5`），改名并在 JS 侧
+  | `BaseCapabilities.swift` | 新增 `getDeviceIntegrity` 越狱探针（文件存在性 + 沙盒外写入探测） | 编译通过；真机返回 `secure`；越狱设备（如有）返回 `compromised` |
+  | `BaseCapabilities.m` | 对应 `RCT_EXTERN_METHOD(getDeviceIntegrity...)` | JS 侧 `NativeModules.BaseCapabilities.getDeviceIntegrity()` 可调用 |
+  | `BaseH5.swift` / `BaseH5.m` | 新模块：`verifyPackageSignature(base64Data, signature, publicKey)`（SecKey RSASSA-PKCS1v15-SHA256，PEM/SPKI 公钥） | 编译通过；用 Node 测试向量（见 `__tests__/updater/signature-verify.test.ts` 同源密钥）验证 valid=true；篡改数据后 valid=false |
+- 注意：`BaseH5` 若与现有类名冲突（全仓 grep `class BaseH5`），改名并在 JS 侧
   `src/updater/native-signature-verifier.ts` 的 `NATIVE_MODULE_NAME` 常量同步。
 
 ### 4. 签名与出 ipa ⬜
@@ -68,7 +68,7 @@
 
 ### 7. 占位能力接入（产品决策项，非本轮引入） ⬜
 
-- `ERPCapabilities.scan` 当前返回 `NOT_IMPLEMENTED`：需接入 VisionKit
+- `BaseCapabilities.scan` 当前返回 `NOT_IMPLEMENTED`：需接入 VisionKit
   （`DataScannerViewController`，iOS 16+）或三方扫码方案；
 - 通知（`NOTIFICATION.*`）：需接入 APNs / RN 推送库；
 - 以上 JS 侧均按 `DEVICE_UNSUPPORTED` 降级，不接入不阻塞基座。
@@ -93,4 +93,4 @@
 - ✅ `ios:doctor` / `ios:sync-h5` / `ios:pods` / `ios:build` 工程链路（P1）
 - ✅ iOS CI workflow（P1，待首跑验证 = 待办 #5）
 - ✅ `getDeviceIntegrity` JS 策略层 + 原生 Swift 实现（P2，编译验证 = 待办 #3）
-- ✅ `ERPH5.verifyPackageSignature` 原生实现 + JS 适配器（P2，编译验证 = 待办 #3）
+- ✅ `BaseH5.verifyPackageSignature` 原生实现 + JS 适配器（P2，编译验证 = 待办 #3）

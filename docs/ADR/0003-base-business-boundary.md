@@ -26,6 +26,22 @@
 基座新增能力前先过一条判定线：**该能力是否与具体业务语义无关、且被多个子应用共享？**
 两者皆否 → 归业务层，基座不做。
 
+## 附：命名去业务化（2026-10-13 落实）
+
+按同一判定线，原生模块命名中的 `ERP` 前缀（源自基座抽离前的宿主项目「精易ERP」）属于
+业务语义残留，全平台统一改为 `Base` 前缀：
+
+| 旧 | 新 |
+|---|---|
+| `ERPCapabilities` / `ERPNetwork` / `ERPPermissions` | `BaseCapabilities` / `BaseNetwork` / `BasePermissions` |
+| `ERPH5` / `ERPLog` / `ERPSystem` / `ERPUpdate` | `BaseH5` / `BaseLog` / `BaseSystem` / `BaseUpdate` |
+| Android 包 `com.qux.erp` | `com.qux.base` |
+| Harmony `ets/erp/` + `ERPTurboModules.h` | `ets/base/` + `BaseTurboModules.h` |
+| 占位域名 `mobile-erp.example.com`、`erp://` 示例 | `mobile-base.example.com`、`base://` |
+
+JS↔原生模块名字符串是唯一契约面，三平台已同步；iOS/Harmony 编译验证见
+`platforms/ios/TODO.md` #3 与 Harmony 构建。
+
 ## 后果
 
 - ✅ 基座保持「薄、稳、通用」，升级方案 P3 范围相应裁剪；

@@ -1,5 +1,5 @@
 /**
- * 鸿蒙侧 ERPSystem TurboModule：与 Android `ERPSystemModule.kt` 的 `getDeviceInfo`
+ * 鸿蒙侧 BaseSystem TurboModule：与 Android `BaseSystemModule.kt` 的 `getDeviceInfo`
  * 逐字段对齐（RN 侧契约见 `src/bridge/modules/system.ts` 的 `DeviceInfoResult`）。
  *
  * 全部读取无需权限：deviceInfo / batteryInfo / statvfs / i18n。
@@ -12,7 +12,7 @@ import statvfs from '@ohos.file.statvfs';
 import type { UITurboModuleContext } from '@rnoh/react-native-openharmony';
 import { UITurboModule } from '@rnoh/react-native-openharmony';
 
-export interface ERPDeviceInfoResult {
+export interface BaseDeviceInfoResult {
   brand: string;
   model: string;
   systemVersion: string;
@@ -24,8 +24,8 @@ export interface ERPDeviceInfoResult {
   timezone: string;
 }
 
-export class ERPSystemTurboModule extends UITurboModule {
-  public static readonly NAME: string = 'ERPSystem';
+export class BaseSystemTurboModule extends UITurboModule {
+  public static readonly NAME: string = 'BaseSystem';
 
   private dataPath: string;
 
@@ -34,14 +34,14 @@ export class ERPSystemTurboModule extends UITurboModule {
     this.dataPath = ctx.uiAbilityContext.filesDir;
   }
 
-  async getDeviceInfo(): Promise<ERPDeviceInfoResult> {
+  async getDeviceInfo(): Promise<BaseDeviceInfoResult> {
     let batteryLevel: number = -1;
     let isCharging: boolean = false;
     try {
       batteryLevel = batteryInfo.batterySOC;
       isCharging = batteryInfo.chargingStatus === batteryInfo.BatteryChargeState.ENABLE;
     } catch (error) {
-      this.ctx.logger.error('[ERPSystem] batteryInfo 读取失败: ' + error);
+      this.ctx.logger.error('[BaseSystem] batteryInfo 读取失败: ' + error);
     }
 
     let totalStorage: number = 0;
@@ -50,17 +50,17 @@ export class ERPSystemTurboModule extends UITurboModule {
       totalStorage = await statvfs.getTotalSize(this.dataPath);
       freeStorage = await statvfs.getFreeSize(this.dataPath);
     } catch (error) {
-      this.ctx.logger.error('[ERPSystem] statvfs 读取失败: ' + error);
+      this.ctx.logger.error('[BaseSystem] statvfs 读取失败: ' + error);
     }
 
     let timezone: string = '';
     try {
       timezone = i18n.getTimeZone().getID();
     } catch (error) {
-      this.ctx.logger.error('[ERPSystem] 时区读取失败: ' + error);
+      this.ctx.logger.error('[BaseSystem] 时区读取失败: ' + error);
     }
 
-    const result: ERPDeviceInfoResult = {
+    const result: BaseDeviceInfoResult = {
       brand: deviceInfo.brand,
       model: deviceInfo.productModel,
       systemVersion: deviceInfo.osFullName,

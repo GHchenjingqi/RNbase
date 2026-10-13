@@ -187,7 +187,7 @@ export class UpdateOrchestrator {
         hasher: this.options.hasher,
         signature: manifest.signature,
         publicKey: this.options.signaturePublicKey ?? H5_UPDATE_PUBLIC_KEY ?? undefined,
-        // 校验器优先级：显式注入 > 原生模块（ERPH5）> Web Crypto（dev/test）> 无（required 策略拒绝）
+        // 校验器优先级：显式注入 > 原生模块（BaseH5）> Web Crypto（dev/test）> 无（required 策略拒绝）
         signatureVerifier:
           this.options.signatureVerifier ??
           createNativeSignatureVerifier() ??

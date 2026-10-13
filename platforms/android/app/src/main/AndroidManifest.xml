@@ -72,7 +72,7 @@
         tools:replace="android:screenOrientation" />
       <!-- ML Kit 扫码界面：CameraX + ML Kit，纸质码识别率更高，强制竖屏 -->
       <activity
-        android:name="com.qux.erp.MLKitScanActivity"
+        android:name="com.qux.base.MLKitScanActivity"
         android:screenOrientation="portrait"
         android:theme="@style/AppTheme" />
     </application>

@@ -1,12 +1,12 @@
 /**
- * 原生网络适配器单测：验证对接 NativeModules.ERPNetwork，
+ * 原生网络适配器单测：验证对接 NativeModules.BaseNetwork，
  * 以及原生未链接时安全降级为 undefined（模块返回 DEVICE_UNSUPPORTED）。
  */
 import { NativeModules } from 'react-native';
 import { resolveNativeNetworkAdapter } from '../src/middleware/network/native-network-adapter';
 
 function installMockNative(overrides: Record<string, unknown> = {}) {
-  (NativeModules as Record<string, unknown>).ERPNetwork = {
+  (NativeModules as Record<string, unknown>).BaseNetwork = {
     getStatus: jest.fn(async () => ({ connected: true, type: 'wifi' })),
     ...overrides,
   };
@@ -14,7 +14,7 @@ function installMockNative(overrides: Record<string, unknown> = {}) {
 
 describe('resolveNativeNetworkAdapter', () => {
   afterEach(() => {
-    delete (NativeModules as Record<string, unknown>).ERPNetwork;
+    delete (NativeModules as Record<string, unknown>).BaseNetwork;
   });
 
   it('returns undefined when native module absent (graceful degrade)', () => {

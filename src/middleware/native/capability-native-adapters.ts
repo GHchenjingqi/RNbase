@@ -1,6 +1,6 @@
 /**
  * 原生能力适配器（RN 侧，规则 13/51）：将 Bridge 能力模块对接到原生模块
- * `NativeModules.ERPCapabilities`。原生未链接时安全降级为空（模块返回
+ * `NativeModules.BaseCapabilities`。原生未链接时安全降级为空（模块返回
  * DEVICE_UNSUPPORTED），不抛出、不影响 App 启动。
  *
  * 延迟读取 NativeModules，便于测试时注入 mock。
@@ -21,7 +21,7 @@ type NativeFile = {
  * 新增能力时在此声明对应方法，适配器中做包装；原生未实现时方法不存在，
  * 适配器对应字段为 undefined，Bridge 模块返回 DEVICE_UNSUPPORTED。
  */
-export interface ERPCapabilitiesNative {
+export interface BaseCapabilitiesNative {
   // ── 已有能力 ──
   scan(formats?: string[]): Promise<{ code: string; format?: string }>;
   takePhoto(): Promise<{ uri: string }>;
@@ -50,7 +50,7 @@ export interface ERPCapabilitiesNative {
   sendNotification(
     title: string,
     content: string,
-    opts?: { channelId?: string },
+    opts?: { channelId?: string }
   ): Promise<{ ok: boolean; notificationId?: number }>;
 
   // ── 新增能力（原生未实现时方法不存在） ──
@@ -111,12 +111,12 @@ export interface ERPCapabilitiesNative {
     deviceId: string,
     serviceUuid: string,
     characteristicUuid: string,
-    data: string,
+    data: string
   ): Promise<{ ok: boolean }>;
   bluetoothRead?(
     deviceId: string,
     serviceUuid: string,
-    characteristicUuid: string,
+    characteristicUuid: string
   ): Promise<{ data: string }>;
   audioStartRecording?(opts?: {
     format?: string;
@@ -157,7 +157,7 @@ export interface ERPCapabilitiesNative {
   getIpAddress?(type?: string): Promise<{ ip: string }>;
   qrGenerate?(
     text: string,
-    opts?: { size?: number; margin?: number; errorCorrectionLevel?: string },
+    opts?: { size?: number; margin?: number; errorCorrectionLevel?: string }
   ): Promise<{ uri: string; base64?: string }>;
   imageCompress?(
     uri: string,
@@ -166,11 +166,11 @@ export interface ERPCapabilitiesNative {
       maxWidth?: number;
       maxHeight?: number;
       format?: string;
-    },
+    }
   ): Promise<{ uri: string; size: number; width: number; height: number }>;
   imageCrop?(
     uri: string,
-    opts: { x: number; y: number; width: number; height: number },
+    opts: { x: number; y: number; width: number; height: number }
   ): Promise<{ uri: string }>;
   imageGetSize?(uri: string): Promise<{ width: number; height: number; size: number }>;
   hapticsImpact?(style: string): Promise<void>;
@@ -183,7 +183,7 @@ export interface ERPCapabilitiesNative {
       rate?: number;
       pitch?: number;
       volume?: number;
-    },
+    }
   ): Promise<{ ok: boolean }>;
   speechStop?(): Promise<{ ok: boolean }>;
   speechIsSpeaking?(): Promise<{ speaking: boolean }>;
@@ -215,8 +215,8 @@ function wrapNativeError(e: unknown, defaultMsg: string): never {
 
 /** 解析原生能力适配器；原生模块缺失时返回空对象（按需降级）。 */
 export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
-  const nativeModule = (NativeModules as Record<string, unknown>).ERPCapabilities as
-    | ERPCapabilitiesNative
+  const nativeModule = (NativeModules as Record<string, unknown>).BaseCapabilities as
+    | BaseCapabilitiesNative
     | undefined;
 
   if (!nativeModule) {
@@ -226,13 +226,13 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
   return {
     // ── 已有能力 ──
     scanner: {
-      scan: opts => nativeModule.scan(opts?.formats).catch(e => wrapNativeError(e, '扫码失败')),
+      scan: (opts) => nativeModule.scan(opts?.formats).catch((e) => wrapNativeError(e, '扫码失败')),
     },
     camera: {
-      takePhoto: () => nativeModule.takePhoto().catch(e => wrapNativeError(e, '拍照失败')),
+      takePhoto: () => nativeModule.takePhoto().catch((e) => wrapNativeError(e, '拍照失败')),
     },
     media: {
-      pickImage: async opts => {
+      pickImage: async (opts) => {
         try {
           const r = await nativeModule.pickImage(opts ?? {});
           return { files: (r.files ?? []).map(toPickedFile) };
@@ -240,10 +240,11 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
           wrapNativeError(e, '选图失败');
         }
       },
-      saveImage: uri => nativeModule.saveImage(uri).catch(e => wrapNativeError(e, '保存图片失败')),
+      saveImage: (uri) =>
+        nativeModule.saveImage(uri).catch((e) => wrapNativeError(e, '保存图片失败')),
     },
     file: {
-      pick: async opts => {
+      pick: async (opts) => {
         try {
           const r = await nativeModule.filePick(opts ?? {});
           return { files: (r.files ?? []).map(toPickedFile) };
@@ -251,20 +252,21 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
           wrapNativeError(e, '文件选择失败');
         }
       },
-      readAsBase64: uri =>
-        nativeModule.readFileAsBase64(uri).catch(e => wrapNativeError(e, '读取文件失败')),
-      download: url => nativeModule.fileDownload(url).catch(e => wrapNativeError(e, '下载失败')),
-      open: uri => nativeModule.fileOpen(uri).catch(e => wrapNativeError(e, '打开文件失败')),
+      readAsBase64: (uri) =>
+        nativeModule.readFileAsBase64(uri).catch((e) => wrapNativeError(e, '读取文件失败')),
+      download: (url) =>
+        nativeModule.fileDownload(url).catch((e) => wrapNativeError(e, '下载失败')),
+      open: (uri) => nativeModule.fileOpen(uri).catch((e) => wrapNativeError(e, '打开文件失败')),
     },
     location: {
       // 原生 getCurrentPosition(promise) 只接受 promise，不传 opts
       getCurrentPosition: () =>
-        nativeModule.getCurrentPosition().catch(e => wrapNativeError(e, '获取定位失败')),
+        nativeModule.getCurrentPosition().catch((e) => wrapNativeError(e, '获取定位失败')),
     },
     notification: {
       // 推送 Token：项目未接入 FCM/厂商推送，返回模拟值便于 H5 联调
       getToken: async () => 'mock-token-emulator',
-      setBadge: async count => {
+      setBadge: async (count) => {
         try {
           const r = await nativeModule.setBadge(count);
           return Boolean(r?.ok);
@@ -273,7 +275,7 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
         }
       },
       playSound: () =>
-        nativeModule.playSound(3000).catch(e => wrapNativeError(e, '提示音播放失败')),
+        nativeModule.playSound(3000).catch((e) => wrapNativeError(e, '提示音播放失败')),
       // 原生 sendNotification(title, content, promise) 只接受 2 个参数，不传 opts
       sendNotification: async (title, content) => {
         try {
@@ -288,12 +290,16 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     clipboard: nativeModule.clipboardGetString
       ? {
           getString: () =>
-            nativeModule.clipboardGetString!().catch(e => wrapNativeError(e, '读取剪贴板失败')),
-          setString: text =>
-            nativeModule.clipboardSetString!(text).catch(e => wrapNativeError(e, '写入剪贴板失败')),
+            nativeModule.clipboardGetString!().catch((e) => wrapNativeError(e, '读取剪贴板失败')),
+          setString: (text) =>
+            nativeModule.clipboardSetString!(text).catch((e) =>
+              wrapNativeError(e, '写入剪贴板失败')
+            ),
           hasString: nativeModule.clipboardHasString
             ? () =>
-                nativeModule.clipboardHasString!().catch(e => wrapNativeError(e, '查询剪贴板失败'))
+                nativeModule.clipboardHasString!().catch((e) =>
+                  wrapNativeError(e, '查询剪贴板失败')
+                )
             : undefined,
         }
       : undefined,
@@ -301,13 +307,13 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     brightness: nativeModule.getBrightness
       ? {
           getBrightness: () =>
-            nativeModule.getBrightness!().catch(e => wrapNativeError(e, '获取亮度失败')),
-          setBrightness: v =>
-            nativeModule.setBrightness!(v).catch(e => wrapNativeError(e, '设置亮度失败')),
+            nativeModule.getBrightness!().catch((e) => wrapNativeError(e, '获取亮度失败')),
+          setBrightness: (v) =>
+            nativeModule.setBrightness!(v).catch((e) => wrapNativeError(e, '设置亮度失败')),
           getSystemBrightness: nativeModule.getSystemBrightness
             ? () =>
-                nativeModule.getSystemBrightness!().catch(e =>
-                  wrapNativeError(e, '获取系统亮度失败'),
+                nativeModule.getSystemBrightness!().catch((e) =>
+                  wrapNativeError(e, '获取系统亮度失败')
                 )
             : undefined,
         }
@@ -316,23 +322,26 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     flashlight: nativeModule.flashlightAvailable
       ? {
           isAvailable: () =>
-            nativeModule.flashlightAvailable!().catch(e => wrapNativeError(e, '查询手电筒失败')),
-          toggle: enabled =>
-            nativeModule.flashlightToggle!(enabled).catch(e =>
-              wrapNativeError(e, '切换手电筒失败'),
+            nativeModule.flashlightAvailable!().catch((e) => wrapNativeError(e, '查询手电筒失败')),
+          toggle: (enabled) =>
+            nativeModule.flashlightToggle!(enabled).catch((e) =>
+              wrapNativeError(e, '切换手电筒失败')
             ),
         }
       : undefined,
 
     sensor: nativeModule.sensorStart
       ? {
-          isAvailable: type =>
-            nativeModule.sensorAvailable!(type).catch(e => wrapNativeError(e, '查询传感器失败')),
+          isAvailable: (type) =>
+            nativeModule.sensorAvailable!(type).catch((e) => wrapNativeError(e, '查询传感器失败')),
           start: (type, callback, opts) =>
-            nativeModule.sensorStart!(type, opts).catch(e => wrapNativeError(e, '启动传感器失败')),
-          stop: id => nativeModule.sensorStop!(id).catch(e => wrapNativeError(e, '停止传感器失败')),
+            nativeModule.sensorStart!(type, opts).catch((e) =>
+              wrapNativeError(e, '启动传感器失败')
+            ),
+          stop: (id) =>
+            nativeModule.sensorStop!(id).catch((e) => wrapNativeError(e, '停止传感器失败')),
           getStepCount: nativeModule.getStepCount
-            ? () => nativeModule.getStepCount!().catch(e => wrapNativeError(e, '获取步数失败'))
+            ? () => nativeModule.getStepCount!().catch((e) => wrapNativeError(e, '获取步数失败'))
             : undefined,
         }
       : undefined,
@@ -356,52 +365,52 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
               wrapNativeError(e, '查询生物识别失败');
             }
           },
-          authenticate: opts =>
-            nativeModule.biometricAuthenticate!(opts).catch(e =>
-              wrapNativeError(e, '生物识别认证失败'),
+          authenticate: (opts) =>
+            nativeModule.biometricAuthenticate!(opts).catch((e) =>
+              wrapNativeError(e, '生物识别认证失败')
             ),
         }
       : undefined,
 
     contacts: nativeModule.contactsGetAll
       ? {
-          getAll: opts =>
-            nativeModule.contactsGetAll!(opts).catch(e =>
-              wrapNativeError(e, '获取通讯录失败'),
+          getAll: (opts) =>
+            nativeModule.contactsGetAll!(opts).catch((e) =>
+              wrapNativeError(e, '获取通讯录失败')
             ) as Promise<{
               contacts: import('../../bridge/modules/capabilities/types').Contact[];
               hasMore: boolean;
             }>,
           pick: () =>
-            nativeModule.contactsPick!().catch(e =>
-              wrapNativeError(e, '选择联系人失败'),
+            nativeModule.contactsPick!().catch((e) =>
+              wrapNativeError(e, '选择联系人失败')
             ) as Promise<import('../../bridge/modules/capabilities/types').Contact | null>,
-          add: contact =>
-            nativeModule.contactsAdd!(contact).catch(e => wrapNativeError(e, '添加联系人失败')),
+          add: (contact) =>
+            nativeModule.contactsAdd!(contact).catch((e) => wrapNativeError(e, '添加联系人失败')),
         }
       : undefined,
 
     calendar: nativeModule.calendarGetCalendars
       ? {
           getCalendars: () =>
-            nativeModule.calendarGetCalendars!().catch(e =>
-              wrapNativeError(e, '获取日历失败'),
+            nativeModule.calendarGetCalendars!().catch((e) =>
+              wrapNativeError(e, '获取日历失败')
             ) as Promise<{
               calendars: { id: string; title: string; color?: string }[];
             }>,
-          getEvents: opts =>
-            nativeModule.calendarGetEvents!(opts).catch(e =>
-              wrapNativeError(e, '获取日历事件失败'),
+          getEvents: (opts) =>
+            nativeModule.calendarGetEvents!(opts).catch((e) =>
+              wrapNativeError(e, '获取日历事件失败')
             ) as Promise<{
               events: import('../../bridge/modules/capabilities/types').CalendarEvent[];
             }>,
-          addEvent: event =>
-            nativeModule.calendarAddEvent!(event).catch(e =>
-              wrapNativeError(e, '添加日历事件失败'),
+          addEvent: (event) =>
+            nativeModule.calendarAddEvent!(event).catch((e) =>
+              wrapNativeError(e, '添加日历事件失败')
             ),
-          removeEvent: id =>
-            nativeModule.calendarRemoveEvent!(id).catch(e =>
-              wrapNativeError(e, '删除日历事件失败'),
+          removeEvent: (id) =>
+            nativeModule.calendarRemoveEvent!(id).catch((e) =>
+              wrapNativeError(e, '删除日历事件失败')
             ),
         }
       : undefined,
@@ -409,12 +418,14 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     nfc: nativeModule.nfcAvailable
       ? {
           isAvailable: () =>
-            nativeModule.nfcAvailable!().catch(e => wrapNativeError(e, '查询 NFC 失败')),
-          readTag: timeout =>
-            nativeModule.nfcReadTag!(timeout).catch(e => wrapNativeError(e, '读取 NFC 标签失败')),
+            nativeModule.nfcAvailable!().catch((e) => wrapNativeError(e, '查询 NFC 失败')),
+          readTag: (timeout) =>
+            nativeModule.nfcReadTag!(timeout).catch((e) => wrapNativeError(e, '读取 NFC 标签失败')),
           writeNdef: nativeModule.nfcWriteNdef
-            ? records =>
-                nativeModule.nfcWriteNdef!(records).catch(e => wrapNativeError(e, '写入 NFC 失败'))
+            ? (records) =>
+                nativeModule.nfcWriteNdef!(records).catch((e) =>
+                  wrapNativeError(e, '写入 NFC 失败')
+                )
             : undefined,
         }
       : undefined,
@@ -422,32 +433,32 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     bluetooth: nativeModule.bluetoothAvailable
       ? {
           isAvailable: () =>
-            nativeModule.bluetoothAvailable!().catch(e => wrapNativeError(e, '查询蓝牙失败')),
+            nativeModule.bluetoothAvailable!().catch((e) => wrapNativeError(e, '查询蓝牙失败')),
           enable: nativeModule.bluetoothEnable
-            ? () => nativeModule.bluetoothEnable!().catch(e => wrapNativeError(e, '启用蓝牙失败'))
+            ? () => nativeModule.bluetoothEnable!().catch((e) => wrapNativeError(e, '启用蓝牙失败'))
             : undefined,
-          startScan: opts =>
-            nativeModule.bluetoothStartScan!(opts).catch(e =>
-              wrapNativeError(e, '蓝牙扫描失败'),
+          startScan: (opts) =>
+            nativeModule.bluetoothStartScan!(opts).catch((e) =>
+              wrapNativeError(e, '蓝牙扫描失败')
             ) as Promise<{
               devices: import('../../bridge/modules/capabilities/types').BluetoothDevice[];
             }>,
           stopScan: () =>
-            nativeModule.bluetoothStopScan!().catch(e => wrapNativeError(e, '停止蓝牙扫描失败')),
-          connect: id =>
-            nativeModule.bluetoothConnect!(id).catch(e => wrapNativeError(e, '蓝牙连接失败')),
-          disconnect: id =>
-            nativeModule.bluetoothDisconnect!(id).catch(e => wrapNativeError(e, '蓝牙断开失败')),
+            nativeModule.bluetoothStopScan!().catch((e) => wrapNativeError(e, '停止蓝牙扫描失败')),
+          connect: (id) =>
+            nativeModule.bluetoothConnect!(id).catch((e) => wrapNativeError(e, '蓝牙连接失败')),
+          disconnect: (id) =>
+            nativeModule.bluetoothDisconnect!(id).catch((e) => wrapNativeError(e, '蓝牙断开失败')),
           write: nativeModule.bluetoothWrite
             ? (id, svc, ch, data) =>
-                nativeModule.bluetoothWrite!(id, svc, ch, data).catch(e =>
-                  wrapNativeError(e, '蓝牙写入失败'),
+                nativeModule.bluetoothWrite!(id, svc, ch, data).catch((e) =>
+                  wrapNativeError(e, '蓝牙写入失败')
                 )
             : undefined,
           read: nativeModule.bluetoothRead
             ? (id, svc, ch) =>
-                nativeModule.bluetoothRead!(id, svc, ch).catch(e =>
-                  wrapNativeError(e, '蓝牙读取失败'),
+                nativeModule.bluetoothRead!(id, svc, ch).catch((e) =>
+                  wrapNativeError(e, '蓝牙读取失败')
                 )
             : undefined,
         }
@@ -455,17 +466,19 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
 
     audio: nativeModule.audioStartRecording
       ? {
-          startRecording: opts =>
-            nativeModule.audioStartRecording!(opts).catch(e => wrapNativeError(e, '开始录音失败')),
+          startRecording: (opts) =>
+            nativeModule.audioStartRecording!(opts).catch((e) =>
+              wrapNativeError(e, '开始录音失败')
+            ),
           stopRecording: () =>
-            nativeModule.audioStopRecording!().catch(e => wrapNativeError(e, '停止录音失败')),
+            nativeModule.audioStopRecording!().catch((e) => wrapNativeError(e, '停止录音失败')),
           play: (uri, opts) =>
-            nativeModule.audioPlay!(uri, opts).catch(e => wrapNativeError(e, '播放音频失败')),
+            nativeModule.audioPlay!(uri, opts).catch((e) => wrapNativeError(e, '播放音频失败')),
           pause: nativeModule.audioPause
-            ? () => nativeModule.audioPause!().catch(e => wrapNativeError(e, '暂停音频失败'))
+            ? () => nativeModule.audioPause!().catch((e) => wrapNativeError(e, '暂停音频失败'))
             : undefined,
           stop: nativeModule.audioStop
-            ? () => nativeModule.audioStop!().catch(e => wrapNativeError(e, '停止音频失败'))
+            ? () => nativeModule.audioStop!().catch((e) => wrapNativeError(e, '停止音频失败'))
             : undefined,
         }
       : undefined,
@@ -473,11 +486,11 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     storage: nativeModule.getDiskInfo
       ? {
           getDiskInfo: () =>
-            nativeModule.getDiskInfo!().catch(e => wrapNativeError(e, '获取存储信息失败')),
+            nativeModule.getDiskInfo!().catch((e) => wrapNativeError(e, '获取存储信息失败')),
           clearCache: () =>
-            nativeModule.clearCache!().catch(e => wrapNativeError(e, '清理缓存失败')),
+            nativeModule.clearCache!().catch((e) => wrapNativeError(e, '清理缓存失败')),
           getAppDir: nativeModule.getAppDir
-            ? () => nativeModule.getAppDir!().catch(e => wrapNativeError(e, '获取应用目录失败'))
+            ? () => nativeModule.getAppDir!().catch((e) => wrapNativeError(e, '获取应用目录失败'))
             : undefined,
         }
       : undefined,
@@ -485,14 +498,14 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     networkInfo: nativeModule.getWifiInfo
       ? {
           getWifiInfo: () =>
-            nativeModule.getWifiInfo!().catch(e => wrapNativeError(e, '获取 WiFi 信息失败')),
+            nativeModule.getWifiInfo!().catch((e) => wrapNativeError(e, '获取 WiFi 信息失败')),
           getCellularInfo: nativeModule.getCellularInfo
             ? () =>
-                nativeModule.getCellularInfo!().catch(e => wrapNativeError(e, '获取蜂窝信息失败'))
+                nativeModule.getCellularInfo!().catch((e) => wrapNativeError(e, '获取蜂窝信息失败'))
             : undefined,
           getIpAddress: nativeModule.getIpAddress
             ? (type?: 'ipv4' | 'ipv6') =>
-                nativeModule.getIpAddress!(type).catch(e => wrapNativeError(e, '获取 IP 失败'))
+                nativeModule.getIpAddress!(type).catch((e) => wrapNativeError(e, '获取 IP 失败'))
             : undefined,
         }
       : undefined,
@@ -500,51 +513,55 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     qr: nativeModule.qrGenerate
       ? {
           generate: (text, opts) =>
-            nativeModule.qrGenerate!(text, opts).catch(e => wrapNativeError(e, '生成二维码失败')),
+            nativeModule.qrGenerate!(text, opts).catch((e) => wrapNativeError(e, '生成二维码失败')),
         }
       : undefined,
 
     image: nativeModule.imageCompress
       ? {
           compress: (uri, opts) =>
-            nativeModule.imageCompress!(uri, opts).catch(e => wrapNativeError(e, '压缩图片失败')),
+            nativeModule.imageCompress!(uri, opts).catch((e) => wrapNativeError(e, '压缩图片失败')),
           crop: nativeModule.imageCrop
             ? (uri, opts) =>
-                nativeModule.imageCrop!(uri, opts).catch(e => wrapNativeError(e, '裁剪图片失败'))
+                nativeModule.imageCrop!(uri, opts).catch((e) => wrapNativeError(e, '裁剪图片失败'))
             : undefined,
           getSize: nativeModule.imageGetSize
-            ? uri =>
-                nativeModule.imageGetSize!(uri).catch(e => wrapNativeError(e, '获取图片尺寸失败'))
+            ? (uri) =>
+                nativeModule.imageGetSize!(uri).catch((e) => wrapNativeError(e, '获取图片尺寸失败'))
             : undefined,
         }
       : undefined,
 
     haptics: nativeModule.hapticsImpact
       ? {
-          impact: style =>
-            nativeModule.hapticsImpact!(style).catch(e => wrapNativeError(e, '触觉反馈失败')),
-          notification: type =>
-            nativeModule.hapticsNotification!(type).catch(e => wrapNativeError(e, '触觉反馈失败')),
+          impact: (style) =>
+            nativeModule.hapticsImpact!(style).catch((e) => wrapNativeError(e, '触觉反馈失败')),
+          notification: (type) =>
+            nativeModule.hapticsNotification!(type).catch((e) =>
+              wrapNativeError(e, '触觉反馈失败')
+            ),
           selection: () =>
-            nativeModule.hapticsSelection!().catch(e => wrapNativeError(e, '触觉反馈失败')),
+            nativeModule.hapticsSelection!().catch((e) => wrapNativeError(e, '触觉反馈失败')),
         }
       : undefined,
 
     speech: nativeModule.speechSpeak
       ? {
           speak: (text, opts) =>
-            nativeModule.speechSpeak!(text, opts).catch(e => wrapNativeError(e, '语音合成失败')),
+            nativeModule.speechSpeak!(text, opts).catch((e) => wrapNativeError(e, '语音合成失败')),
           stop: nativeModule.speechStop
-            ? () => nativeModule.speechStop!().catch(e => wrapNativeError(e, '停止语音失败'))
+            ? () => nativeModule.speechStop!().catch((e) => wrapNativeError(e, '停止语音失败'))
             : undefined,
           isSpeaking: nativeModule.speechIsSpeaking
             ? () =>
-                nativeModule.speechIsSpeaking!().catch(e => wrapNativeError(e, '查询语音状态失败'))
+                nativeModule.speechIsSpeaking!().catch((e) =>
+                  wrapNativeError(e, '查询语音状态失败')
+                )
             : undefined,
           getAvailableLanguages: nativeModule.speechGetLanguages
             ? () =>
-                nativeModule.speechGetLanguages!().catch(e =>
-                  wrapNativeError(e, '获取语言列表失败'),
+                nativeModule.speechGetLanguages!().catch((e) =>
+                  wrapNativeError(e, '获取语言列表失败')
                 )
             : undefined,
         }
@@ -556,33 +573,35 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
       nativeModule.appInstalled || nativeModule.appOpenSettings
         ? {
             isInstalled: nativeModule.appInstalled
-              ? pkg =>
-                  nativeModule.appInstalled!(pkg).catch(e => wrapNativeError(e, '查询应用失败'))
+              ? (pkg) =>
+                  nativeModule.appInstalled!(pkg).catch((e) => wrapNativeError(e, '查询应用失败'))
               : undefined,
             openApp: nativeModule.appOpen
               ? (pkg, opts) =>
-                  nativeModule.appOpen!(pkg, opts).catch(e => wrapNativeError(e, '打开应用失败'))
+                  nativeModule.appOpen!(pkg, opts).catch((e) => wrapNativeError(e, '打开应用失败'))
               : undefined,
             openAppStore: nativeModule.appOpenStore
-              ? appId =>
-                  nativeModule.appOpenStore!(appId).catch(e =>
-                    wrapNativeError(e, '打开应用市场失败'),
+              ? (appId) =>
+                  nativeModule.appOpenStore!(appId).catch((e) =>
+                    wrapNativeError(e, '打开应用市场失败')
                   )
               : undefined,
             openAppSettings: nativeModule.appOpenSettings
               ? () =>
-                  nativeModule.appOpenSettings!().catch(e => wrapNativeError(e, '打开应用设置失败'))
+                  nativeModule.appOpenSettings!().catch((e) =>
+                    wrapNativeError(e, '打开应用设置失败')
+                  )
               : undefined,
             openSystemSettings: nativeModule.appOpenSystemSettings
-              ? action =>
-                  nativeModule.appOpenSystemSettings!(action).catch(e =>
-                    wrapNativeError(e, '打开系统设置失败'),
+              ? (action) =>
+                  nativeModule.appOpenSystemSettings!(action).catch((e) =>
+                    wrapNativeError(e, '打开系统设置失败')
                   )
               : undefined,
             getInstalledApps: nativeModule.appGetInstalled
               ? () =>
-                  nativeModule.appGetInstalled!().catch(e =>
-                    wrapNativeError(e, '获取已安装应用失败'),
+                  nativeModule.appGetInstalled!().catch((e) =>
+                    wrapNativeError(e, '获取已安装应用失败')
                   ) as Promise<{
                     apps: {
                       packageName: string;
@@ -597,15 +616,15 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     backgroundTask: nativeModule.backgroundStart
       ? {
           start: (key, opts) =>
-            nativeModule.backgroundStart!(key, opts).catch(e =>
-              wrapNativeError(e, '启动后台任务失败'),
+            nativeModule.backgroundStart!(key, opts).catch((e) =>
+              wrapNativeError(e, '启动后台任务失败')
             ),
-          stop: id =>
-            nativeModule.backgroundStop!(id).catch(e => wrapNativeError(e, '停止后台任务失败')),
+          stop: (id) =>
+            nativeModule.backgroundStop!(id).catch((e) => wrapNativeError(e, '停止后台任务失败')),
           isRunning: nativeModule.backgroundRunning
-            ? key =>
-                nativeModule.backgroundRunning!(key).catch(e =>
-                  wrapNativeError(e, '查询后台任务失败'),
+            ? (key) =>
+                nativeModule.backgroundRunning!(key).catch((e) =>
+                  wrapNativeError(e, '查询后台任务失败')
                 )
             : undefined,
         }
@@ -614,7 +633,7 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     inAppReview: nativeModule.inAppReview
       ? {
           requestReview: () =>
-            nativeModule.inAppReview!().catch(e => wrapNativeError(e, '应用内评价失败')),
+            nativeModule.inAppReview!().catch((e) => wrapNativeError(e, '应用内评价失败')),
         }
       : undefined,
   };

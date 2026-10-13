@@ -11,7 +11,7 @@
  * 全部在 App 私有目录内，无需额外权限；WebView 通过 file:// 加载子包入口。
  * 入口 URI 形如 file:///data/user/0/com.qux/files/h5-versions/<version>/<entry>。
  */
-package com.qux.erp
+package com.qux.base
 
 import android.util.Base64
 import android.util.Log
@@ -27,10 +27,10 @@ import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
-class ERPH5Module(private val reactContext: ReactApplicationContext) :
+class BaseH5Module(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "ERPH5"
+    override fun getName(): String = "BaseH5"
 
     private val rootDir: File
         get() = File(reactContext.filesDir, "h5-versions")
@@ -48,7 +48,7 @@ class ERPH5Module(private val reactContext: ReactApplicationContext) :
         return try {
             JSONObject(currentFile.readText(Charsets.UTF_8))
         } catch (e: Exception) {
-            Log.w("ERPH5", "current.json 解析失败", e)
+            Log.w("BaseH5", "current.json 解析失败", e)
             null
         }
     }
@@ -60,7 +60,7 @@ class ERPH5Module(private val reactContext: ReactApplicationContext) :
             tmp.writeText(json.toString(), Charsets.UTF_8)
             tmp.renameTo(currentFile)
         } catch (e: Exception) {
-            Log.w("ERPH5", "写 current.json 失败", e)
+            Log.w("BaseH5", "写 current.json 失败", e)
             false
         }
     }

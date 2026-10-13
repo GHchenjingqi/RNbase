@@ -4,7 +4,7 @@
  * 系统级能力分两类：
  *  1. 纯 RN 可直接获取的系统状态：
  *     - getDarkMode / getLanguage / getScreenInfo / getAccessibility / getInfo
- *  2. 需原生实现的系统信息（ERPSystem 模块）：
+ *  2. 需原生实现的系统信息（BaseSystem 模块）：
  *     - getDeviceInfo（品牌/型号/系统版本/电量/存储/时区）
  *     - getBattery（电量/充电状态）
  *
@@ -212,7 +212,7 @@ export function registerSystemModule(server: BridgeServer, adapters: SystemAdapt
       };
     },
 
-    /** 设备信息（品牌/型号/系统版本/电量/存储/时区，需原生 ERPSystem）。 */
+    /** 设备信息（品牌/型号/系统版本/电量/存储/时区，需原生 BaseSystem）。 */
     async getDeviceInfo() {
       if (!adapters.deviceInfo) {
         throw new BridgeException('DEVICE_UNSUPPORTED', '设备信息能力未接入');
@@ -220,7 +220,7 @@ export function registerSystemModule(server: BridgeServer, adapters: SystemAdapt
       return adapters.deviceInfo();
     },
 
-    /** 电量与充电状态（需原生 ERPSystem）。 */
+    /** 电量与充电状态（需原生 BaseSystem）。 */
     async getBattery() {
       if (!adapters.deviceInfo) {
         throw new BridgeException('DEVICE_UNSUPPORTED', '电量能力未接入');

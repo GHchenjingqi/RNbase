@@ -7,7 +7,7 @@
  *  - BatteryManager：电量/充电状态
  *  - StatFs：存储空间
  */
-package com.qux.erp
+package com.qux.base
 
 import android.content.Context
 import android.os.BatteryManager
@@ -21,10 +21,10 @@ import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableNativeMap
 import java.util.TimeZone
 
-class ERPSystemModule(private val reactContext: ReactApplicationContext) :
+class BaseSystemModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "ERPSystem"
+    override fun getName(): String = "BaseSystem"
 
     @ReactMethod
     fun getDeviceInfo(promise: Promise) {

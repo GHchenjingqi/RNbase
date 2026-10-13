@@ -9,15 +9,15 @@
  * 公钥格式：PEM（SPKI），与 version.json h5PublicKey / config H5_UPDATE_PUBLIC_KEY 一致；
  * 内部剥离 SPKI 的 ASN.1 头得到 PKCS#1 RSAPublicKey 供 SecKeyCreateWithData 使用。
  *
- * 注册方式：本文件与 ERPH5.m 一起加入 Xcode 的 App Target（见 platforms/ios/TODO.md #3）。
+ * 注册方式：本文件与 BaseH5.m 一起加入 Xcode 的 App Target（见 platforms/ios/TODO.md #3）。
  */
 import Foundation
 import React
 import Security
 
-@objc(ERPH5)
-class ERPH5: NSObject, RCTBridgeModule {
-  static func moduleName() -> String! { "ERPH5" }
+@objc(BaseH5)
+class BaseH5: NSObject, RCTBridgeModule {
+  static func moduleName() -> String! { "BaseH5" }
   static func requiresMainQueueSetup() -> Bool { false }
 
   /// 校验包签名。入参均为 base64 / PEM 文本（与 JS 适配器的桥接契约一致）。

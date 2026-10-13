@@ -5,7 +5,7 @@
  * 追加写入 App 私有目录 <filesDir>/logs/device-YYYY-MM-DD.log（按日期分包，
  * 同一天一个文件）。私有目录无需额外权限，debug 构建可用 adb run-as 导出。
  */
-package com.qux.erp
+package com.qux.base
 
 import android.util.Log
 import com.facebook.react.bridge.Promise
@@ -20,10 +20,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class ERPLogModule(private val reactContext: ReactApplicationContext) :
+class BaseLogModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "ERPLog"
+    override fun getName(): String = "BaseLog"
 
     private val logsDir: File
         get() = File(reactContext.filesDir, "logs")
@@ -54,7 +54,7 @@ class ERPLogModule(private val reactContext: ReactApplicationContext) :
                 out.write(line.toByteArray(Charsets.UTF_8))
             }
         } catch (e: Exception) {
-            Log.w("ERPLog", "write log failed: $message", e)
+            Log.w("BaseLog", "write log failed: $message", e)
         }
     }
 

@@ -1,9 +1,9 @@
 /**
- * Android 远程全量升级原生模块（整包替换，与 ERPH5Module 的子包增量更新互不相干）。
+ * Android 远程全量升级原生模块（整包替换，与 BaseH5Module 的子包增量更新互不相干）。
  *
  * 对应 RN 侧 src/middleware/native/update-native-adapter.ts 调用的
- * NativeModules.ERPUpdate，注册方式：MainApplication.kt 的
- * packageList.add(ERPUpdatePackage())。iOS 无自装通道，不做实现。
+ * NativeModules.BaseUpdate，注册方式：MainApplication.kt 的
+ * packageList.add(BaseUpdatePackage())。iOS 无自装通道，不做实现。
  *
  * 为什么下载与查询拆成 startDownload + getProgress 两个方法：
  * H5 侧 Bridge 请求超时是 30s（scripts/api.js TIMEOUT_MS），几十 MB 的 APK
@@ -13,7 +13,7 @@
  * 落盘位置 getExternalFilesDir(null)/update：已被 file_paths.xml 的
  * external_files（path="."）覆盖，FileProvider 可直接授权给安装器。
  */
-package com.qux.erp
+package com.qux.base
 
 import android.content.ContentValues
 import android.content.Intent
@@ -37,10 +37,10 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.Executors
 
-class ERPUpdateModule(private val reactContext: ReactApplicationContext) :
+class BaseUpdateModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "ERPUpdate"
+    override fun getName(): String = "BaseUpdate"
 
     private val executor = Executors.newSingleThreadExecutor()
     private val stateLock = Any()

@@ -4,7 +4,7 @@
  * 为什么要有这个脚本而不是直接把 `react-native run-ios` 写进 package.json：
  *  1. Xcode、xcodebuild、CocoaPods 只存在于 macOS。Windows/Linux 上执行会抛
  *     `Command failed: xcodebuild`，看不出是「环境不对」还是「工程坏了」；
- *  2. 基座的 iOS 工程已到「模板 + 自研 ERP* 模块 + H5 入口」这一层，仍有少量需人工的项：
+ *  2. 基座的 iOS 工程已到「模板 + 自研 Base* 模块 + H5 入口」这一层，仍有少量需人工的项：
  *     - CLIENT_ID.ios 在 src/config/index.ts 仍是占位值，上架前必须替换；
  *     - 本地 H5 需把 h5/ 作为 folder reference 加进 Xcode App target（ios:sync-h5 同步资源）。
  *     这些必须让人在跑命令时就看到，而不是等装机后白屏再回源码找。
@@ -64,7 +64,7 @@ function printGuard(reason) {
 }
 
 /**
- * 自研原生模块清单（platforms/ios/<工程目录>/ERP*.{swift,m}）。
+ * 自研原生模块清单（platforms/ios/<工程目录>/Base*.{swift,m}）。
  * doctor 用它回答「iOS 侧到底有没有对应实现」，而不是靠人回忆。
  */
 function nativeSources() {
@@ -73,7 +73,7 @@ function nativeSources() {
   for (const entry of fs.readdirSync(iosDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
     for (const file of fs.readdirSync(path.join(iosDir, entry.name))) {
-      if (/^ERP.*\.(swift|m)$/.test(file)) {
+      if (/^Base.*\.(swift|m)$/.test(file)) {
         found.push(`${entry.name}/${file}`);
       }
     }
@@ -96,7 +96,7 @@ function doctor() {
   );
   const ws = findWorkspace();
   lines.push(`workspace：${ws || '缺失（pod install 之后才有）'}`);
-  lines.push(`自研原生模块：${nativeSources().join(', ') || '未发现 ERP*.{swift,m}'}`);
+  lines.push(`自研原生模块：${nativeSources().join(', ') || '未发现 Base*.{swift,m}'}`);
 
   // clientId 占位校验：直接扫 config 源文件，避免引入 TS 解析依赖。
   const configPath = path.join(root, 'src', 'config', 'index.ts');

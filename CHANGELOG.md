@@ -5,6 +5,16 @@
 
 ## [Unreleased]
 
+### Changed（ERP→Base 全平台命名去业务化，2026-10-13）
+- 依据 ADR-0003 判定线清理业务语义残留（源自抽离前宿主项目「精易ERP」）：
+  `ERPCapabilities/ERPNetwork/ERPPermissions/ERPH5/ERPLog/ERPSystem/ERPUpdate` → `Base*`；
+  Android 包 `com.qux.erp` → `com.qux.base`；Harmony `ets/erp/` → `ets/base/`；
+  占位域名 `mobile-erp.example.com` → `mobile-base.example.com`；`erp://` 示例 → `base://`。
+- JS↔原生模块名字符串三平台同步（src 15 文件 + Kotlin 12 + Swift/.m 7 + ets/cpp 8）；
+  用户可见权限文案「精易ERP」→「本应用」；`ios.js` doctor 正则同步。
+- 验证：tsc/eslint/jest 492/492 全绿；Android gradle 在本机存在预存在的
+  settings-plugin Kotlin 编译环境问题（未改动 HEAD 同样失败，与本次无关）。
+
 ### Added（P3-3 Bridge 能力清单生成器，2026-10-13）
 - `scripts/gen-api-doc.js`：从 `api.js` 注册表生成 `docs/BRIDGE_API.generated.md`（59 方法 + 6 APPMANAGER 特例），
   与 RN 侧注册交叉比对漂移（RN 侧 25 模块未在 H5 SDK 暴露）；`--check` 门禁已接入主 CI。
@@ -12,9 +22,9 @@
 ### Added（iOS 原生预实现 + 真机待办收敛，2026-10-13）
 - `platforms/ios/TODO.md`：全部需 Mac/真机/后端值的待办（步骤 + 验收标准），原生待办单一真源。
 - `platforms/ios/ExportOptions.plist`：出 ipa 的 `xcodebuild -exportArchive` 模板。
-- `ERPCapabilities.swift` 新增 `getDeviceIntegrity` 越狱探针（特征文件 + 沙盒外写入探测，待真机验证）。
-- 新增 `ERPH5.swift/.m`：`verifyPackageSignature`（SecKey RSASSA-PKCS1v15-SHA256 + SPKI→PKCS#1 走查，待 Xcode 编译验证）。
-- `src/updater/native-signature-verifier.ts`：原生校验适配器（探测 NativeModules.ERPH5 + 手写 base64 + 大包防护阈值），
+- `BaseCapabilities.swift` 新增 `getDeviceIntegrity` 越狱探针（特征文件 + 沙盒外写入探测，待真机验证）。
+- 新增 `BaseH5.swift/.m`：`verifyPackageSignature`（SecKey RSASSA-PKCS1v15-SHA256 + SPKI→PKCS#1 走查，待 Xcode 编译验证）。
+- `src/updater/native-signature-verifier.ts`：原生校验适配器（探测 NativeModules.BaseH5 + 手写 base64 + 大包防护阈值），
   orchestrator 校验器优先级：注入 > 原生 > Web Crypto > 无。
 
 ### Added（P2 安全与可观测深化，2026-10-13）
@@ -30,7 +40,7 @@
 ### Added（P1 补齐 iOS，2026-10-13）
 - iOS H5 入口分支：原生 `H5BundleBasePath` 拼本地入口，未就绪回退远程/渲染配置缺失错误页。
 - `validateClientIds()` 启动校验：占位 clientId 装机前告警。
-- `ERPCapabilities.swift` 暴露 `H5BundleBasePath` 常量。
+- `BaseCapabilities.swift` 暴露 `H5BundleBasePath` 常量。
 - `scripts/ios-sync-h5.mjs` 资源同步 + `ios.js` doctor/build 增强 + `ios:sync-h5` 脚本。
 - `.github/workflows/ci-ios.yml`（macOS runner，独立不阻塞主 CI）。
 

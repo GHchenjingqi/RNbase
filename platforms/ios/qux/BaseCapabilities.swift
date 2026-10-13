@@ -2,9 +2,9 @@
  * iOS 能力原生模块（Skill 规则 11/13/51）。
  *
  * 对应 RN 侧 src/native/capabilityNativeAdapters.ts 调用的
- * NativeModules.ERPCapabilities。
+ * NativeModules.BaseCapabilities。
  *
- * 注册方式：将本文件加入 Xcode 的 App Target。导出 JS 名为 "ERPCapabilities"。
+ * 注册方式：将本文件加入 Xcode 的 App Target。导出 JS 名为 "BaseCapabilities"。
  *
  * 说明：scan 依赖扫码三方库（如 Vision / 自定义扫码页），此处保留标准占位实现，
  * 可按项目实际扫码方案替换；其余能力使用系统 API。
@@ -16,9 +16,9 @@ import Photos
 import React
 import UIKit
 
-@objc(ERPCapabilities)
-class ERPCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
-  static func moduleName() -> String! { "ERPCapabilities" }
+@objc(BaseCapabilities)
+class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
+  static func moduleName() -> String! { "BaseCapabilities" }
   static func requiresMainQueueSetup() -> Bool { false }
 
   // MARK: - 常量导出（JS 同步读取，避免异步等待）
@@ -297,7 +297,7 @@ class ERPCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
   }
 }
 
-extension ERPCapabilities: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+extension BaseCapabilities: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
   func imagePickerController(
     _ picker: UIImagePickerController,
     didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]

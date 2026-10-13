@@ -76,7 +76,7 @@ export function createLogger(sink: LogSink = console.log) {
   return {
     log(event: AppEvent): void {
       const safe = redact(event) as AppEvent;
-      sink(`[erp] ${JSON.stringify(safe)}`);
+      sink(`[base] ${JSON.stringify(safe)}`);
     },
     redact,
   };

@@ -63,13 +63,13 @@ let nfcDetected = false;
 function detectNfcAvailability(): void {
   if (nfcDetected) return;
   nfcDetected = true;
-  const native = (NativeModules as Record<string, unknown>).ERPCapabilities as
+  const native = (NativeModules as Record<string, unknown>).BaseCapabilities as
     | { nfcAvailable?: () => Promise<{ available: boolean }> }
     | undefined;
   if (!native?.nfcAvailable) return;
   native
     .nfcAvailable()
-    .then(r => {
+    .then((r) => {
       nfcAvailableCache = Boolean(r?.available);
     })
     .catch(() => {
@@ -99,7 +99,7 @@ function getCapabilities(): Capabilities {
 /** 能力 features 对象 → 可用能力名数组（过滤 false），用于握手回执与 bridge.ready 事件。 */
 function featuresToArray(features: Capabilities['features']): string[] {
   return (Object.keys(features) as (keyof Capabilities['features'])[]).filter(
-    k => features[k] === true,
+    (k) => features[k] === true
   );
 }
 

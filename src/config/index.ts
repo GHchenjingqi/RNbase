@@ -41,7 +41,7 @@ export const CLIENT_ID = {
   ios: 'PLEASE_SET_IOS_CLIENT_ID',
   /**
    * 鸿蒙包 clientId。后端尚未为鸿蒙端分配独立值前，暂时复用安卓 id：
-   * 鸿蒙包走的是同一套 ERP 账号体系，凭空造一个 id 会让登录直接被拒。
+   * 鸿蒙包走的是同一套基座账号体系，凭空造一个 id 会让登录直接被拒。
    * 后端注册后把这里换成独立值即可，无需改任何调用方。
    */
   harmony: '428a8310cd442757ae699df5d894f051',
@@ -280,7 +280,7 @@ export const PERF_DEFAULT_BASELINES: PerformanceBaseline[] = [
 ];
 
 /** H5 版本清单地址（规则 6/28）。 */
-export const H5_MANIFEST_URL = 'https://mobile-erp.example.com/manifest.json';
+export const H5_MANIFEST_URL = 'https://mobile-base.example.com/manifest.json';
 
 /**
  * Feature Flag 开关地址（P3 通用基座能力，运行时开关不发版止血）。
@@ -353,7 +353,7 @@ export const REMOTE_H5_ORIGIN: string | null = (() => {
 
 /** WebView 信任源 / 域名白名单（规则 24/25）。 */
 export const DOMAIN_WHITELIST: string[] = (() => {
-  const list = ['https://mobile-erp.example.com'];
+  const list = ['https://mobile-base.example.com'];
   // 远程模式下站点自己就是第一信任源，否则 BridgeServer 的来源校验会拒掉它的消息。
   if (REMOTE_H5_ORIGIN) {
     list.push(REMOTE_H5_ORIGIN);

@@ -2,11 +2,11 @@
  * Android 能力原生模块（Skill 规则 11/13/51）。
  *
  * 对应 RN 侧 src/middleware/native/capability-native-adapters.ts 调用的
- * NativeModules.ERPCapabilities。
+ * NativeModules.BaseCapabilities。
  *
- * 注册方式：在 MainApplication.kt 的 packageList 中 add(ERPCapabilitiesPackage())。
+ * 注册方式：在 MainApplication.kt 的 packageList 中 add(BaseCapabilitiesPackage())。
  */
-package com.qux.erp
+package com.qux.base
 
 import android.app.Activity
 import android.Manifest
@@ -48,10 +48,10 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 
-class ERPCapabilitiesModule(private val reactContext: ReactApplicationContext) :
+class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
 
-    override fun getName(): String = "ERPCapabilities"
+    override fun getName(): String = "BaseCapabilities"
 
     private var pendingPromise: Promise? = null
     private var pendingRequestCode = -1
@@ -360,7 +360,7 @@ class ERPCapabilitiesModule(private val reactContext: ReactApplicationContext) :
                                 } else {
                                     promise.reject(
                                         "PERMISSION_DENIED",
-                                        "通知权限被拒绝，请在系统设置 → 应用 → 精易ERP → 通知中开启通知权限",
+                                        "通知权限被拒绝，请在系统设置 → 应用 → 本应用 → 通知中开启通知权限",
                                     )
                                 }
                                 return true
@@ -456,7 +456,7 @@ class ERPCapabilitiesModule(private val reactContext: ReactApplicationContext) :
             // 检查是否有相机应用；模拟器（如雷电）可能未预装相机，此时降级为从相册选图
             if (intent.resolveActivity(reactContext.packageManager) == null) {
                 android.util.Log.w(
-                    "ERPCapabilities",
+                    "BaseCapabilities",
                     "未找到相机应用，降级为从相册选图（模拟器环境常见）",
                 )
                 pendingPromise = promise
@@ -753,13 +753,13 @@ class ERPCapabilitiesModule(private val reactContext: ReactApplicationContext) :
             NfcAdapter.FLAG_READER_NFC_V or
             NfcAdapter.FLAG_READER_NFC_BARCODE
 
-        android.util.Log.d("ERPCapabilities", "NFC readTag: enableReaderMode, timeout=${timeoutMs}ms")
+        android.util.Log.d("BaseCapabilities", "NFC readTag: enableReaderMode, timeout=${timeoutMs}ms")
 
         // enableReaderMode 必须在主线程调用
         activity.runOnUiThread {
             try {
                 nfcAdapter.enableReaderMode(activity, { tag ->
-                    android.util.Log.d("ERPCapabilities", "NFC tag discovered: ${bytesToHex(tag.id)}")
+                    android.util.Log.d("BaseCapabilities", "NFC tag discovered: ${bytesToHex(tag.id)}")
                     val result = readNdefFromTag(tag)
                     activity.runOnUiThread {
                         try { nfcAdapter.disableReaderMode(activity) } catch (_: Exception) {}
@@ -784,7 +784,7 @@ class ERPCapabilitiesModule(private val reactContext: ReactApplicationContext) :
             // 超时兜底（在主线程 post）
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 if (pendingRequestCode == REQUEST_NFC_READ) {
-                    android.util.Log.d("ERPCapabilities", "NFC readTag timeout")
+                    android.util.Log.d("BaseCapabilities", "NFC readTag timeout")
                     try { nfcAdapter.disableReaderMode(activity) } catch (_: Exception) {}
                     val p = pendingPromise
                     pendingPromise = null
@@ -831,12 +831,12 @@ class ERPCapabilitiesModule(private val reactContext: ReactApplicationContext) :
             NfcAdapter.FLAG_READER_NFC_V or
             NfcAdapter.FLAG_READER_NFC_BARCODE
 
-        android.util.Log.d("ERPCapabilities", "NFC writeNdef: enableReaderMode, records=${ndefRecords.size}")
+        android.util.Log.d("BaseCapabilities", "NFC writeNdef: enableReaderMode, records=${ndefRecords.size}")
 
         activity.runOnUiThread {
             try {
                 nfcAdapter.enableReaderMode(activity, { tag ->
-                    android.util.Log.d("ERPCapabilities", "NFC write tag discovered: ${bytesToHex(tag.id)}")
+                    android.util.Log.d("BaseCapabilities", "NFC write tag discovered: ${bytesToHex(tag.id)}")
                     val success = writeNdefToTag(tag, ndefMessage)
                     activity.runOnUiThread {
                         try { nfcAdapter.disableReaderMode(activity) } catch (_: Exception) {}

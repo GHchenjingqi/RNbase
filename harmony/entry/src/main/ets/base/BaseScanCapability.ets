@@ -2,15 +2,15 @@
  * 扫码（Scan Kit）。
  *
  * 单独成文件只为隔离风险：Scan Kit 属于 HMS SDK，OpenHarmony 运行时（本机模拟器）里没有
- * 对应实现。若在 ERPCapabilitiesTurboModule.ets 里静态 import，模块加载失败会连带剪贴板、
- * 日志、文件等全部能力一起挂掉；因此那边用 `import('./ERPScanCapability')` 懒加载，
+ * 对应实现。若在 BaseCapabilitiesTurboModule.ets 里静态 import，模块加载失败会连带剪贴板、
+ * 日志、文件等全部能力一起挂掉；因此那边用 `import('./BaseScanCapability')` 懒加载，
  * 只有真机点「扫码」时才解析本文件。
  */
 import { scanBarcode, scanCore } from '@kit.ScanKit';
 import type { BusinessError } from '@ohos.base';
 import { common } from '@kit.AbilityKit';
 
-export interface ERPScanResult {
+export interface BaseScanResult {
   code: string;
   format: string;
 }
@@ -118,7 +118,7 @@ const CODE_CANCELLED: number = 1000500002;
 export async function scanWithScanKit(
   context: common.UIAbilityContext,
   formats: string[],
-): Promise<ERPScanResult> {
+): Promise<BaseScanResult> {
   const types: scanCore.ScanType[] = [];
   if (formats !== undefined && formats !== null) {
     for (const item of formats) {
@@ -143,7 +143,7 @@ export async function scanWithScanKit(
     }
     throw new Error(`扫码失败（code=${biz ? biz.code : 'unknown'} ${biz ? biz.message : error}）`);
   }
-  const result: ERPScanResult = {
+  const result: BaseScanResult = {
     code: scanned.originalValue,
     format: scanTypeName(scanned.scanType),
   };

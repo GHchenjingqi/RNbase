@@ -208,7 +208,7 @@ type SubtleCryptoLike = {
  *
  * 仅在运行环境提供 Web Crypto `crypto.subtle`（浏览器 / Node / 部分 RN polyfill）时可用；
  * RN/Hermes 原生环境通常为 null —— 此时应在 UpdateOrchestrator 注入原生签名校验器
- * （如 ERPH5.verifyPackageSignature），否则 required 策略会报 signature_verifier_unavailable。
+ * （如 BaseH5.verifyPackageSignature），否则 required 策略会报 signature_verifier_unavailable。
  */
 export const defaultSignatureVerifier: SignatureVerifier | null = (() => {
   const subtle = (

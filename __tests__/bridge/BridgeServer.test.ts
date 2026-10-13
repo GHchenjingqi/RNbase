@@ -25,7 +25,7 @@ describe('BridgeServer', () => {
   });
 
   test('register + handle 正常返回', async () => {
-    server.register('test', 'echo', params => ({ echoed: params }));
+    server.register('test', 'echo', (params) => ({ echoed: params }));
     const req = makeRequest({
       module: 'test',
       action: 'echo',
@@ -42,11 +42,11 @@ describe('BridgeServer', () => {
       sub: (params: { a: number; b: number }) => params.a - params.b,
     });
     const res1 = await server.handle(
-      makeRequest({ module: 'test', action: 'add', params: { a: 1, b: 2 } }),
+      makeRequest({ module: 'test', action: 'add', params: { a: 1, b: 2 } })
     );
     expect(res1.data).toBe(3);
     const res2 = await server.handle(
-      makeRequest({ module: 'test', action: 'sub', params: { a: 5, b: 3 } }),
+      makeRequest({ module: 'test', action: 'sub', params: { a: 5, b: 3 } })
     );
     expect(res2.data).toBe(2);
   });
@@ -80,7 +80,7 @@ describe('BridgeServer', () => {
     server.register(
       'test',
       'slow',
-      () => new Promise(resolve => setTimeout(() => resolve('done'), 2000)),
+      () => new Promise((resolve) => setTimeout(() => resolve('done'), 2000))
     );
     const res = await server.handle(makeRequest({ module: 'test', action: 'slow' }));
     expect(res.success).toBe(false);
@@ -105,16 +105,16 @@ describe('BridgeServer', () => {
 
   test('origin 校验：受信 origin 通过', async () => {
     const s = new BridgeServer({
-      trustedOrigins: ['https://mobile-erp.example.com'],
+      trustedOrigins: ['https://mobile-base.example.com'],
     });
     s.register('test', 'echo', () => 'ok');
-    const res = await s.handle(makeRequest(), 'https://mobile-erp.example.com/page');
+    const res = await s.handle(makeRequest(), 'https://mobile-base.example.com/page');
     expect(res.success).toBe(true);
   });
 
   test('origin 校验：非受信 origin 拒绝', async () => {
     const s = new BridgeServer({
-      trustedOrigins: ['https://mobile-erp.example.com'],
+      trustedOrigins: ['https://mobile-base.example.com'],
     });
     s.register('test', 'echo', () => 'ok');
     const res = await s.handle(makeRequest(), 'https://evil.com');
@@ -164,7 +164,7 @@ describe('BridgeServer', () => {
         module: 'test',
         action: 'echo',
         success: true,
-      }),
+      })
     );
   });
 });

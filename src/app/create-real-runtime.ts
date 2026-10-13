@@ -3,11 +3,11 @@
  *
  *  - manifest 拉取：ManifestClient 读 config.H5_MANIFEST_URL
  *  - 包下载：PackageDownloader + RN fetch（带重试/进度）
- *  - 校验：原生 ERPH5 SHA-256（Hermes 无 Web Crypto）
- *  - 落盘/激活/回滚：原生 ERPH5（filesDir/h5-versions/ + current.json 原子切换）
+ *  - 校验：原生 BaseH5 SHA-256（Hermes 无 Web Crypto）
+ *  - 落盘/激活/回滚：原生 BaseH5（filesDir/h5-versions/ + current.json 原子切换）
  *
  * 原生模块缺失时（测试/浏览器环境）降级为内存演示运行时，保证可启动。
- * 鸿蒙同理：ERPH5 只在安卓原生侧实现（RNOH 未移植），所以「H5 子包整包远程升级」
+ * 鸿蒙同理：BaseH5 只在安卓原生侧实现（RNOH 未移植），所以「H5 子包整包远程升级」
  * 目前是安卓专属能力，鸿蒙走下面这条降级分支，不会崩。
  */
 import { NativeModules } from 'react-native';
@@ -20,8 +20,8 @@ import { createDemoRuntime } from './create-demo-runtime';
 import { deviceLogger } from '../diagnostics/device-logger';
 
 export function createRealRuntime(): H5Runtime {
-  if (!NativeModules.ERPH5) {
-    deviceLogger.warn('ERPH5 原生模块未注册，降级为内存演示运行时');
+  if (!NativeModules.BaseH5) {
+    deviceLogger.warn('BaseH5 原生模块未注册，降级为内存演示运行时');
     return createDemoRuntime();
   }
 
@@ -36,7 +36,7 @@ export function createRealRuntime(): H5Runtime {
     verifier: { sha256: nativeSha256Hasher },
     appVersion: APP_VERSION,
     bridgeVersion: BRIDGE_VERSION,
-    onStateChange: state => {
+    onStateChange: (state) => {
       deviceLogger.info(`h5.update.state=${state}`);
     },
   });

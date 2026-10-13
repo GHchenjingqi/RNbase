@@ -7,26 +7,26 @@
  * 只在 ArkTS 侧实现的模块必须同时在 C++ 侧登记方法名，否则 JS 取用时会抛
  * `Couldn't find Turbo Module on the ArkTs side`（缺 ArkTS 那半边）或拿到
  * `undefined` 方法（缺 C++ 那半边的 `methodMap_`）。两边名字要一起加，
- * 见 `src/main/cpp/ERPTurboModules.h`。
+ * 见 `src/main/cpp/BaseTurboModules.h`。
  */
 import type { UITurboModuleContext } from '@rnoh/react-native-openharmony';
 import { RNOHPackage } from '@rnoh/react-native-openharmony';
 import type { UITurboModule } from '@rnoh/react-native-openharmony';
-import { ERPCapabilitiesTurboModule } from './ERPCapabilitiesTurboModule';
-import { ERPLogTurboModule } from './ERPLogTurboModule';
-import { ERPNetworkTurboModule } from './ERPNetworkTurboModule';
-import { ERPSystemTurboModule } from './ERPSystemTurboModule';
+import { BaseCapabilitiesTurboModule } from './BaseCapabilitiesTurboModule';
+import { BaseLogTurboModule } from './BaseLogTurboModule';
+import { BaseNetworkTurboModule } from './BaseNetworkTurboModule';
+import { BaseSystemTurboModule } from './BaseSystemTurboModule';
 
-export class ERPPackage extends RNOHPackage {
+export class BasePackage extends RNOHPackage {
   override getUITurboModuleFactoryByNameMap(): Map<string, (ctx: UITurboModuleContext) => UITurboModule | null> {
     return new Map<string, ((ctx: UITurboModuleContext) => UITurboModule)>()
-      .set(ERPSystemTurboModule.NAME, (ctx) => new ERPSystemTurboModule(ctx))
-      .set(ERPLogTurboModule.NAME, (ctx) => new ERPLogTurboModule(ctx))
-      .set(ERPNetworkTurboModule.NAME, (ctx) => new ERPNetworkTurboModule(ctx))
-      .set(ERPCapabilitiesTurboModule.NAME, (ctx) => new ERPCapabilitiesTurboModule(ctx));
+      .set(BaseSystemTurboModule.NAME, (ctx) => new BaseSystemTurboModule(ctx))
+      .set(BaseLogTurboModule.NAME, (ctx) => new BaseLogTurboModule(ctx))
+      .set(BaseNetworkTurboModule.NAME, (ctx) => new BaseNetworkTurboModule(ctx))
+      .set(BaseCapabilitiesTurboModule.NAME, (ctx) => new BaseCapabilitiesTurboModule(ctx));
   }
 
   getDebugName(): string {
-    return 'ERP';
+    return 'Base';
   }
 }

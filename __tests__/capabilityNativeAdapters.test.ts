@@ -1,5 +1,5 @@
 /**
- * 原生能力适配器单测：验证对接 NativeModules.ERPCapabilities，
+ * 原生能力适配器单测：验证对接 NativeModules.BaseCapabilities，
  * 以及原生未链接时安全降级为空（模块返回 DEVICE_UNSUPPORTED）。
  *
  * 剪贴板 / 应用管理按「原生方法存在性」逐项挂载：iOS 只实现 appOpenSettings，
@@ -10,7 +10,7 @@ import { BridgeException } from '../src/bridge/bridge-error';
 import { resolveNativeCapabilityAdapters } from '../src/middleware/native/capability-native-adapters';
 
 function installMockNative(overrides: Record<string, unknown> = {}) {
-  (NativeModules as Record<string, unknown>).ERPCapabilities = {
+  (NativeModules as Record<string, unknown>).BaseCapabilities = {
     scan: jest.fn(async () => ({ code: 'X' })),
     takePhoto: jest.fn(async () => ({ uri: 'f.jpg' })),
     pickImage: jest.fn(async () => ({
@@ -33,7 +33,7 @@ function installMockNative(overrides: Record<string, unknown> = {}) {
 
 describe('resolveNativeCapabilityAdapters', () => {
   afterEach(() => {
-    delete (NativeModules as Record<string, unknown>).ERPCapabilities;
+    delete (NativeModules as Record<string, unknown>).BaseCapabilities;
   });
 
   it('returns empty when native module absent (graceful degrade)', () => {
@@ -68,13 +68,13 @@ describe('resolveNativeCapabilityAdapters', () => {
 
   it('maps clipboard methods to getString/setString/hasString', async () => {
     installMockNative({
-      clipboardGetString: jest.fn(async () => ({ text: 'ERP-001' })),
+      clipboardGetString: jest.fn(async () => ({ text: 'BASE-001' })),
       clipboardSetString: jest.fn(async () => ({ ok: true })),
       clipboardHasString: jest.fn(async () => ({ has: true })),
     });
     const clipboard = resolveNativeCapabilityAdapters().clipboard!;
-    expect(await clipboard.getString()).toEqual({ text: 'ERP-001' });
-    expect(await clipboard.setString('ERP-001')).toEqual({ ok: true });
+    expect(await clipboard.getString()).toEqual({ text: 'BASE-001' });
+    expect(await clipboard.setString('BASE-001')).toEqual({ ok: true });
     expect(await clipboard.hasString!()).toEqual({ has: true });
   });
 
@@ -86,7 +86,7 @@ describe('resolveNativeCapabilityAdapters', () => {
     });
     const err = await resolveNativeCapabilityAdapters()
       .clipboard!.getString()
-      .catch(e => e as BridgeException);
+      .catch((e) => e as BridgeException);
     expect(err).toBeInstanceOf(BridgeException);
     expect(err.error.code).toBe('NATIVE_ERROR');
     expect(err.error.message).toContain('no focus');

@@ -1,8 +1,8 @@
 /**
- * 鸿蒙侧 ERPCapabilities TurboModule。
+ * 鸿蒙侧 BaseCapabilities TurboModule。
  *
  * 方法名与返回体按 RNbase 的 JS 契约（`src/middleware/native/capability-native-adapters.ts`
- * 的 `ERPCapabilitiesNative`）对齐，而不是照抄安卓的 `ERPCapabilitiesModule.kt`：
+ * 的 `BaseCapabilitiesNative`）对齐，而不是照抄安卓的 `BaseCapabilitiesModule.kt`：
  * RN 侧按「方法存在与否」挂载适配器，名字对不上就等于能力不存在。
  * 从 jingyi 基座搬来时改过名：copy→clipboardSetString、paste→clipboardGetString、
  * openSystemSettings→appOpenSystemSettings。
@@ -13,7 +13,7 @@
  * fileOpen / setBadge / sendNotification / getCurrentPosition / takePhoto / pickImage /
  * saveImage / filePick / playSound / scan（Scan Kit 走懒加载，只在真机生效）。
  *
- * 故意「不注册」的方法（ArkTS 与 `cpp/ERPTurboModules.h` 同时删除）：
+ * 故意「不注册」的方法（ArkTS 与 `cpp/BaseTurboModules.h` 同时删除）：
  * appInstalled（需系统级 GET_BUNDLE_INFO_PRIVILEGED）、appOpen / appOpenStore（鸿蒙无
  * 「按包名拉起」的公开入口）、nfcAvailable / nfcReadTag / nfcWriteNdef（需真机 NFC 标签，
  * 且读标签要 system API）。JS 侧取不到这些方法 → 对应能力报 DEVICE_UNSUPPORTED，
@@ -39,79 +39,79 @@ import { systemShare } from '@kit.ShareKit';
 import { uniformTypeDescriptor as utd } from '@kit.ArkData';
 import { abilityAccessCtrl, common, type Permissions } from '@kit.AbilityKit';
 import { UITurboModule } from '@rnoh/react-native-openharmony';
-import type { ERPScanResult } from './ERPScanCapability';
+import type { BaseScanResult } from './BaseScanCapability';
 
-export interface ERPOkResult {
+export interface BaseOkResult {
   ok: boolean;
 }
 
 /** JS 侧 clipboardGetString 读的是 text（不是 content）。 */
-export interface ERPClipboardGetResult {
+export interface BaseClipboardGetResult {
   text: string;
 }
 
-export interface ERPClipboardHasResult {
+export interface BaseClipboardHasResult {
   has: boolean;
 }
 
 /** appOpenSettings / appOpenSystemSettings 的返回体，字段名与安卓一致。 */
-export interface ERPOpenSettingsResult {
+export interface BaseOpenSettingsResult {
   opened: boolean;
 }
 
-export interface ERPReadFileResult {
+export interface BaseReadFileResult {
   base64: string;
   mimeType: string;
   name: string;
   size: number;
 }
 
-export interface ERPDownloadResult {
+export interface BaseDownloadResult {
   uri: string;
 }
 
-export interface ERPOpenFileResult {
+export interface BaseOpenFileResult {
   opened: boolean;
 }
 
-export interface ERPPositionResult {
+export interface BasePositionResult {
   latitude: number;
   longitude: number;
   accuracy: number;
   provider: string;
 }
 
-export interface ERPSendNotificationResult {
+export interface BaseSendNotificationResult {
   ok: boolean;
   notificationId: number;
 }
 
 /** 选中/拍照后的文件描述，字段与 Android 侧 buildFileMap 一致。 */
-export interface ERPFileItem {
+export interface BaseFileItem {
   uri: string;
   name: string;
   mimeType: string;
   size: number;
 }
 
-export interface ERPFilesResult {
-  files: ERPFileItem[];
+export interface BaseFilesResult {
+  files: BaseFileItem[];
 }
 
-export interface ERPTakePhotoResult {
+export interface BaseTakePhotoResult {
   uri: string;
 }
 
-export interface ERPSaveImageResult {
+export interface BaseSaveImageResult {
   saved: boolean;
 }
 
 /** JS 侧 pickImage(opts) 传的是对象，不是裸 boolean（见 capabilityNativeAdapters.ts）。 */
-export interface ERPImagePickOptions {
+export interface BaseImagePickOptions {
   multiple?: boolean;
 }
 
-export interface ERPFilePickOptions {
+export interface BaseFilePickOptions {
   accept?: string[];
   multiple?: boolean;
 }
@@ -131,7 +131,7 @@ function describeError(error: Object, fallback: string): string {
   return `${fallback}：${error}`;
 }
 
-/** 后缀 → MIME；Android 侧用系统 MimeTypeMap，鸿蒙没有等价公开 API，这里覆盖 ERP 用到的类型。 */
+/** 后缀 → MIME；Android 侧用系统 MimeTypeMap，鸿蒙没有等价公开 API，这里覆盖基座用到的类型。 */
 // ArkTS 不收对象字面量形式的 Map 初始化（arkts-no-untyped-obj-literals），故用链式 set 构造。
 function buildMimeMap(): Map<string, string> {
   const map: Map<string, string> = new Map<string, string>();
@@ -178,35 +178,35 @@ function toFsTarget(uri: string): string {
   return uri;
 }
 
-export class ERPCapabilitiesTurboModule extends UITurboModule {
-  public static readonly NAME: string = 'ERPCapabilities';
+export class BaseCapabilitiesTurboModule extends UITurboModule {
+  public static readonly NAME: string = 'BaseCapabilities';
 
   // ===================== 剪贴板 =====================
 
-  async clipboardSetString(text: string): Promise<ERPOkResult> {
+  async clipboardSetString(text: string): Promise<BaseOkResult> {
     try {
       const data: pasteboard.PasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
       await pasteboard.getSystemPasteboard().setData(data);
-      const result: ERPOkResult = { ok: true };
+      const result: BaseOkResult = { ok: true };
       return result;
     } catch (error) {
-      this.ctx.logger.error(`[ERPCapabilities] clipboardSetString 失败: ${error}`);
+      this.ctx.logger.error(`[BaseCapabilities] clipboardSetString 失败: ${error}`);
       throw new Error('复制失败');
     }
   }
 
-  async clipboardGetString(): Promise<ERPClipboardGetResult> {
+  async clipboardGetString(): Promise<BaseClipboardGetResult> {
     try {
       const data: pasteboard.PasteData = await pasteboard.getSystemPasteboard().getData();
       const text: string | undefined = data.getPrimaryText();
-      const result: ERPClipboardGetResult = { text: text ? text : '' };
+      const result: BaseClipboardGetResult = { text: text ? text : '' };
       return result;
     } catch (error) {
       // 剪贴板为空时 getData 会抛，按 Android 的语义回空串而不是报错。
       // 模拟器实测：读取系统剪贴板会被 pasteboard 服务判为需要
       // ohos.permission.READ_PASTEBOARD（受限权限，上架要单独申请），日志留痕便于真机复查。
-      this.ctx.logger.warn(`[ERPCapabilities] clipboardGetString 读取失败，按空内容返回: ${error}`);
-      const result: ERPClipboardGetResult = { text: '' };
+      this.ctx.logger.warn(`[BaseCapabilities] clipboardGetString 读取失败，按空内容返回: ${error}`);
+      const result: BaseClipboardGetResult = { text: '' };
       return result;
     }
   }
@@ -216,22 +216,22 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * 这里复用 getData + getPrimaryText（本文件已验证可用的两个 API），不去调
    * SystemPasteboard.hasData()：该接口在不同 API 版本上的可用性不一致，宁可多一次读取。
    */
-  async clipboardHasString(): Promise<ERPClipboardHasResult> {
+  async clipboardHasString(): Promise<BaseClipboardHasResult> {
     let has: boolean = false;
     try {
       const data: pasteboard.PasteData = await pasteboard.getSystemPasteboard().getData();
       has = (data.getPrimaryText() ?? '').length > 0;
     } catch (error) {
-      this.ctx.logger.warn(`[ERPCapabilities] clipboardHasString 读取失败，按无内容返回: ${error}`);
+      this.ctx.logger.warn(`[BaseCapabilities] clipboardHasString 读取失败，按无内容返回: ${error}`);
       has = false;
     }
-    const result: ERPClipboardHasResult = { has: has };
+    const result: BaseClipboardHasResult = { has: has };
     return result;
   }
 
   // ===================== 系统分享面板 =====================
 
-  async share(title: string, text: string, url: string): Promise<ERPOkResult> {
+  async share(title: string, text: string, url: string): Promise<BaseOkResult> {
     // SharedData 的构造函数只收单条 record（`constructor(record: SharedRecord)`），
     // 所以第一条走构造、其余走 addRecord。
     let sharedData: systemShare.SharedData | null = null;
@@ -266,10 +266,10 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
         selectionMode: systemShare.SelectionMode.BATCH,
       });
     } catch (error) {
-      this.ctx.logger.error(`[ERPCapabilities] share 面板拉起失败: ${error}`);
+      this.ctx.logger.error(`[BaseCapabilities] share 面板拉起失败: ${error}`);
       throw new Error('分享失败');
     }
-    const result: ERPOkResult = { ok: true };
+    const result: BaseOkResult = { ok: true };
     return result;
   }
 
@@ -279,7 +279,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * 拉起设置应用。鸿蒙没有「按 action 跳设置子页」的公开入口，所以只有两档：
    * appDetail=true 进「本应用详情页」（settingsParamBundleName 参数），否则进设置首页。
    */
-  private async startSettings(appDetail: boolean): Promise<ERPOpenSettingsResult> {
+  private async startSettings(appDetail: boolean): Promise<BaseOpenSettingsResult> {
     const bundleName: string = this.ctx.uiAbilityContext.abilityInfo.bundleName;
     // ArkTS 不收 `Record` 的字面量初始化（arkts-no-untyped-obj-literals），先建空
     // Record 再按key赋值。
@@ -299,15 +299,15 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     try {
       await this.ctx.uiAbilityContext.startAbility(want);
     } catch (error) {
-      this.ctx.logger.error(`[ERPCapabilities] 拉起设置失败(appDetail=${appDetail}): ${error}`);
+      this.ctx.logger.error(`[BaseCapabilities] 拉起设置失败(appDetail=${appDetail}): ${error}`);
       throw new Error('打开系统设置失败');
     }
-    const result: ERPOpenSettingsResult = { opened: true };
+    const result: BaseOpenSettingsResult = { opened: true };
     return result;
   }
 
   /** 本应用详情页：JS 侧 appManager.openAppSettings。 */
-  async appOpenSettings(): Promise<ERPOpenSettingsResult> {
+  async appOpenSettings(): Promise<BaseOpenSettingsResult> {
     return await this.startSettings(true);
   }
 
@@ -315,7 +315,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * JS 侧 appManager.openSystemSettings(action)。wifi/bluetooth/location 等 action
    * 在鸿蒙无对应入口，一律落到设置首页；只有明确指向应用详情的 action 才进详情页。
    */
-  async appOpenSystemSettings(action: string): Promise<ERPOpenSettingsResult> {
+  async appOpenSystemSettings(action: string): Promise<BaseOpenSettingsResult> {
     const isAppDetail: boolean = !action || action === 'application_details' || action === 'notification';
     return await this.startSettings(isAppDetail);
   }
@@ -327,7 +327,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * Android 侧图片会先压到 1024 边长再转码；鸿蒙的解码压缩要接 ImageKit，
    * 与选图面板同属一批（选图批次）一起做，这里先按原字节返回。
    */
-  async readFileAsBase64(uri: string): Promise<ERPReadFileResult> {
+  async readFileAsBase64(uri: string): Promise<BaseReadFileResult> {
     const target: string = toFsTarget(uri);
     let file: fs.File | null = null;
     try {
@@ -338,7 +338,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
       const bytes: Uint8Array = new Uint8Array(buffer, 0, read);
       const base64: string = new util.Base64Helper().encodeToStringSync(bytes);
       const name: string = baseNameOf(uri);
-      const result: ERPReadFileResult = {
+      const result: BaseReadFileResult = {
         base64: base64,
         mimeType: mimeTypeOf(name),
         name: name,
@@ -355,7 +355,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
   }
 
   /** 下载到 `<filesDir>/download`，返回 `file://` uri（Android 侧下 cacheDir，语义一致）。 */
-  async fileDownload(url: string): Promise<ERPDownloadResult> {
+  async fileDownload(url: string): Promise<BaseDownloadResult> {
     const dir: string = `${this.ctx.uiAbilityContext.filesDir}/download`;
     // 扩展名要跟着 URL 走：落成 .dat 会让图库拒绝保存（saveImage 报 14000011），
     // fileOpen 也按文件名猜 MIME，最后只会「暂无可用打开方式」。
@@ -379,12 +379,12 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     } catch (error) {
       throw new Error(describeError(error, '下载失败'));
     }
-    const result: ERPDownloadResult = { uri: `file://${filePath}` };
+    const result: BaseDownloadResult = { uri: `file://${filePath}` };
     return result;
   }
 
   /** 交给系统「能打开该类型的应用」；没有匹配应用时按 Android 语义回 opened:false。 */
-  async fileOpen(uri: string): Promise<ERPOpenFileResult> {
+  async fileOpen(uri: string): Promise<BaseOpenFileResult> {
     const openWant: Want = {
       action: 'ohos.want.action.viewData',
       uri: uri,
@@ -394,10 +394,10 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     try {
       await this.ctx.uiAbilityContext.startAbility(openWant);
     } catch (error) {
-      this.ctx.logger.warn(`[ERPCapabilities] fileOpen 无匹配应用: ${error}`);
+      this.ctx.logger.warn(`[BaseCapabilities] fileOpen 无匹配应用: ${error}`);
       opened = false;
     }
-    const result: ERPOpenFileResult = { opened: opened };
+    const result: BaseOpenFileResult = { opened: opened };
     return result;
   }
 
@@ -408,20 +408,20 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * 正规入口，不需要 Android 那套「发通知触发厂商角标」的兜底。
    * 失败回 ok:false 而不抛错：H5 每次刷新未读数都会调它，报错会淹没设备日志。
    */
-  async setBadge(count: number): Promise<ERPOkResult> {
+  async setBadge(count: number): Promise<BaseOkResult> {
     let ok: boolean = true;
     try {
       await notificationManager.setBadgeNumber(count);
     } catch (error) {
-      this.ctx.logger.warn(`[ERPCapabilities] setBadge(${count}) 失败: ${error}`);
+      this.ctx.logger.warn(`[BaseCapabilities] setBadge(${count}) 失败: ${error}`);
       ok = false;
     }
-    const result: ERPOkResult = { ok: ok };
+    const result: BaseOkResult = { ok: ok };
     return result;
   }
 
   /** 未授权时 `requestEnableNotification` 会拉起系统授权弹窗，用户拒绝则抛 1600004。 */
-  async sendNotification(title: string, content: string): Promise<ERPSendNotificationResult> {
+  async sendNotification(title: string, content: string): Promise<BaseSendNotificationResult> {
     const notificationId: number = Date.now() % 100000;
     try {
       const enabled: boolean = await notificationManager.isNotificationEnabled();
@@ -448,13 +448,13 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     } catch (error) {
       throw new Error(describeError(error, '通知发送失败'));
     }
-    const result: ERPSendNotificationResult = { ok: true, notificationId: notificationId };
+    const result: BaseSendNotificationResult = { ok: true, notificationId: notificationId };
     return result;
   }
 
   // ===================== 定位 =====================
 
-  async getCurrentPosition(): Promise<ERPPositionResult> {
+  async getCurrentPosition(): Promise<BasePositionResult> {
     const permissions: Permissions[] = ['ohos.permission.APPROXIMATELY_LOCATION', 'ohos.permission.LOCATION'];
     let granted: boolean = false;
     try {
@@ -467,7 +467,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
         }
       }
     } catch (error) {
-      this.ctx.logger.warn(`[ERPCapabilities] 定位授权弹窗失败: ${error}`);
+      this.ctx.logger.warn(`[BaseCapabilities] 定位授权弹窗失败: ${error}`);
       granted = false;
     }
     if (!granted) {
@@ -483,7 +483,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     try {
       const location: geoLocationManager.Location = await geoLocationManager.getCurrentLocation(locationRequest);
       // 该 SDK 版本的 Location 没有 provider 字段，固定回 harmony 供 H5 区分来源。
-      const result: ERPPositionResult = {
+      const result: BasePositionResult = {
         latitude: location.latitude,
         longitude: location.longitude,
         accuracy: location.accuracy,
@@ -502,7 +502,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * readFileAsBase64 都不可靠；与 Android 的 copyToCacheDir 同因，统一复制进沙箱再回
    * `file://` 绝对路径。
    */
-  private async copyIntoSandbox(uri: string, defaultSuffix: string): Promise<ERPFileItem> {
+  private async copyIntoSandbox(uri: string, defaultSuffix: string): Promise<BaseFileItem> {
     const dir: string = `${this.ctx.uiAbilityContext.filesDir}/cache`;
     if (!fs.accessSync(dir)) {
       fs.mkdirSync(dir, true);
@@ -516,7 +516,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     } catch (error) {
       throw new Error(describeError(error, '复制选中文件失败'));
     }
-    const item: ERPFileItem = {
+    const item: BaseFileItem = {
       uri: `file://${target}`,
       name: name,
       mimeType: mimeTypeOf(name),
@@ -526,7 +526,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
   }
 
   /** 系统相机面板（cameraPicker）；用户取消回 `{uri:''}`，与 Android 语义一致。 */
-  async takePhoto(): Promise<ERPTakePhotoResult> {
+  async takePhoto(): Promise<BaseTakePhotoResult> {
     const profile: cameraPicker.PickerProfile = {
       cameraPosition: camera.CameraPosition.CAMERA_POSITION_BACK,
     };
@@ -548,15 +548,15 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     } catch (error) {
       throw new Error(describeError(error, '拍照失败'));
     }
-    const result: ERPTakePhotoResult = { uri: uri };
+    const result: BaseTakePhotoResult = { uri: uri };
     return result;
   }
 
-  async pickImage(opts: ERPImagePickOptions): Promise<ERPFilesResult> {
+  async pickImage(opts: BaseImagePickOptions): Promise<BaseFilesResult> {
     const option: photoAccessHelper.PhotoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
     option.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
     option.maxSelectNumber = opts.multiple === true ? 9 : 1;
-    const files: ERPFileItem[] = [];
+    const files: BaseFileItem[] = [];
     try {
       const viewPicker: photoAccessHelper.PhotoViewPicker = new photoAccessHelper.PhotoViewPicker();
       const picked: photoAccessHelper.PhotoSelectResult = await viewPicker.select(option);
@@ -566,7 +566,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     } catch (error) {
       throw new Error(describeError(error, '相册选图失败'));
     }
-    const result: ERPFilesResult = { files: files };
+    const result: BaseFilesResult = { files: files };
     return result;
   }
 
@@ -574,7 +574,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * 存图到相册：三方应用免权限的唯一正规路径是 showAssetsCreationDialog（会弹系统确认框），
    * 用户取消则回 saved:false，不抛错。
    */
-  async saveImage(uri: string): Promise<ERPSaveImageResult> {
+  async saveImage(uri: string): Promise<BaseSaveImageResult> {
     const helper: photoAccessHelper.PhotoAccessHelper =
       photoAccessHelper.getPhotoAccessHelper(this.ctx.uiAbilityContext);
     const srcName: string = baseNameOf(decodeURIComponent(uri));
@@ -601,7 +601,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     } catch (error) {
       throw new Error(describeError(error, '保存图片失败'));
     }
-    const result: ERPSaveImageResult = { saved: saved };
+    const result: BaseSaveImageResult = { saved: saved };
     return result;
   }
 
@@ -609,7 +609,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * 文件选择：DocumentViewPicker 的后缀过滤只认 `.png` 这种写法，H5 传 MIME（image/*）时忽略，
    * 让它退化成「全部文件」。
    */
-  async filePick(opts: ERPFilePickOptions): Promise<ERPFilesResult> {
+  async filePick(opts: BaseFilePickOptions): Promise<BaseFilesResult> {
     const option: picker.DocumentSelectOptions = new picker.DocumentSelectOptions();
     option.maxSelectNumber = opts.multiple === true ? 9 : 1;
     const filters: string[] = [];
@@ -624,7 +624,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     if (filters.length > 0) {
       option.fileSuffixFilters = filters;
     }
-    const files: ERPFileItem[] = [];
+    const files: BaseFileItem[] = [];
     try {
       const docPicker: picker.DocumentViewPicker = new picker.DocumentViewPicker(this.ctx.uiAbilityContext);
       const uris: string[] = await docPicker.select(option);
@@ -634,7 +634,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
     } catch (error) {
       throw new Error(describeError(error, '文件选择失败'));
     }
-    const result: ERPFilesResult = { files: files };
+    const result: BaseFilesResult = { files: files };
     return result;
   }
 
@@ -645,7 +645,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
    * 所以内置一段 rawfile 短音（erp_beep.wav）落沙箱后用 AVPlayer 播。
    * 与 Android 一致：拿到 fd 就立刻回 ok，不阻塞等播放完成，duration 到点强制停止。
    */
-  async playSound(duration: number): Promise<ERPOkResult> {
+  async playSound(duration: number): Promise<BaseOkResult> {
     const stopAfterMs: number = duration > 0 ? duration : 3000;
     const path: string = `${this.ctx.uiAbilityContext.cacheDir}/${BEEP_ASSET_NAME}`;
     let file: fs.File | null = null;
@@ -704,7 +704,7 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
       }
       throw new Error(describeError(error, '提示音播放失败'));
     }
-    const result: ERPOkResult = { ok: true };
+    const result: BaseOkResult = { ok: true };
     return result;
   }
 
@@ -712,12 +712,12 @@ export class ERPCapabilitiesTurboModule extends UITurboModule {
 
   /**
    * Scan Kit 属于 HMS SDK，OpenHarmony 运行时（本机模拟器）里根本没有对应 native 模块，
-   * 所以实现单独放 ERPScanCapability.ets 并用 import() 懒加载：真机上正常调用，
-   * 模拟器上只有点扫码才失败，不会在启动阶段拖垮整个 ERPCapabilities。
+   * 所以实现单独放 BaseScanCapability.ets 并用 import() 懒加载：真机上正常调用，
+   * 模拟器上只有点扫码才失败，不会在启动阶段拖垮整个 BaseCapabilities。
    */
-  async scan(formats: string[]): Promise<ERPScanResult> {
-    const mod: ESObject = await import('./ERPScanCapability');
-    const scanWithScanKit: (context: common.UIAbilityContext, formats: string[]) => Promise<ERPScanResult> =
+  async scan(formats: string[]): Promise<BaseScanResult> {
+    const mod: ESObject = await import('./BaseScanCapability');
+    const scanWithScanKit: (context: common.UIAbilityContext, formats: string[]) => Promise<BaseScanResult> =
       mod.scanWithScanKit;
     return await scanWithScanKit(this.ctx.uiAbilityContext, formats);
   }

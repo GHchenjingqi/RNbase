@@ -1,7 +1,7 @@
 /**
  * 原生升级模块适配器（RN 侧，规则 13/51）。
  *
- * 对接 NativeModules.ERPUpdate。非安卓平台（iOS / 浏览器测试）没有该原生模块，
+ * 对接 NativeModules.BaseUpdate。非安卓平台（iOS / 浏览器测试）没有该原生模块，
  * 这里安全降级为空对象，让 bridge 层回 DEVICE_UNSUPPORTED，不影响 App 启动。
  *
  * 延迟读取 NativeModules，便于测试时注入 mock。
@@ -11,7 +11,7 @@ import { BridgeException } from '../../bridge/bridge-error';
 import type { BridgeErrorCode } from '../../bridge/protocol';
 import type { StartDownloadOptions, UpdateAdapters } from '../../bridge/modules/update';
 
-export interface ERPUpdateNative {
+export interface BaseUpdateNative {
   getInfo(): Promise<Record<string, unknown>>;
   startDownload(opts: {
     url: string;
@@ -116,8 +116,8 @@ function normalizeProgress(raw: Record<string, unknown>) {
 
 /** 解析原生升级适配器；原生模块缺失时返回空对象（非安卓按能力缺失处理）。 */
 export function resolveNativeUpdateAdapter(): UpdateAdapters {
-  const nativeModule = (NativeModules as Record<string, unknown>).ERPUpdate as
-    | ERPUpdateNative
+  const nativeModule = (NativeModules as Record<string, unknown>).BaseUpdate as
+    | BaseUpdateNative
     | undefined;
 
   if (!nativeModule) {
@@ -129,23 +129,23 @@ export function resolveNativeUpdateAdapter(): UpdateAdapters {
       nativeModule
         .getInfo()
         .then(normalizeInfo)
-        .catch(e => wrapNativeError(e, '读取版本信息失败')),
+        .catch((e) => wrapNativeError(e, '读取版本信息失败')),
     startDownload: (options: StartDownloadOptions) =>
-      nativeModule.startDownload(options).catch(e => wrapNativeError(e, '启动下载失败')),
+      nativeModule.startDownload(options).catch((e) => wrapNativeError(e, '启动下载失败')),
     getProgress: () =>
       nativeModule
         .getProgress()
         .then(normalizeProgress)
-        .catch(e => wrapNativeError(e, '读取下载进度失败')),
+        .catch((e) => wrapNativeError(e, '读取下载进度失败')),
     cancelDownload: () =>
-      nativeModule.cancelDownload().catch(e => wrapNativeError(e, '取消下载失败')),
-    install: () => nativeModule.install().catch(e => wrapNativeError(e, '拉起安装失败')),
+      nativeModule.cancelDownload().catch((e) => wrapNativeError(e, '取消下载失败')),
+    install: () => nativeModule.install().catch((e) => wrapNativeError(e, '拉起安装失败')),
     canRequestInstall: () =>
-      nativeModule.canRequestInstallCheck().catch(e => wrapNativeError(e, '读取安装权限失败')),
+      nativeModule.canRequestInstallCheck().catch((e) => wrapNativeError(e, '读取安装权限失败')),
     openInstallSettings: () =>
-      nativeModule.openInstallSettings().catch(e => wrapNativeError(e, '打不开系统授权页')),
+      nativeModule.openInstallSettings().catch((e) => wrapNativeError(e, '打不开系统授权页')),
     copyToDownloads: () =>
-      nativeModule.copyToDownloads().catch(e => wrapNativeError(e, '导出到下载目录失败')),
-    cleanup: () => nativeModule.cleanup().catch(e => wrapNativeError(e, '清理升级包失败')),
+      nativeModule.copyToDownloads().catch((e) => wrapNativeError(e, '导出到下载目录失败')),
+    cleanup: () => nativeModule.cleanup().catch((e) => wrapNativeError(e, '清理升级包失败')),
   };
 }

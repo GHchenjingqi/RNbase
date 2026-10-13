@@ -2,22 +2,22 @@
  * iOS 网络状态原生模块（Skill 规则 46/51）。
  *
  * 对应 RN 侧 src/network/nativeNetworkAdapter.ts 调用的
- * NativeModules.ERPNetwork。
+ * NativeModules.BaseNetwork。
  *
  * 注册方式：将本文件加入 Xcode 的 App Target。
- * 桥接文件 ERPNetwork.m 会自动注册。
+ * 桥接文件 BaseNetwork.m 会自动注册。
  */
 import Foundation
 import Network
 import React
 
-@objc(ERPNetwork)
-class ERPNetwork: NSObject, RCTBridgeModule {
-  static func moduleName() -> String! { "ERPNetwork" }
+@objc(BaseNetwork)
+class BaseNetwork: NSObject, RCTBridgeModule {
+  static func moduleName() -> String! { "BaseNetwork" }
   static func requiresMainQueueSetup() -> Bool { false }
 
   private let monitor = NWPathMonitor()
-  private let queue = DispatchQueue(label: "ERPNetworkMonitor")
+  private let queue = DispatchQueue(label: "BaseNetworkMonitor")
 
   private var currentStatus: [String: Any] = [
     "connected": false,

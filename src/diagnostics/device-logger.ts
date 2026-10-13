@@ -8,7 +8,7 @@
  *   默认阈值   : info —— 记录 info / success / warn / error，忽略 debug
  *   调高为 error —— 仅记录 error
  *
- * 落盘：通过原生日志模块 ERPLog 追加写入 <filesDir>/logs/device-YYYY-MM-DD.log，
+ * 落盘：通过原生日志模块 BaseLog 追加写入 <filesDir>/logs/device-YYYY-MM-DD.log，
  * 按日期分包（同一天一个文件）。原生模块未接入时降级到 console，不影响主流程。
  */
 import { NativeModules } from 'react-native';
@@ -41,14 +41,14 @@ export type BridgeCallInfo = {
 
 export type LogWriter = (level: DeviceLogLevel, line: string) => void;
 
-type ERPLogNative = {
+type BaseLogNative = {
   write: (level: string, message: string) => void;
 };
 
 const { redact } = createLogger();
 
-function getNativeWriter(): ERPLogNative | undefined {
-  return (NativeModules as Record<string, unknown>).ERPLog as ERPLogNative | undefined;
+function getNativeWriter(): BaseLogNative | undefined {
+  return (NativeModules as Record<string, unknown>).BaseLog as BaseLogNative | undefined;
 }
 
 export function createDeviceLogger(initialLevel: DeviceLogLevel = LOG_LEVEL, writer?: LogWriter) {

@@ -114,7 +114,7 @@ describe('update 桥接模块', () => {
 
 describe('resolveNativeUpdateAdapter', () => {
   afterEach(() => {
-    delete (NativeModules as Record<string, unknown>).ERPUpdate;
+    delete (NativeModules as Record<string, unknown>).BaseUpdate;
   });
 
   test('原生模块未链接时降级为空对象', () => {
@@ -122,7 +122,7 @@ describe('resolveNativeUpdateAdapter', () => {
   });
 
   test('原生错误码映射成 BridgeErrorCode', async () => {
-    (NativeModules as Record<string, unknown>).ERPUpdate = {
+    (NativeModules as Record<string, unknown>).BaseUpdate = {
       install: jest.fn(async () => {
         throw { code: 'INSTALL_PERMISSION_DENIED', message: 'need REQUEST_INSTALL_PACKAGES' };
       }),
@@ -132,15 +132,15 @@ describe('resolveNativeUpdateAdapter', () => {
     };
     const adapters = resolveNativeUpdateAdapter();
     // BridgeException 的错误码挂在 error.code 上（不是实例的 code 字段）
-    const installErr = await adapters.install!().catch(e => e as BridgeException);
+    const installErr = await adapters.install!().catch((e) => e as BridgeException);
     expect(installErr).toBeInstanceOf(BridgeException);
     expect(installErr.error.code).toBe('PERMISSION_DENIED');
-    const cleanupErr = await adapters.cleanup!().catch(e => e as BridgeException);
+    const cleanupErr = await adapters.cleanup!().catch((e) => e as BridgeException);
     expect(cleanupErr.error.code).toBe('NATIVE_ERROR');
   });
 
   test('版本信息字段缺失时收口成默认值，不产生 NaN', async () => {
-    (NativeModules as Record<string, unknown>).ERPUpdate = {
+    (NativeModules as Record<string, unknown>).BaseUpdate = {
       getInfo: jest.fn(async () => ({ versionCode: undefined, taskState: '' })),
     };
     const info = await resolveNativeUpdateAdapter().getInfo!();
@@ -156,7 +156,7 @@ describe('resolveNativeUpdateAdapter', () => {
 
   test('canRequestInstall 对齐原生 canRequestInstallCheck', async () => {
     const canRequestInstallCheck = jest.fn(async () => ({ granted: true }));
-    (NativeModules as Record<string, unknown>).ERPUpdate = { canRequestInstallCheck };
+    (NativeModules as Record<string, unknown>).BaseUpdate = { canRequestInstallCheck };
     await expect(resolveNativeUpdateAdapter().canRequestInstall!()).resolves.toEqual({
       granted: true,
     });
