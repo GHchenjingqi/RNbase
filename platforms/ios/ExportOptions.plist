@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- xcodebuild -exportArchive 模板：出 ipa 前把 teamID / method 改为实际值。
+	     method 可选：app-store / enterprise / ad-hoc / development。
+	     用法示例：
+	     xcodebuild -exportArchive \
+	       -archivePath build/qux.xcarchive \
+	       -exportPath build/ipa \
+	       -exportOptionsPlist platforms/ios/ExportOptions.plist -->
+	<key>method</key>
+	<string>ad-hoc</string>
+	<key>teamID</key>
+	<string>YOUR_TEAM_ID</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>signingCertificate</key>
+	<string>iPhone Distribution</string>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>compileBitcode</key>
+	<false/>
+	<key>destination</key>
+	<string>export</string>
+</dict>
+</plist>

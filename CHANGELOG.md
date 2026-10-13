@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+### Added（P3-3 Bridge 能力清单生成器，2026-10-13）
+- `scripts/gen-api-doc.js`：从 `api.js` 注册表生成 `docs/BRIDGE_API.generated.md`（59 方法 + 6 APPMANAGER 特例），
+  与 RN 侧注册交叉比对漂移（RN 侧 25 模块未在 H5 SDK 暴露）；`--check` 门禁已接入主 CI。
+
+### Added（iOS 原生预实现 + 真机待办收敛，2026-10-13）
+- `platforms/ios/TODO.md`：全部需 Mac/真机/后端值的待办（步骤 + 验收标准），原生待办单一真源。
+- `platforms/ios/ExportOptions.plist`：出 ipa 的 `xcodebuild -exportArchive` 模板。
+- `ERPCapabilities.swift` 新增 `getDeviceIntegrity` 越狱探针（特征文件 + 沙盒外写入探测，待真机验证）。
+- 新增 `ERPH5.swift/.m`：`verifyPackageSignature`（SecKey RSASSA-PKCS1v15-SHA256 + SPKI→PKCS#1 走查，待 Xcode 编译验证）。
+- `src/updater/native-signature-verifier.ts`：原生校验适配器（探测 NativeModules.ERPH5 + 手写 base64 + 大包防护阈值），
+  orchestrator 校验器优先级：注入 > 原生 > Web Crypto > 无。
+
 ### Added（P2 安全与可观测深化，2026-10-13）
 - **H5 包签名强制校验**：`H5Manifest.signature` 字段；`H5_UPDATE_PUBLIC_KEY` 配置（version.json `h5PublicKey` 注入）；
   `verifier.ts` 支持 `off/optional/required` 三策略；Web Crypto 版 `defaultSignatureVerifier`（RN 环境需注入原生校验器）；
@@ -37,4 +49,4 @@
 - 范围裁定（ADR-0003）：i18n / 主题 Design Token / 业务埋点**不做**，归 H5 业务层职责。
 
 ### 测试基线
-- 全量 `npm test`：**479 用例**（P0 前 439 → P0 后 443 → P1 后 449 → P2 后 472 → P3 后 479）。
+- 全量 `npm test`：**492 用例**（P0 前 439 → P0 后 443 → P1 后 449 → P2 后 472 → P3 后 479 → P3-3 后 484 → iOS 原生预实现后 492）。

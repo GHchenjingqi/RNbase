@@ -13,6 +13,7 @@
 import { ManifestClient } from './manifest-client';
 import { checkForUpdate, compareVersion, type UpdateCheckContext } from './update-checker';
 import { PackageDownloader, type HttpDownloader } from './downloader';
+import { createNativeSignatureVerifier } from './native-signature-verifier';
 import {
   verifyPackage,
   defaultSignatureVerifier,
@@ -186,7 +187,12 @@ export class UpdateOrchestrator {
         hasher: this.options.hasher,
         signature: manifest.signature,
         publicKey: this.options.signaturePublicKey ?? H5_UPDATE_PUBLIC_KEY ?? undefined,
-        signatureVerifier: this.options.signatureVerifier ?? defaultSignatureVerifier ?? undefined,
+        // 校验器优先级：显式注入 > 原生模块（ERPH5）> Web Crypto（dev/test）> 无（required 策略拒绝）
+        signatureVerifier:
+          this.options.signatureVerifier ??
+          createNativeSignatureVerifier() ??
+          defaultSignatureVerifier ??
+          undefined,
         signaturePolicy: SIGNATURE_POLICY,
       });
       if (!verifyResult.ok) {

@@ -51,4 +51,7 @@ RCT_EXTERN_METHOD(appOpenSettings:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(getCurrentPosition:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(getDeviceIntegrity:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end

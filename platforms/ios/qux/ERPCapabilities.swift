@@ -33,6 +33,46 @@ class ERPCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
   private let locationManager = CLLocationManager()
   private var locationResolver: RCTPromiseResolveBlock?
 
+  // MARK: - 设备完整性（jailbreak 探针，对应 src/security/device-integrity.ts）
+
+  /// 返回 'secure' | 'compromised'。JS 侧 normalizeIntegrity 接受这三种字符串或 boolean。
+  /// 探测手段（公开 API，App Store 安全）：
+  ///  1. 越狱特征文件存在性（Cydia / MobileSubstrate / sshd / apt 等）；
+  ///  2. 沙盒逃逸探测：向 /private 写入临时文件，非越狱设备必被拒绝。
+  /// 待办：真机验证（见 platforms/ios/TODO.md #3）。
+  @objc(getDeviceIntegrity:rejecter:)
+  func getDeviceIntegrity(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
+    resolve(Self.detectJailbreak() ? "compromised" : "secure")
+  }
+
+  static func detectJailbreak() -> Bool {
+    let suspiciousPaths = [
+      "/Applications/Cydia.app",
+      "/Applications/Sileo.app",
+      "/Library/MobileSubstrate/MobileSubstrate.dylib",
+      "/bin/bash",
+      "/usr/sbin/sshd",
+      "/usr/bin/ssh",
+      "/etc/apt",
+      "/private/var/lib/apt/",
+      "/private/var/lib/cydia",
+      "/var/log/syslog",
+    ]
+    for path in suspiciousPaths where FileManager.default.fileExists(atPath: path) {
+      return true
+    }
+    // 沙盒逃逸探测：非越狱设备写入 /private 根必失败（iOS 沙盒只允许写容器目录）。
+    let probePath = "/private/\(UUID().uuidString)"
+    if (try? "rnbase-jailbreak-probe".write(toFile: probePath, atomically: true, encoding: .utf8)) != nil {
+      try? FileManager.default.removeItem(atPath: probePath)
+      return true
+    }
+    return false
+  }
+
   // MARK: - 扫码（占位，需接入实际扫码方案）
 
   @objc(scan:rejecter:)
