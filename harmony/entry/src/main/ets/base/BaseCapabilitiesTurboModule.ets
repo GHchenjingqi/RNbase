@@ -4,7 +4,7 @@
  * 方法名与返回体按 RNbase 的 JS 契约（`src/middleware/native/capability-native-adapters.ts`
  * 的 `BaseCapabilitiesNative`）对齐，而不是照抄安卓的 `BaseCapabilitiesModule.kt`：
  * RN 侧按「方法存在与否」挂载适配器，名字对不上就等于能力不存在。
- * 从 jingyi 基座搬来时改过名：copy→clipboardSetString、paste→clipboardGetString、
+ * 基座抽离时改过名：copy→clipboardSetString、paste→clipboardGetString、
  * openSystemSettings→appOpenSystemSettings。
  *
  * 已接通（全部走 OpenHarmony 公开 API）：
@@ -117,7 +117,7 @@ export interface BaseFilePickOptions {
 }
 
 /** rawfile 里的提示音资源；Android 用系统默认通知音，鸿蒙无对应公开 API，只能内置。 */
-const BEEP_ASSET_NAME: string = 'erp_beep.wav';
+const BEEP_ASSET_NAME: string = 'base_beep.wav';
 
 const SETTINGS_BUNDLE: string = 'com.huawei.hmos.settings';
 const SETTINGS_ABILITY: string = 'com.huawei.hmos.settings.MainAbility';
@@ -509,7 +509,7 @@ export class BaseCapabilitiesTurboModule extends UITurboModule {
     }
     const srcName: string = baseNameOf(decodeURIComponent(uri));
     const ext: string = suffixOf(srcName);
-    const name: string = `erp_${Date.now()}.${ext.length > 0 ? ext : defaultSuffix}`;
+    const name: string = `base_${Date.now()}.${ext.length > 0 ? ext : defaultSuffix}`;
     const target: string = `${dir}/${name}`;
     try {
       await fs.copyFile(uri, target);
@@ -580,7 +580,7 @@ export class BaseCapabilitiesTurboModule extends UITurboModule {
     const srcName: string = baseNameOf(decodeURIComponent(uri));
     const ext: string = suffixOf(srcName);
     const config: photoAccessHelper.PhotoCreationConfig = {
-      title: `erp_${Date.now()}`,
+      title: `base_${Date.now()}`,
       fileNameExtension: ext.length > 0 ? ext : 'png',
       photoType: photoAccessHelper.PhotoType.IMAGE,
     };
@@ -642,7 +642,7 @@ export class BaseCapabilitiesTurboModule extends UITurboModule {
 
   /**
    * Android 用 RingtoneManager 播系统默认通知音，鸿蒙对三方应用没有等价公开 API，
-   * 所以内置一段 rawfile 短音（erp_beep.wav）落沙箱后用 AVPlayer 播。
+   * 所以内置一段 rawfile 短音（base_beep.wav）落沙箱后用 AVPlayer 播。
    * 与 Android 一致：拿到 fd 就立刻回 ok，不阻塞等播放完成，duration 到点强制停止。
    */
   async playSound(duration: number): Promise<BaseOkResult> {

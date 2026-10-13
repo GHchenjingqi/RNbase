@@ -35,9 +35,9 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>用于获取定位以匹配就近仓库、客户与门店等 ERP 业务场景</string>
+	<string>用于提供通用定位能力（如匹配就近服务点等场景）</string>
 	<key>NSCameraUsageDescription</key>
-	<string>用于扫码入库、拍照上传单据等 ERP 业务场景</string>
+	<string>用于扫码识别与拍照上传等通用场景</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于从相册选择图片作为业务附件</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

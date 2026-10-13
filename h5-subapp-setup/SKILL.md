@@ -1,6 +1,6 @@
 ---
 name: h5-subapp-setup
-description: 为 RN WebView 基座（如 jingyi_app_base 这类 RN + WebView + Bridge 项目）搭建或改造 H5 子应用。当用户要求创建 H5 子项目/子应用、搭建 H5 开发环境、写 H5 页面接入 RN（window.RN / RN.SYSTEM 等 Bridge API）、用 Vue3 或 React + Vite 配置子包、处理 file:// 适配（hash 路由、相对路径、api.js 引入）、打包 zip 子包并生成 manifest.json 用于动态升级时使用。也用于检查现有 H5 目录是否满足 WebView 加载与动态升级的必备条件。
+description: 为 RN WebView 基座（如 RNbase 这类 RN + WebView + Bridge 项目）搭建或改造 H5 子应用。当用户要求创建 H5 子项目/子应用、搭建 H5 开发环境、写 H5 页面接入 RN（window.RN / RN.SYSTEM 等 Bridge API）、用 Vue3 或 React + Vite 配置子包、处理 file:// 适配（hash 路由、相对路径、api.js 引入）、打包 zip 子包并生成 manifest.json 用于动态升级时使用。也用于检查现有 H5 目录是否满足 WebView 加载与动态升级的必备条件。
 ---
 
 # H5 子应用必备条件与环境搭建
@@ -61,8 +61,8 @@ Bridge 接入 → 构建 → 打包发布。
 - **状态查询**：`RN.STATE()`（disconnected/connecting/connected/ready）、
   `RN.ISREADY()`、`RN.QUEUESIZE()`、`RN.HASCAPABILITY(feature)`。
 - **appId 声明**：每个 H5 子应用必须声明唯一 appId（多应用白名单校验，升级方案 §23）：
-  在 `index.html` 的 `api.js` 之前注入 `<script>window.__JY_APP_ID__='<你的appId>'</script>`；
-  未声明时默认 `jingyi_h5`。基座 `TRUSTED_APP_IDS` 配置后，非白名单 appId 的握手被拒
+  在 `index.html` 的 `api.js` 之前注入 `<script>window.__H5_APP_ID__='<你的appId>'</script>`；
+  未声明时默认 `base_h5`。基座 `TRUSTED_APP_IDS` 配置后，非白名单 appId 的握手被拒
   （SECURITY_BLOCKED）。
 - **前后台事件**：`RN.ON('app.resume' / 'app.background', handler)`，App 切后台/回前台时触发。
 

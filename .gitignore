@@ -112,3 +112,6 @@ hvigor/
 *.temp
 .tmp/
 .temp/.workbuddy/
+
+# WorkBuddy agent workspace data
+.workbuddy/

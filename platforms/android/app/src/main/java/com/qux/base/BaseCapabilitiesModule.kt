@@ -280,7 +280,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
     /** 创建角标通知渠道（Android 8.0+，低优先级不打扰用户）。 */
     private fun ensureBadgeNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = "erp_badge"
+            val channelId = "base_badge"
             val channelName = "消息角标"
             val importance = android.app.NotificationManager.IMPORTANCE_LOW
             val channel = android.app.NotificationChannel(channelId, channelName, importance).apply {
@@ -324,7 +324,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
     /**
      * 发送通知栏消息（模拟推送）。
      * 在系统通知栏展示一条通知，点击后打开 App 主页面。
-     * Android 8.0+ 使用 erp_notify 通知渠道（高优先级，会弹出横幅）。
+     * Android 8.0+ 使用 base_notify 通知渠道（高优先级，会弹出横幅）。
      * Android 13+ 自动检查并请求 POST_NOTIFICATIONS 运行时权限，授权后发送。
      */
     @ReactMethod
@@ -380,7 +380,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
     private fun doSendNotification(title: String, content: String, promise: Promise) {
         try {
             ensureNotifyNotificationChannel()
-            val channelId = "erp_notify"
+            val channelId = "base_notify"
             val notificationId = (System.currentTimeMillis() % 10000).toInt()
 
             val intent = reactContext.packageManager.getLaunchIntentForPackage(reactContext.packageName)
@@ -415,7 +415,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
     /** 创建消息通知渠道（Android 8.0+，高优先级会弹出横幅）。 */
     private fun ensureNotifyNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = "erp_notify"
+            val channelId = "base_notify"
             val channelName = "消息通知"
             val importance = android.app.NotificationManager.IMPORTANCE_HIGH
             val channel = android.app.NotificationChannel(channelId, channelName, importance).apply {
@@ -443,7 +443,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
             val dir = reactContext.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
                 ?: reactContext.cacheDir
             if (!dir.exists()) dir.mkdirs()
-            val photoFile = File(dir, "erp_photo_${System.currentTimeMillis()}.jpg")
+            val photoFile = File(dir, "base_photo_${System.currentTimeMillis()}.jpg")
             val outputUri = FileProvider.getUriForFile(
                 reactContext,
                 "${reactContext.packageName}.fileprovider",
@@ -541,7 +541,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
             val src = Uri.parse(uri)
             val resolver = reactContext.contentResolver
             val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, "erp_${System.currentTimeMillis()}.png")
+                put(MediaStore.Images.Media.DISPLAY_NAME, "base_${System.currentTimeMillis()}.png")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/png")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
@@ -593,7 +593,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
             val input = conn.inputStream
             val file = File(
                 reactContext.cacheDir,
-                "erp_${System.currentTimeMillis()}.dat",
+                "base_${System.currentTimeMillis()}.dat",
             )
             FileOutputStream(file).use { out -> input.copyTo(out) }
             input.close()
@@ -1060,7 +1060,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
         val resolver = reactContext.contentResolver
         val input = resolver.openInputStream(uri) ?: throw Exception("无法读取文件")
         val ext = getExtension(uri) ?: "dat"
-        val file = File(reactContext.cacheDir, "erp_pick_${System.currentTimeMillis()}.$ext")
+        val file = File(reactContext.cacheDir, "base_pick_${System.currentTimeMillis()}.$ext")
         FileOutputStream(file).use { out -> input.copyTo(out) }
         input.close()
         return Uri.fromFile(file).toString()
@@ -1123,7 +1123,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
         try {
             val clipboard =
                 reactContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("erp_clipboard", text))
+            clipboard.setPrimaryClip(ClipData.newPlainText("base_clipboard", text))
             val result = WritableNativeMap().apply { putBoolean("ok", true) }
             promise.resolve(result)
         } catch (e: Exception) {

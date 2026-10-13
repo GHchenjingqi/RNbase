@@ -1,7 +1,7 @@
-# jingyi Bridge 通信升级实施方案（结合本项目）
+# Base Bridge 通信升级实施方案（结合本项目）
 
 > 依据：《RN_H5_Bridge_postMessage_onMessage_升级实施方案.md》（v1.0，73 节）
-> 适用范围：jingyi_app_base（RN 基座）+ jingyi_h5（Vite 子应用）+ h5-subapp-setup（模板）
+> 适用范围：RNbase（RN 基座）+ base_h5（Vite 子应用）+ h5-subapp-setup（模板）
 > 状态：**Phase A~F 已实施并在模拟器 CDP 验证通过**（见 §7 实施记录）；G 待拍板
 
 ---
@@ -176,7 +176,7 @@ ready(\_params) {
 
 &#x20;   appVersion: APP\_VERSION,
 
-&#x20;   appId: 'jingyi\_app\_base',               // 基座自身 appId
+&#x20;   appId: 'RNbase',               // 基座自身 appId
 
 &#x20;   capabilities: featuresToArray(getCapabilities().features),
 
@@ -303,7 +303,7 @@ RN.READY = function (info) {
 
 
 
-* 常量：`BRIDGE_PROTOCOL_VERSION='1.0'`、`H5_VERSION`（读 manifest / 构建注入）、`APP_ID`（如 'jingyi\_h5'，构建注入或常量）
+* 常量：`BRIDGE_PROTOCOL_VERSION='1.0'`、`H5_VERSION`（读 manifest / 构建注入）、`APP_ID`（如 'base_h5'，构建注入或常量）
 
 1. 暴露新 API（门面不变原则，仅新增）：
 
@@ -325,7 +325,7 @@ RN.SDK\_VERSION = '1.1.0';
 
 1. 浏览器 Mock：`createBrowserClient()` 的 `state` 恒为 'ready'（mock 全部可用），`request` 不排队；`RN.READY` 直接 resolve `{ok:true, state:'READY', capabilities:[...]}`（浏览器布局调试不阻塞）。
 
-2. **同步 4 目标**：改完 `scripts/api.js` 后执行 `node scripts/sync-h5-api.js`（react/vue 模板 + jingyi\_h5 + 基座 h5/js），再 `node scripts/inject-h5-api.js <dist>` 重新注入产物；**4 目标 MD5 校验一致**。
+2. **同步 4 目标**：改完 `scripts/api.js` 后执行 `node scripts/sync-h5-api.js`（react/vue 模板 + base_h5 + 基座 h5/js），再 `node scripts/inject-h5-api.js <dist>` 重新注入产物；**4 目标 MD5 校验一致**。
 
 **验证**：
 
@@ -427,13 +427,13 @@ useEffect(() => {
 
 4. 文档：`h5-subapp-setup/SKILL.md` 补 "appId 声明规范"（每个 H5 子应用在构建配置中声明唯一 appId）。
 
-**验证**：logcat 出现 `[bridge] H5->RN …"module":"app","action":"ready"…"appId":"jingyi_h5"`；白名单测试：临时塞错 appId 出现 warn 且调用不阻断。
+**验证**：logcat 出现 `[bridge] H5->RN …"module":"app","action":"ready"…"appId":"base_h5"`；白名单测试：临时塞错 appId 出现 warn 且调用不阻断。
 
 ### Phase F：Debug 面板与观测增强（H5，0.5 日）
 
 **目标**：devtools 页从 "11 项只读测试" 升级为 "连接状态 + 握手 + 事件 + 能力" 调试面板。
 
-改动点（`jingyi_h5/src/pages/devtools/devtools.jsx`）：
+改动点（`base_h5/src/pages/devtools/devtools.jsx`）：
 
 
 
@@ -462,7 +462,7 @@ useEffect(() => {
 >
 >  TS 版为基底抽 
 >
-> `@jingyi/h5-bridge-sdk`
+> `@rnbase/h5-bridge-sdk`
 >
 > （含核心 + 门面 + transport + mock），补状态机 / 队列 / 握手实现；
 > 发布到私有 registry；H5 模板（react/vue）改为 npm 依赖引入，
@@ -532,4 +532,4 @@ useEffect(() => {
 
 * **浏览器 Mock 一致性**：Mock 恒 ready 且不排队，保证脱离 App 的布局调试体验不变。
 
-* **未提交改动**：当前基座与 jingyi\_h5 均有大量未提交改动（含本次计划将触碰的 protocol.ts/app.ts/WebViewBridge.tsx/api.js），建议 Phase A 前先 commit 一次基线，便于阶段回滚。
+* **未提交改动**：当前基座与 base_h5 均有大量未提交改动（含本次计划将触碰的 protocol.ts/app.ts/WebViewBridge.tsx/api.js），建议 Phase A 前先 commit 一次基线，便于阶段回滚。

@@ -120,24 +120,24 @@ H5 通过 `RN.ON(event, handler)` 订阅，返回取消订阅函数。
 |---|---|---|---|
 | APP | GETINFO / GETVERSION / GETCAPABILITIES / GETCLIENTID / READY / LIFECYCLE / NATIVEBACKRESULT | App 信息、能力清单、clientId、启动握手、生命周期、返回键回执 | ✅ 可用（RN 侧实现） |
 | AUTH | GETTOKEN / GETUSER / LOGOUT | 登录态获取与登出 | ✅ 可用（内存态存储） |
-| PERMISSION | CHECK / REQUEST / REQUESTALL / OPENSETTINGS | 权限查询/申请/批量申请/跳系统设置 | ✅ 可用（RN `PermissionManager`：Android 走 `PermissionsAndroid`，iOS 走原生 `ERPPermissions`） |
-| NETWORK | GETSTATUS | 网络状态 | ✅ 可用（原生 `ERPNetwork` 已注册） |
-| SYSTEM | VIBRATE / COPY / SHARE / GETDARKMODE / GETLANGUAGE / GETSCREENINFO / GETSTATUSBARHEIGHT / GETPLATFORM / GETACCESSIBILITY / GETINFO / GETDEVICEINFO / GETBATTERY | 震动 / 剪贴板 / 分享 / 外观 / 屏幕 / 无障碍 / 设备信息汇总 | ✅ 可用（COPY/SHARE 走 RN `Clipboard`/`Share`；GETDEVICEINFO/GETBATTERY 需原生 `ERPSystem`，已注册） |
-| NOTIFICATION | GETTOKEN / SETBADGE / PLAYSOUND / SENDNOTIFICATION | 推送 token / 角标 / 提示音 / 本地通知 | ✅ 可用（`ERPCapabilities`）；GETTOKEN 是模拟值，项目未接 FCM/厂商推送 |
-| CAMERA | TAKEPHOTO | 拍照 | ✅ 可用（原生 `ERPCapabilities` 已注册） |
+| PERMISSION | CHECK / REQUEST / REQUESTALL / OPENSETTINGS | 权限查询/申请/批量申请/跳系统设置 | ✅ 可用（RN `PermissionManager`：Android 走 `PermissionsAndroid`，iOS 走原生 `BasePermissions`） |
+| NETWORK | GETSTATUS | 网络状态 | ✅ 可用（原生 `BaseNetwork` 已注册） |
+| SYSTEM | VIBRATE / COPY / SHARE / GETDARKMODE / GETLANGUAGE / GETSCREENINFO / GETSTATUSBARHEIGHT / GETPLATFORM / GETACCESSIBILITY / GETINFO / GETDEVICEINFO / GETBATTERY | 震动 / 剪贴板 / 分享 / 外观 / 屏幕 / 无障碍 / 设备信息汇总 | ✅ 可用（COPY/SHARE 走 RN `Clipboard`/`Share`；GETDEVICEINFO/GETBATTERY 需原生 `BaseSystem`，已注册） |
+| NOTIFICATION | GETTOKEN / SETBADGE / PLAYSOUND / SENDNOTIFICATION | 推送 token / 角标 / 提示音 / 本地通知 | ✅ 可用（`BaseCapabilities`）；GETTOKEN 是模拟值，项目未接 FCM/厂商推送 |
+| CAMERA | TAKEPHOTO | 拍照 | ✅ 可用（原生 `BaseCapabilities` 已注册） |
 | SCANNER | SCAN | 扫码 | ✅ 可用（原生 `MLKitScanActivity`，Google ML Kit） |
 | MEDIA | PICKIMAGE / SAVEIMAGE | 相册选图 / 保存图片 | ✅ 可用 |
 | FILE | PICK / PICKIMAGE / READASBASE64 / DOWNLOAD / OPEN | 文件选择/读取/下载/打开 | ✅ 可用（READASBASE64 仅限小文件调试，业务仍走 URI） |
 | LOCATION | GETCURRENTPOSITION | 定位 | ✅ 可用 |
-| CLIPBOARD | GETSTRING / SETSTRING / HASSTRING | 剪贴板读 / 写 / 是否有文本 | ✅ 可用（原生 `ERPCapabilities`；Android 10+ 读剪贴板受焦点限制） |
+| CLIPBOARD | GETSTRING / SETSTRING / HASSTRING | 剪贴板读 / 写 / 是否有文本 | ✅ 可用（原生 `BaseCapabilities`；Android 10+ 读剪贴板受焦点限制） |
 | APPMANAGER | ISINSTALLED / OPENAPP / OPENAPPSTORE / OPENAPPSETTINGS / OPENSYSTEMSETTINGS / GETINSTALLEDAPPS | 检测安装 / 按包名打开 / 应用市场 / 应用设置 / 系统设置分区 | ✅ 前五项可用；GETINSTALLEDAPPS 未接入（原生不枚举应用列表） |
-| UPDATE | GETINFO / STARTDOWNLOAD / GETPROGRESS / CANCELDOWNLOAD / INSTALL / CANREQUESTINSTALL / OPENINSTALLSETTINGS / COPYTODOWNLOADS / CLEANUP | 整包 APK 远程升级（下载→校验→拉起安装器） | ✅ 仅 Android（原生 `ERPUpdate`）；iOS 由 App Store 分发，统一 DEVICE_UNSUPPORTED |
+| UPDATE | GETINFO / STARTDOWNLOAD / GETPROGRESS / CANCELDOWNLOAD / INSTALL / CANREQUESTINSTALL / OPENINSTALLSETTINGS / COPYTODOWNLOADS / CLEANUP | 整包 APK 远程升级（下载→校验→拉起安装器） | ✅ 仅 Android（原生 `BaseUpdate`）；iOS 由 App Store 分发，统一 DEVICE_UNSUPPORTED |
 | NFC | AVAILABLE / READTAG / WRITENDEF | NFC 可用性 / 读标签 / 写 NDEF | ✅ 可用（设备需带 NFC 硬件） |
-| LOG | INFO / ERROR / WARN / DEBUG | H5 主动打点的事件日志 | ⚠️ 调用一定成功，但**落盘未接原生**：dev 输出到 console、生产走内存适配器（`FileLogWriter` 需注入 RNFS/`ERPLog` 才真正写文件，见 §4.16）。设备调用日志（§12）另走原生 `ERPLog` |
+| LOG | INFO / ERROR / WARN / DEBUG | H5 主动打点的事件日志 | ⚠️ 调用一定成功，但**落盘未接原生**：dev 输出到 console、生产走内存适配器（`FileLogWriter` 需注入 RNFS/`BaseLog` 才真正写文件，见 §4.16）。设备调用日志（§12）另走原生 `BaseLog` |
 | KEYBOARD | —（无请求方法，仅事件） | 软键盘显隐事件 `keyboard.change` | ✅ 可用（RN 侧 `Keyboard` 监听，见 §8） |
 
 > **说明**：`MainApplication.kt` 的 `packageList` 已注册 6 个原生包
-> （`ERPNetwork` / `ERPLog` / `ERPH5` / `ERPSystem` / `ERPCapabilities` / `ERPUpdate`），
+> （`BaseNetwork` / `BaseLog` / `BaseH5` / `BaseSystem` / `BaseCapabilities` / `BaseUpdate`），
 > 上表能力在 Android 上均返回真实数据。**鸿蒙与 iOS 上的实际可用性不一样**，
 > 分别见 §9.6（鸿蒙差异清单）与 §9.5（iOS 接入状态）。
 >
@@ -354,7 +354,7 @@ const { text } = await RN.CLIPBOARD.GETSTRING();
 > Android 10+ 限制：**App 不在前台焦点态时读剪贴板返回空**（系统安全策略，非桥接 bug）。
 > 只想判断有没有内容时用 `HASSTRING`，它不受该限制影响那么严格。
 > 与 `SYSTEM.COPY` 的区别：`SYSTEM.COPY` 是 RN 侧 `Clipboard`（写入即可）；
-> `CLIPBOARD.*` 走原生 `ERPCapabilities`，三端语义一致，推荐新代码用本模块。
+> `CLIPBOARD.*` 走原生 `BaseCapabilities`，三端语义一致，推荐新代码用本模块。
 
 ### 4.11 APPMANAGER — 应用管理
 
@@ -520,14 +520,14 @@ Android 15+ edge-to-edge 下 `StatusBar.currentHeight` 已废弃返回 0，这�
 }
 ```
 
-`device` 字段来自原生 `ERPSystem`，原生未接入时省略（不影响其余字段）。
+`device` 字段来自原生 `BaseSystem`，原生未接入时省略（不影响其余字段）。
 
 **`RN.SYSTEM.GETDEVICEINFO()` → `{ brand, model, systemVersion, sdkInt, batteryLevel, isCharging, totalStorage, freeStorage, timezone }`** —
-设备硬件信息（品牌/型号/系统版本/SDK/电量/充电/存储/时区），需原生 `ERPSystem` 模块，
+设备硬件信息（品牌/型号/系统版本/SDK/电量/充电/存储/时区），需原生 `BaseSystem` 模块，
 未接入时 DEVICE_UNSUPPORTED。
 
 **`RN.SYSTEM.GETBATTERY()` → `{ level: number | null, isCharging: boolean }`** — 电量百分比
-（0-100；未知为 `null`）与充电状态，需原生 `ERPSystem`，未接入时 DEVICE_UNSUPPORTED。
+（0-100；未知为 `null`）与充电状态，需原生 `BaseSystem`，未接入时 DEVICE_UNSUPPORTED。
 
 ### 4.15 NOTIFICATION — 通知
 
@@ -542,7 +542,7 @@ Android 桌面角标受厂商 Launcher 支持度限制，不支持时 `ok` 为 `
 （原生 `RingtoneManager`，无播放完成回调，用计时器兜底释放）。
 
 **`RN.NOTIFICATION.SENDNOTIFICATION({ title, content })` → `{ ok: boolean, notificationId?: number }`** —
-发本地通知栏消息（原生通知渠道 `erp_notify`，角标渠道 `erp_badge`）。前置：Android 13+ 需先申请
+发本地通知栏消息（原生通知渠道 `base_notify`，角标渠道 `base_badge`）。前置：Android 13+ 需先申请
 `notification` 权限，未授权时原生报 `NATIVE_ERROR`，H5 应先
 `RN.PERMISSION.REQUESTALL({ permissions: ['notification'] })`。
 
@@ -560,8 +560,8 @@ RN.LOG.ERROR({ event: 'api_error', page: '/login', message: '请求失败', data
 - `data` 会走脱敏层（token/手机号等自动掩码），可以放心传结构化上下文。
 - **落盘现状**：`createDefaultLogManager()` 在 dev 用 `ConsoleFileSystemAdapter`（打到 console），
   生产用 `MemoryFileSystemAdapter`（只在内存里，进程退出即丢）。要真正写文件需给 `FileLogWriter`
-  注入 RNFS 或原生 `ERPLog` 适配器 —— 这是当前未接的一项，不代表日志功能报错。
-- 与 §12 的「设备调用日志」是两类：§12 由容器自动记录 Bridge 调用并经原生 `ERPLog` 落盘，
+  注入 RNFS 或原生 `BaseLog` 适配器 —— 这是当前未接的一项，不代表日志功能报错。
+- 与 §12 的「设备调用日志」是两类：§12 由容器自动记录 Bridge 调用并经原生 `BaseLog` 落盘，
   本节是 H5 主动打点。
 
 ---
@@ -827,12 +827,12 @@ RECORD_AUDIO / POST_NOTIFICATIONS / VIBRATE / NFC / REQUEST_INSTALL_PACKAGES
 
 | 原生模块 | 状态 | 对应 Bridge 能力 |
 |---|---|---|
-| `ERPNetworkModule.kt` + `ERPNetworkPackage` | ✅ 已注册 | network |
-| `ERPLogModule.kt` + `ERPLogPackage` | ✅ 已注册 | log、设备调用日志落盘 |
-| `ERPH5Module.kt` + `ERPH5Package` | ✅ 已注册 | H5 子包本地版本管理（§13） |
-| `ERPSystemModule.kt` + `ERPSystemPackage` | ✅ 已注册 | system.getDeviceInfo / getBattery |
-| `ERPCapabilitiesModule.kt` + `ERPCapabilitiesPackage` | ✅ 已注册 | camera / scanner / media / file / location / clipboard / appManager / nfc / notification |
-| `ERPUpdateModule.kt` + `ERPUpdatePackage` | ✅ 已注册 | update（整包 APK 远程升级，仅 Android） |
+| `BaseNetworkModule.kt` + `BaseNetworkPackage` | ✅ 已注册 | network |
+| `BaseLogModule.kt` + `BaseLogPackage` | ✅ 已注册 | log、设备调用日志落盘 |
+| `BaseH5Module.kt` + `BaseH5Package` | ✅ 已注册 | H5 子包本地版本管理（§13） |
+| `BaseSystemModule.kt` + `BaseSystemPackage` | ✅ 已注册 | system.getDeviceInfo / getBattery |
+| `BaseCapabilitiesModule.kt` + `BaseCapabilitiesPackage` | ✅ 已注册 | camera / scanner / media / file / location / clipboard / appManager / nfc / notification |
+| `BaseUpdateModule.kt` + `BaseUpdatePackage` | ✅ 已注册 | update（整包 APK 远程升级，仅 Android） |
 
 新增原生包时在 `packageList` 里 `add(XxxPackage())` 即可，RN 侧与 H5 侧协议不用改（规则 10）。
 
@@ -853,7 +853,7 @@ RECORD_AUDIO / POST_NOTIFICATIONS / VIBRATE / NFC / REQUEST_INSTALL_PACKAGES
 | `appManager.isInstalled` / `openApp` / `openAppStore` / `openSystemSettings` | ✅ | ❌ | 包名/Intent 分区是 Android 概念；iOS 的 `canOpenURL` 需 `LSApplicationQueriesSchemes` 白名单，结果不可信，故**故意不实现** |
 | `appManager.openAppSettings` | ✅ | ✅ | iOS 用 `UIApplication.openSettingsURLString`（唯一入口） |
 | `appManager.getInstalledApps` | ❌ | ❌ | 原生不枚举应用列表（隐私 + 11+ 可见性噪音） |
-| `notification.setBadge` / `playSound` / `sendNotification` | ✅ | ❌ | 渠道 `erp_notify` / `erp_badge`；提示音用 `RingtoneManager` 默认通知铃声 |
+| `notification.setBadge` / `playSound` / `sendNotification` | ✅ | ❌ | 渠道 `base_notify` / `base_badge`；提示音用 `RingtoneManager` 默认通知铃声 |
 | `notification.getToken` | ✅（模拟值） | ✅（模拟值） | 项目未接 FCM/厂商推送，返回 `mock-token-emulator` 供 H5 联调 |
 | `nfc.isAvailable` / `readTag` / `writeNdef` | ✅ | ❌ | iOS 未接 CoreNFC |
 | brightness / flashlight / sensor / biometric / contacts / calendar / bluetooth / audio / storage / networkInfo / qr / image / haptics / speech / backgroundTask / inAppReview | ❌ | ❌ | 桥接层已注册、原生方法未实现 → 一律 `DEVICE_UNSUPPORTED` |
@@ -861,7 +861,7 @@ RECORD_AUDIO / POST_NOTIFICATIONS / VIBRATE / NFC / REQUEST_INSTALL_PACKAGES
 ### 9.4 整包远程升级（update）链路
 
 ```
-RN.UPDATE.STARTDOWNLOAD → ERPUpdateModule（后台线程 HttpURLConnection 写
+RN.UPDATE.STARTDOWNLOAD → BaseUpdateModule（后台线程 HttpURLConnection 写
                         <externalFilesDir>/update/qux-<version>.apk.<gen>.part，
                         无外部存储时回落 cacheDir/update）
                         ↓ 每写一块累计 received；取消/新任务用「世代号 generation」让旧回调失效
@@ -904,20 +904,20 @@ H5 取 txt 内容作为 `STARTDOWNLOAD` 的 `sha256`。传空串表示跳过校�
 
 ### 9.5 iOS 侧接入清单
 
-`platforms/ios/qux/` 下的 `ERPCapabilities.swift` / `ERPCapabilities.m` / `ERPPermissions.swift` /
-`ERPNetwork.swift` / `ERPNetwork.m` 是 iOS 原生实现，但 **`qux.xcodeproj` 的 Sources 构建阶段目前
+`platforms/ios/qux/` 下的 `BaseCapabilities.swift` / `BaseCapabilities.m` / `BasePermissions.swift` /
+`BaseNetwork.swift` / `BaseNetwork.m` 是 iOS 原生实现，但 **`qux.xcodeproj` 的 Sources 构建阶段目前
 只编了 `AppDelegate.swift`**（本仓与上游基座都一样）。在 Xcode 里把上述文件加入 App Target 后，
 iOS 侧的 camera / media / file / location / clipboard / appManager.openAppSettings 才会真正生效，
-否则 `NativeModules.ERPCapabilities` 为 `undefined`，全部能力按 `DEVICE_UNSUPPORTED` 降级。
+否则 `NativeModules.BaseCapabilities` 为 `undefined`，全部能力按 `DEVICE_UNSUPPORTED` 降级。
 
-Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`ERPCapabilities.m` 已补齐 12 个方法声明）：
+Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补齐 12 个方法声明）：
 **Swift 加方法 ≠ JS 能调到**，两边要同步改，否则该单项在 JS 侧不存在、静默降级。
 
 ### 9.6 鸿蒙（RNOH）差异清单
 
-鸿蒙侧走 `harmony/entry/src/main/ets/erp/*.ets` 的自研 TurboModule + `cpp/ERPTurboModules.h` 注册表，
-**方法名以 RNbase 的 JS 契约为准**（不是照抄安卓的 `ERPCapabilitiesModule.kt`）：JS 侧按「方法存在与否」
-挂适配器，名字对不上就等于该能力不存在 → `DEVICE_UNSUPPORTED`。从 jingyi 基座搬过来时改过名：
+鸿蒙侧走 `harmony/entry/src/main/ets/base/*.ets` 的自研 TurboModule + `cpp/BaseTurboModules.h` 注册表，
+**方法名以 RNbase 的 JS 契约为准**（不是照抄安卓的 `BaseCapabilitiesModule.kt`）：JS 侧按「方法存在与否」
+挂适配器，名字对不上就等于该能力不存在 → `DEVICE_UNSUPPORTED`。基座抽离时改过名：
 `copy→clipboardSetString`、`paste→clipboardGetString`、`openSystemSettings→appOpenSystemSettings`。
 
 > 前置条件：本仓库当前**没有装 RNOH**（0.84.4 的 peer 精确锁 RN 0.84.1，与主干 0.87.1 冲突），
@@ -935,7 +935,7 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`ERPCapabilities.m` 已补齐
 | `location.getCurrentPosition` | ✅ | 权限/定位服务未开时分别抛中文错误；与安卓一样**不透传 opts** |
 | `clipboard.setString` / `getString` / `hasString` | ✅ | 自研 `clipboardSetString/GetString/HasString`，**不走 RN `Clipboard`**（RNOH 不保证实现它）；读失败回空串而不是抛错 |
 | `system.copy` | ✅ | 优先原生 `clipboardSetString`，拿不到才回落 RN `Clipboard` |
-| `system.share` | ✅ | 走 RN `Share`（RNOH 有 `ShareTurboModule`），**不经过** `ERPCapabilities.share`；ArkTS 侧那个 `share` 注册了但基座不用 |
+| `system.share` | ✅ | 走 RN `Share`（RNOH 有 `ShareTurboModule`），**不经过** `BaseCapabilities.share`；ArkTS 侧那个 `share` 注册了但基座不用 |
 | `appManager.openAppSettings` | ✅ | `settings` ability：`application_info_entry` + 本包 detail |
 | `appManager.openSystemSettings` | ✅ | 只有**两个落点**：`application_details`/空/`notification` → 应用详情页，其余 → 设置首页。安卓那种按分区跳的语义拿不到 |
 | `appManager.isInstalled` | ❌ | 需系统级 `GET_BUNDLE_INFO_PRIVILEGED`，公开 API 做不到 → `DEVICE_UNSUPPORTED` |
@@ -943,9 +943,9 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`ERPCapabilities.m` 已补齐
 | `notification.setBadge` / `playSound` / `sendNotification` | ✅ | 角标走 `notificationManager.setBadgeNumber`（免权限，失败回 `ok:false` 不抛错，免得刷未读数把设备日志淹掉）；提示音是先把 rawfile 里的 beep 资源写进 cacheDir 再用 `media.AVPlayer` 播（默认 3s，`duration` 可覆盖），**不是**系统通知铃声；通知未授权时会拉起系统授权弹窗 |
 | `notification.getToken` | ❌ | 未注册（项目本来也没接 FCM/厂商推送，安卓返回的是模拟值） |
 | `nfc.*` | ❌ | 读标签要 system API + 真机标签，故意不注册 → `DEVICE_UNSUPPORTED` |
-| `update.*`（整包升级） | ❌ | `ERPUpdate` 未移植；鸿蒙整包分发归 AppGallery，H5 应隐藏升级入口 |
-| H5 子包动态升级（§13） | ❌ | `ERPH5` 未移植，`createRealRuntime()` 检测不到即降级为内存演示运行时（不崩） |
-| `network.getStatus` / `log.*` / `system.getDeviceInfo` | ✅ | 对应 `ERPNetwork` / `ERPLog` / `ERPSystem`；容器退出用 `ERPSystem.exitApp`（RNOH 没有安卓的 `ExitApp`） |
+| `update.*`（整包升级） | ❌ | `BaseUpdate` 未移植；鸿蒙整包分发归 AppGallery，H5 应隐藏升级入口 |
+| H5 子包动态升级（§13） | ❌ | `BaseH5` 未移植，`createRealRuntime()` 检测不到即降级为内存演示运行时（不崩） |
+| `network.getStatus` / `log.*` / `system.getDeviceInfo` | ✅ | 对应 `BaseNetwork` / `BaseLog` / `BaseSystem`；容器退出用 `BaseSystem.exitApp`（RNOH 没有安卓的 `ExitApp`） |
 | `permission.*` | ⚠️ | 见下 |
 
 #### 行为差异（不是「能不能」，是「不一样」）
@@ -965,11 +965,11 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`ERPCapabilities.m` 已补齐
 - **WebView 容器**：鸿蒙侧不因 `source.uri` 变化重建 source（ArkWeb 会因此重载，navigationId 1→2）；
   `onHttpError` **只记日志不弹错误页**（ArkWeb 会把子资源失败也报上来，按主帧判不可靠）。
 - **返回键**：只有页面级返回（RNOH 没有安卓 `BackPressedDispatcher` 那条全局链路）。
-- **原生方法注册是双份的**：ArkTS 的 `public async` 方法 + `cpp/ERPTurboModules.h` 的
+- **原生方法注册是双份的**：ArkTS 的 `public async` 方法 + `cpp/BaseTurboModules.h` 的
   `ARK_ASYNC_METHOD_METADATA(名字, 参数个数)`，两边必须逐一对应，且**全部方法都是 async**
   （同步方法会在 JS 线程上等主线程 → 死锁）。改签名忘了改 C++ 的表现是「方法存在但一调就抛」。
 - **自检通道**：`App.tsx` 启动时跑 `runHarmonyNativeSelfTest()`（仅鸿蒙、仅一次），逐项探测
-  `ERPSystem` / `ERPNetwork` / `ERPLog` / 剪贴板 / `fileDownload` / `setBadge` 并写设备日志，
+  `BaseSystem` / `BaseNetwork` / `BaseLog` / 剪贴板 / `fileDownload` / `setBadge` 并写设备日志，
   登录前就能用 `hdc` 取回结果。会抢前台的动作（拍照、选图、扫码、播放提示音、通知）不在其中，需人工点。
 
 ---
@@ -1009,9 +1009,9 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`ERPCapabilities.m` 已补齐
 | `src/bridge/modules/` | 业务/容器模块（app/auth/permission/system/notification/log/keyboard/toast/dialog/navigation…） |
 | `src/bridge/modules/update.ts` | 整包远程升级模块（拆「起任务 + 轮询」，见 §4.12） |
 | `src/bridge/modules/capabilities/` | 能力模块（camera/scanner/media/file/location/clipboard/appManager/nfc 适配器契约 `types.ts`） |
-| `src/middleware/native/capability-native-adapters.ts` | `NativeModules.ERPCapabilities` → 能力适配器（逐项探测，缺失降级） |
-| `src/middleware/native/system-native-adapter.ts` | `ERPSystem` 设备信息 + copy（优先原生 `clipboardSetString`，回落 RN `Clipboard`）/ share（RN `Share`） |
-| `src/middleware/native/update-native-adapter.ts` | `NativeModules.ERPUpdate` → update 模块适配器 + 原生码映射 |
+| `src/middleware/native/capability-native-adapters.ts` | `NativeModules.BaseCapabilities` → 能力适配器（逐项探测，缺失降级） |
+| `src/middleware/native/system-native-adapter.ts` | `BaseSystem` 设备信息 + copy（优先原生 `clipboardSetString`，回落 RN `Clipboard`）/ share（RN `Share`） |
+| `src/middleware/native/update-native-adapter.ts` | `NativeModules.BaseUpdate` → update 模块适配器 + 原生码映射 |
 | `src/middleware/network/` | network 模块与原生适配器 |
 | `src/platform/os.ts` | 平台判定唯一入口（`currentOs` / `isHarmony` / `isIos`）——`Platform.OS` 是封闭联合，鸿蒙分支只能从这里走 |
 | `src/platform/harmony/safe-area-context.harmony.tsx` | 鸿蒙安全区纯 JS 替身（metro 按 platform 换包名，见 §9.6） |
@@ -1019,11 +1019,11 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`ERPCapabilities.m` 已补齐
 | `src/webview/WebViewBridge.tsx` | WebView 容器：消息派发、事件透传、返回键拦截（`native.back`）、前后台事件、安全区两条路（本地注入 `window.RN_SAFE_AREA` / 远程只注入 `<style>`，见 §9.7） |
 | `src/diagnostics/device-logger.ts` | 设备调用日志（级别控制/脱敏/落盘） |
 | `src/diagnostics/device-log-store.ts` | 日志文件查询/读取/清理（RN 侧） |
-| `platforms/android/.../erp/` | Android 原生模块（ERPCapabilities / ERPNetwork / ERPLog / ERPH5 / ERPSystem / ERPUpdate / MLKitScanActivity） |
+| `platforms/android/.../base/` | Android 原生模块（BaseCapabilities / BaseNetwork / BaseLog / BaseH5 / BaseSystem / BaseUpdate / MLKitScanActivity） |
 | `platforms/android/.../AndroidManifest.xml` | 权限声明、FileProvider、`<queries>` 包可见性、扫码 Activity |
-| `platforms/ios/qux/ERPCapabilities.swift` + `.m` | iOS 能力实现 + `RCT_EXTERN_MODULE` 导出（见 §9.5） |
-| `harmony/entry/src/main/ets/erp/` | 鸿蒙自研 TurboModule（ERPCapabilities / ERPSystem / ERPLog / ERPNetwork + `ERPScanCapability.ets`） |
-| `harmony/entry/src/main/cpp/ERPTurboModules.h` | 方法注册表（`ARK_ASYNC_METHOD_METADATA`），必须与 ArkTS 的 `public async` 方法逐一对应 |
+| `platforms/ios/qux/BaseCapabilities.swift` + `.m` | iOS 能力实现 + `RCT_EXTERN_MODULE` 导出（见 §9.5） |
+| `harmony/entry/src/main/ets/base/` | 鸿蒙自研 TurboModule（BaseCapabilities / BaseSystem / BaseLog / BaseNetwork + `BaseScanCapability.ets`） |
+| `harmony/entry/src/main/cpp/BaseTurboModules.h` | 方法注册表（`ARK_ASYNC_METHOD_METADATA`），必须与 ArkTS 的 `public async` 方法逐一对应 |
 | `harmony/oh-package.json5` | 用 `file:../node_modules/...` 指到 RNOH HAR —— 这就是 `harmony/` 必须在仓库根的原因 |
 | `src/config/index.ts` | 集中配置；`REMOTE_H5_URL` / `IS_REMOTE_H5` / `REMOTE_H5_ORIGIN` 是远程模式开关（scheme 白名单校验在这里） |
 | `src/app/resolve-h5-source.ts` | H5 入口决策：远程模式直接返回 `remoteUrl`，否则本地激活版本 → 内置兜底页 |
@@ -1141,7 +1141,7 @@ await deviceLogStore.clearLogs();                       // 清空，返回 { cle
 - RN 侧：`BridgeServer` 新增 `onCall` 观测钩子（`src/bridge/bridge-server.ts`），
   `WebViewBridge` 注入 `logDeviceCall`（`src/diagnostics/device-logger.ts`），
   记录每次调用的参数/结果/耗时/错误（参数与结果均经现有脱敏逻辑处理）。
-- 原生侧：`ERPLogModule.kt`（`ERPLog` 模块）追加写入 `filesDir/logs/device-YYYY-MM-DD.log`，
+- 原生侧：`BaseLogModule.kt`（`BaseLog` 模块）追加写入 `filesDir/logs/device-YYYY-MM-DD.log`，
   已注册到 `MainApplication.kt`。原生模块未接入时日志降级到 console，不影响业务。
 - 日志写入失败不影响主流程（fire-and-forget）。
 
@@ -1160,13 +1160,13 @@ APK 自带一个内置 H5 子包（`h5/` 目录，经 `build.gradle` 打进 APK 
 
 ```ts
 // src/config/index.ts
-export const H5_MANIFEST_URL = 'https://mobile-erp.example.com/manifest.json';
+export const H5_MANIFEST_URL = 'https://mobile-base.example.com/manifest.json';
 ```
 
 真正启用动态升级时，把该值替换为你的 manifest 服务地址，例如：
 
 ```ts
-export const H5_MANIFEST_URL = 'https://your-cdn.com/erp-h5/manifest.json';
+export const H5_MANIFEST_URL = 'https://your-cdn.com/base-h5/manifest.json';
 ```
 
 消费链路：`create-real-runtime.ts` → `new ManifestClient({ latestUrl: H5_MANIFEST_URL })`
@@ -1195,7 +1195,7 @@ manifest 服务需返回 `manifest.json`，字段与 `src/updater/types.ts` 的 
 版本目录约定：`{base}/manifest.json` 为 latest manifest；单版本 manifest 模板
 `{base}/releases/{version}/manifest.json`（`ManifestClient.versionUrlTemplate`，可选）。
 
-### 13.4 本地版本管理（原生 ERPH5 模块）
+### 13.4 本地版本管理（原生 BaseH5 模块）
 
 落盘位置：`<filesDir>/h5-versions/`（App 私有目录，无需额外权限）。
 
@@ -1210,12 +1210,12 @@ h5-versions/
     index.html ...
 ```
 
-- 安装：`ERPH5.install(version, base64Zip, manifestJson)` — 解压 zip（含路径穿越防护）并写 manifest。
-- 激活：`ERPH5.activate(version)` — 原子写 `current.json`（tmp 文件 + rename），`previous` 记为旧版本。
-- 入口：`ERPH5.getActiveEntry()` — 返回 `file:///data/user/0/com.qux/files/h5-versions/<version>/<entry>`。
-- 校验：`ERPH5.sha256(base64)` — MessageDigest SHA-256，返回小写 hex。
+- 安装：`BaseH5.install(version, base64Zip, manifestJson)` — 解压 zip（含路径穿越防护）并写 manifest。
+- 激活：`BaseH5.activate(version)` — 原子写 `current.json`（tmp 文件 + rename），`previous` 记为旧版本。
+- 入口：`BaseH5.getActiveEntry()` — 返回 `file:///data/user/0/com.qux/files/h5-versions/<version>/<entry>`。
+- 校验：`BaseH5.sha256(base64)` — MessageDigest SHA-256，返回小写 hex。
 
-原生模块：`platforms/android/app/src/main/java/com/qux/erp/ERPH5Module.kt` + `ERPH5Package.kt`，
+原生模块：`platforms/android/app/src/main/java/com/qux/base/BaseH5Module.kt` + `BaseH5Package.kt`，
 已注册到 `MainApplication.kt`。
 
 ### 13.5 升级流程（自动触发）
@@ -1228,7 +1228,7 @@ App 启动后（`AppRoot.tsx` 后台 useEffect）自动执行：
      → 有可用版本 → update()：
           DOWNLOADING → PackageDownloader(RN fetch，带重试/进度)
           VERIFYING    → 原生 SHA-256 与 manifest.sha256 比对
-          INSTALLING   → ERPH5 解压落盘
+          INSTALLING   → BaseH5 解压落盘
           ACTIVATING   → 原子切换 current 指针
           SMOKE_TEST   → 刷新 WebView 用新包
      → H5 握手 READY → markReady() 标记 STABLE（冒烟通过）
@@ -1273,8 +1273,8 @@ url.startsWith('file:///data/data/com.qux/files/h5-versions/')
 | manifest 地址配置 | `src/config/index.ts` → `H5_MANIFEST_URL` |
 | manifest 拉取 | `src/updater/manifest-client.ts` → `ManifestClient` |
 | 下载（RN fetch + 重试） | `src/updater/native-http.ts` + `src/updater/downloader.ts` |
-| SHA-256（原生） | `src/updater/native-sha256.ts` + `ERPH5.sha256` |
-| 本地版本存储 | `src/storage/native-h5-storage.ts` + `ERPH5Module.kt` |
+| SHA-256（原生） | `src/updater/native-sha256.ts` + `BaseH5.sha256` |
+| 本地版本存储 | `src/storage/native-h5-storage.ts` + `BaseH5Module.kt` |
 | 生产装配 | `src/app/create-real-runtime.ts` |
 | 自动触发与状态机 | `src/app/AppRoot.tsx` + `src/updater/h5-version-manager.ts` |
 | WebView 放行 | `src/webview/navigation.ts` |

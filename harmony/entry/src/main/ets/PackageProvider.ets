@@ -14,7 +14,7 @@ import type {
 } from '@rnoh/react-native-openharmony';
 import { RNOHPackage as RNOHPackageBase } from '@rnoh/react-native-openharmony';
 import { SafeAreaViewPackage } from '@react-native-ohos/react-native-safe-area-context';
-import { BasePackage } from './erp/BasePackage';
+import { BasePackage } from './base/BasePackage';
 import { createRNOHPackages as createRNOHPackagesAutolinking } from './RNOHPackagesFactory';
 
 /**

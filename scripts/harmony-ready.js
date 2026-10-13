@@ -16,7 +16,7 @@ const RNOH_PKG = '@react-native-oh/react-native-harmony';
 const RNOH_CLI_PKG = '@react-native-oh/react-native-harmony-cli';
 
 /**
- * RNOH 的版本事实（本机没有 node_modules 时的兜底口径，来自 jingyi 基座实测）：
+ * RNOH 的版本事实（本机没有 node_modules 时的兜底口径，来自基座实测）：
  * 0.84.4 的 CLI 与 HAR 配套，peer 精确锁 react-native 0.84.1。
  * 装了 RNOH 之后一律以包内 peerDependencies 为准，不再用这里的数字。
  */

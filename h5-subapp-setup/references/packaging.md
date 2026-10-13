@@ -10,9 +10,9 @@
 
 ```bash
 # 在基座项目根执行（<dist> 为子应用构建产物目录）
-node scripts/inject-h5-api.js ../jingyi_h5/dist   # 按实际路径填写
+node scripts/inject-h5-api.js ../base_h5/dist   # 按实际路径填写
 # 或手动复制：
-#   Copy-Item ..\jingyi_app_base\scripts\api.js dist\js\api.js
+#   Copy-Item ..\RNbase\scripts\api.js dist\js\api.js
 ```
 
 ```bash
@@ -42,7 +42,7 @@ Get-FileHash h5-subapp.zip -Algorithm SHA256   # 转小写
   "version": "1.0.1",
   "buildId": "20260902-101",
   "entry": "index.html",
-  "packageUrl": "https://your-cdn.com/erp-h5/releases/1.0.1/h5-subapp.zip",
+  "packageUrl": "https://your-cdn.com/base-h5/releases/1.0.1/h5-subapp.zip",
   "sha256": "<小写hex>",
   "size": 123456,
   "publishedAt": "2026-09-02T10:00:00Z",
