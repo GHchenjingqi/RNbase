@@ -30,6 +30,7 @@
     "install:harmony": "node scripts/hvigor.js assembleHap --install",
     "clean:harmony": "node scripts/hvigor.js clean",
     "ios:doctor": "node scripts/ios.js doctor",
+    "ios:sync-h5": "node scripts/ios-sync-h5.mjs",
     "ios:pods": "node scripts/ios.js pods",
     "dev:ios": "node scripts/ios.js run",
     "build:ios": "node scripts/ios.js build",

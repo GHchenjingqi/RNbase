@@ -1,0 +1,55 @@
+name: iOS Build (Debug, Simulator)
+
+# 独立 workflow：不阻塞主 CI（ci.yml）。仅在手动触发或 iOS 相关路径变更时跑，
+# 用于在 macOS runner 上验证 iOS 原生工程 + 自研 ERP* 模块能否编译通过。
+# 注意：pod install 耗时较长，且需要 macOS 环境；release 出 .ipa 仍需 Xcode 手动 Archive。
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'platforms/ios/**'
+      - 'src/**'
+      - 'scripts/ios.js'
+      - 'scripts/ios-sync-h5.mjs'
+      - 'package.json'
+      - 'Podfile'
+  pull_request:
+    paths:
+      - 'platforms/ios/**'
+      - 'src/**'
+      - 'scripts/ios.js'
+      - 'scripts/ios-sync-h5.mjs'
+      - 'package.json'
+      - 'Podfile'
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Sync H5 into iOS bundle
+        run: npm run ios:sync-h5
+
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
+
+      - name: Pod install
+        working-directory: platforms/ios
+        run: pod install --repo-update
+
+      - name: Xcode build (simulator, Debug)
+        working-directory: platforms/ios
+        run: xcodebuild -workspace qux.xcworkspace -scheme qux -configuration Debug -sdk iphonesimulator build

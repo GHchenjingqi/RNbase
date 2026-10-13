@@ -84,6 +84,8 @@ export function getErrorTitle(error: WebViewErrorInfo): string {
       return '页面渲染异常';
     case 'timeout':
       return '加载超时';
+    case 'config':
+      return '功能未配置';
     default:
       return '加载失败';
   }
@@ -108,6 +110,8 @@ export function getErrorSuggestion(error: WebViewErrorInfo): string {
       return '页面出现异常，请重新加载';
     case 'timeout':
       return '网络较慢，请检查网络后重试';
+    case 'config':
+      return '该功能所需的本地资源尚未打包，请使用远程模式或联系开发';
     default:
       return '请重新加载或稍后重试';
   }

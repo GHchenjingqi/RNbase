@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+# RNbase 提交前检查（P0-4 韧性地基 · Git Hooks）。
+#
+# 仅使用仓库已安装的 eslint / prettier / tsc，不引入新依赖，
+# 因此不会破坏现有 npm ci（不修改 package.json / package-lock.json）。
+#
+# 激活方式（二选一）：
+#   1) 用 husky：npm i -D husky lint-staged && npx husky install
+#   2) 不用 husky：cp .husky/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+# 完整校验（typecheck / lint 全量 / prettier 全量 / jest）交给 CI，
+# 提交钩子只挡「暂存区的明显问题」，保持提交快。
+
+# husky 注入的辅助脚本（若存在则 source，不存在也不影响）
+HUSSKY_SH="$(dirname -- "$0")/_/husky.sh"
+if [ -f "$HUSSKY_SH" ]; then
+  . "$HUSSKY_SH"
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+# 暂存区中的 TS/TSX（测试由 CI 的 jest 覆盖，这里不拦，避免误伤）
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$' || true)
+
+if [ -n "$STAGED" ]; then
+  echo "[pre-commit] eslint 检查暂存文件"
+  echo "$STAGED" | xargs -I{} npx eslint --max-warnings=0 "{}"
+fi
+
+# 暂存区中的源码做 prettier 自动格式化（向前约束，不卡存量文件）
+STAGED_FMT=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js)$' || true)
+
+if [ -n "$STAGED_FMT" ]; then
+  echo "[pre-commit] prettier 格式化暂存文件"
+  echo "$STAGED_FMT" | xargs -I{} npx prettier --write "{}"
+  echo "$STAGED_FMT" | xargs -I{} git add "{}"
+fi
+
+echo "[pre-commit] OK"

@@ -173,6 +173,9 @@ describe('App 入口（真机链路）', () => {
 
   it('本地模式：入口仍是 APK 内置 assets，Bridge 照常', async () => {
     mockRemote.on = false;
+    // jest 默认 Platform.OS='ios'；固定为 android 以验证 APK 内置 assets 入口
+    // （iOS 本地模式在没有原生 H5BundleBasePath 时会走配置缺失错误页，那是另一条分支）
+    require('react-native').Platform.OS = 'android';
     await bootApp();
     expect(mockBridgeProps.source as { uri: string }).toEqual({
       uri: expect.stringMatching(/^file:\/\/\/android_asset\/index\.html/),

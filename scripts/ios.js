@@ -1,15 +1,16 @@
 /**
- * iOS 侧命令入口（预留位，与安卓/鸿蒙同名不同缀：dev:ios / build:ios / clean:ios）。
+ * iOS 侧命令入口（与安卓/鸿蒙同名不同缀：dev:ios / build:ios / clean:ios）。
  *
  * 为什么要有这个脚本而不是直接把 `react-native run-ios` 写进 package.json：
  *  1. Xcode、xcodebuild、CocoaPods 只存在于 macOS。Windows/Linux 上执行会抛
  *     `Command failed: xcodebuild`，看不出是「环境不对」还是「工程坏了」；
- *  2. 基座的 iOS 工程目前只到「模板 + 自研 ERP* 模块」这一层，仍有两处明确未接：
- *     H5 入口（见 src/app/resolve-h5-entry.ts）与 CLIENT_ID.ios（见 src/config/index.ts）。
- *     这两条必须让人在跑命令时就看到，而不是等装机后白屏再回源码找。
+ *  2. 基座的 iOS 工程已到「模板 + 自研 ERP* 模块 + H5 入口」这一层，仍有少量需人工的项：
+ *     - CLIENT_ID.ios 在 src/config/index.ts 仍是占位值，上架前必须替换；
+ *     - 本地 H5 需把 h5/ 作为 folder reference 加进 Xcode App target（ios:sync-h5 同步资源）。
+ *     这些必须让人在跑命令时就看到，而不是等装机后白屏再回源码找。
  * 本脚本在非 macOS 一律拒绝并给出下一步；在 macOS 才真正调 xcodebuild / react-native CLI。
  *
- * 用法：node scripts/ios.js <doctor|pods|run|build> [--release]
+ * 用法：node scripts/ios.js <doctor|pods|run|build|sync-h5> [--release]
  */
 const { spawnSync } = require('child_process');
 const fs = require('fs');
@@ -21,11 +22,14 @@ const isMac = process.platform === 'darwin';
 const task = process.argv[2];
 const isRelease = process.argv.includes('--release');
 
-/** iOS 链路的已知缺口，跑到任何命令都先复述一遍，免得「装上了但白屏」再回源码找原因。 */
+/**
+ * iOS 链路的已知缺口，跑到任何命令都先复述一遍，免得「装上了但白屏」再回源码找原因。
+ * 这些是需要人工介入的配置项，不是脚本能自动补的。
+ */
 const KNOWN_GAPS = [
-  'H5 入口 getH5EntryUri() 目前只给安卓 assets 路径（file:///android_asset/index.html），' +
-    'iOS 需要 Bundle 内资源路径解析（原生侧还没有对应方法），否则 WebView 白屏',
-  'src/config/index.ts 的 CLIENT_ID.ios 仍是占位值，上架前必须换成 iOS 端分配的 clientId',
+  'CLIENT_ID.ios 仍是占位值 PLEASE_SET_IOS_CLIENT_ID（src/config/index.ts），上架前必须换成 iOS 端分配的 clientId，否则登录被后端拒绝',
+  'iOS 本地 H5 需把 h5/ 作为 folder reference 加进 Xcode App target（见 ios:sync-h5 与 Xcode 步骤），否则仅远程站点模式（version.json remoteUrl）可用',
+  'release 出 .ipa 需要 Xcode 配置 signing 后手动 Archive，或把 -archive/-exportArchive（ExportOptions.plist）参数补进 scripts/ios.js',
 ];
 
 function fail(msg) {
@@ -38,7 +42,7 @@ function findWorkspace() {
   if (!fs.existsSync(iosDir)) return null;
   const ws = fs
     .readdirSync(iosDir)
-    .filter(f => f.endsWith('.xcworkspace'))
+    .filter((f) => f.endsWith('.xcworkspace'))
     .sort();
   return ws.length ? path.join(iosDir, ws[0]) : null;
 }
@@ -49,11 +53,12 @@ function printGuard(reason) {
     '[ios] iOS 构建只能在 macOS 上执行（需要 Xcode / xcodebuild / CocoaPods）。\n' +
       '[ios] 下一步：在 Mac 上 clone 同一份仓库，装好 Xcode 与 CocoaPods 后执行\n' +
       '         npm ci\n' +
+      '         npm run ios:sync-h5   # 把 h5/ 同步进 iOS 工程\n' +
       '         npm run ios:pods      # pod install\n' +
       '         npm run dev:ios       # Metro + run-ios（模拟器）\n' +
       '         npm run build:ios     # xcodebuild（模拟器 Debug 构建，不出 .ipa）\n' +
       '[ios] 基座在 Windows/Linux 上的可用链路：安卓（npm run dev / build:android）' +
-      '与鸿蒙（npm run dev:harmony，见 README「鸿蒙（RNOH）」）。',
+      '与鸿蒙（npm run dev:harmony，见 README「鸿蒙（RNOH）」）。'
   );
   for (const gap of KNOWN_GAPS) console.error(`[ios] 注意缺口：${gap}`);
 }
@@ -87,11 +92,28 @@ function doctor() {
   lines.push(
     `Podfile.lock：${
       fs.existsSync(lock) ? '存在（pod install 已跑过）' : '缺失，先 npm run ios:pods'
-    }`,
+    }`
   );
   const ws = findWorkspace();
   lines.push(`workspace：${ws || '缺失（pod install 之后才有）'}`);
   lines.push(`自研原生模块：${nativeSources().join(', ') || '未发现 ERP*.{swift,m}'}`);
+
+  // clientId 占位校验：直接扫 config 源文件，避免引入 TS 解析依赖。
+  const configPath = path.join(root, 'src', 'config', 'index.ts');
+  const cfg = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+  const iosPlaceholder = /ios:\s*['"]PLEASE_SET_IOS_CLIENT_ID['"]/.test(cfg);
+  lines.push(`CLIENT_ID.ios：${iosPlaceholder ? '仍是占位值，必须替换！' : '已配置'}`);
+
+  // 本地 H5 资源是否同步进 iOS 工程。
+  const h5InBundle = fs.existsSync(path.join(iosDir, 'qux', 'h5', 'index.html'));
+  lines.push(
+    `iOS bundle H5：platforms/ios/qux/h5/index.html ${
+      h5InBundle
+        ? '存在（已 sync-h5）'
+        : '缺失，运行 npm run ios:sync-h5 并在 Xcode 加 folder reference'
+    }`
+  );
+
   console.log('[ios] 当前状态:');
   for (const l of lines) console.log(`  ${l}`);
   console.log('[ios] 已知缺口:');
@@ -109,6 +131,11 @@ function pods() {
   run('pod', ['install'], { cwd: iosDir });
 }
 
+/** 把仓库 h5/ 同步进 iOS 工程（供 Xcode 以 folder reference 引用）。跨平台可用。 */
+function syncH5() {
+  run('node', [path.join(__dirname, 'ios-sync-h5.mjs')]);
+}
+
 function runIos() {
   if (!findWorkspace()) {
     console.warn('[ios] 还没有 .xcworkspace，先执行 npm run ios:pods。');
@@ -119,13 +146,20 @@ function runIos() {
 function build() {
   const ws = findWorkspace();
   if (!ws) fail('缺少 .xcworkspace：先 npm run ios:pods（pod install 会生成）');
-  const scheme = path.basename(ws).replace(/\.xcworkspace$/, '');
   if (isRelease) {
     fail(
       'release 需要签名与 App Store Connect 配置' +
         '（xcodebuild -archive + -exportArchive + ExportOptions.plist），\n' +
         '        基座尚未固化这套参数；请在 Xcode 里配置 signing 后手动 archive，' +
-        '或按需把命令补进 scripts/ios.js（并同步 README）。',
+        '或按需把命令补进 scripts/ios.js（并同步 README）。'
+    );
+  }
+  // 本地模式前确保 H5 资源到位（远程模式忽略亦可，但 sync 无害）。
+  syncH5();
+  if (!fs.existsSync(path.join(iosDir, 'qux', 'h5', 'index.html'))) {
+    console.warn(
+      '[ios] platforms/ios/qux/h5 缺失：请先 npm run ios:sync-h5，并在 Xcode 把 h5 ' +
+        '作为 folder reference 加进 App target，否则本地模式 WebView 白屏。'
     );
   }
   // 模拟器 Debug 构建：不需要签名，能验证 Swift/OC 侧与 pod 依赖是否真的编得过。
@@ -135,36 +169,39 @@ function build() {
       '-workspace',
       ws,
       '-scheme',
-      scheme,
+      path.basename(ws).replace(/\.xcworkspace$/, ''),
       '-configuration',
       'Debug',
       '-sdk',
       'iphonesimulator',
       'build',
     ],
-    { cwd: iosDir },
+    { cwd: iosDir }
   );
   console.log('[ios] 模拟器 Debug 构建完成（产物在 Xcode DerivedData，本脚本不投递 ipa）。');
 }
 
-const TASKS = ['doctor', 'pods', 'run', 'build'];
+const TASKS = ['doctor', 'pods', 'run', 'build', 'sync-h5'];
 
 function main() {
   if (!task) fail(`用法: node scripts/ios.js <${TASKS.join('|')}> [--release]`);
   // 先验 task：否则在 Windows 上打错命令名也只会看到「只能在 macOS 执行」，根因被盖住。
   if (!TASKS.includes(task)) fail(`未知 task=${task}，可用：${TASKS.join(' / ')}`);
-  // doctor 只读文件，任何平台都能跑（在 Windows 上要能回答「iOS 侧到底缺什么」）；
-  // pods/run/build 才真的需要 macOS。
+  // doctor / sync-h5 只读或纯文件操作，任何平台都能跑；其余命令才真的需要 macOS。
   if (task === 'doctor') {
     doctor();
     return;
   }
+  if (task === 'sync-h5') {
+    syncH5();
+    return;
+  }
+  // 其余命令执行前也先把缺口说一遍，避免有人以为 iOS 已经可用。
+  for (const gap of KNOWN_GAPS) console.warn(`[ios] 注意缺口：${gap}`);
   if (!isMac) {
     printGuard(`当前系统 ${process.platform} 无法执行 iOS 链路（task=${task}）。`);
     process.exit(1);
   }
-  // 其余命令执行前也先把缺口说一遍，避免有人以为 iOS 已经可用。
-  for (const gap of KNOWN_GAPS) console.warn(`[ios] 注意缺口：${gap}`);
   if (task === 'pods') return pods();
   if (task === 'run') return runIos();
   return build();

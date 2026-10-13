@@ -47,6 +47,28 @@ export const CLIENT_ID = {
 };
 
 /**
+ * 打包前客户端标识校验（尤其是 iOS）。
+ *
+ * `CLIENT_ID.ios` 默认是占位值 `PLEASE_SET_IOS_CLIENT_ID`，未替换会导致 iOS 端登录被后端拒绝。
+ * App 启动时调用 validateClientIds()，命中占位值会在控制台与设备日志中明确告警，
+ * 避免「装机后才发现白屏/登录失败」再回源码排查。
+ *
+ * @returns 仍为占位值的端列表（['ios'] / ['android','ios'] 等），全配置则返回空数组。
+ */
+const PLACEHOLDER_CLIENT_ID = 'PLEASE_SET_IOS_CLIENT_ID';
+
+export function validateClientIds(): string[] {
+  const missing: string[] = [];
+  (Object.keys(CLIENT_ID) as Array<keyof typeof CLIENT_ID>).forEach((platform) => {
+    const id = CLIENT_ID[platform];
+    if (!id || id === PLACEHOLDER_CLIENT_ID) {
+      missing.push(platform);
+    }
+  });
+  return missing;
+}
+
+/**
  * ===================== 日志配置 =====================
  */
 
@@ -227,11 +249,25 @@ function normalizeRemoteUrl(raw: unknown): string | null {
 
 /** 远程站点地址；null 表示本地 H5 模式。 */
 export const REMOTE_H5_URL: string | null = normalizeRemoteUrl(
-  (versionInfo as { remoteUrl?: unknown }).remoteUrl,
+  (versionInfo as { remoteUrl?: unknown }).remoteUrl
 );
 
 /** 是否处于「基座 + URL」模式。 */
 export const IS_REMOTE_H5 = REMOTE_H5_URL !== null;
+
+/**
+ * 远程站点模式「主资源加载超时」（毫秒，默认 30000）。
+ *
+ * 仅在 bridgeEnabled=false（远程站点）时启用：从 onLoadStart 起算，
+ * 若 onLoadEnd（HTML 主资源到达）未在时限内触发，判定为离线 / DNS 挂起 / 站点过慢，
+ * 切到错误页（可重新加载）。
+ *
+ * 为什么只卡「主资源」：第三方 SPA「返回 200 却卡在自身加载态」时 onLoadEnd 已触发，
+ * 此超时不会误伤（README 远程模式硬性限制已说明这类无兜底）；
+ * 它兜的是「连 HTML 都拿不到」的硬失败——这类失败 WebView 未必抛 onError（实测离线偶发白屏），
+ * 故用软超时补齐（规范 §26 加载失败兜底）。
+ */
+export const REMOTE_H5_LOAD_TIMEOUT_MS = 30000;
 
 /**
  * 远程站点的 origin（`scheme://host[:port]`），用于 Bridge 来源校验与导航白名单。
@@ -261,7 +297,7 @@ export const DOMAIN_WHITELIST: string[] = (() => {
       // 通过 adb reverse 将模拟器 8081 转发到宿主机 8082 时，WebView 实际加载的是 8081 端口
       'http://localhost:8081',
       'http://127.0.0.1:8081',
-      'http://10.0.2.2:8081',
+      'http://10.0.2.2:8081'
     );
   }
   return list;

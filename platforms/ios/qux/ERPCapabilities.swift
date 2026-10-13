@@ -21,6 +21,15 @@ class ERPCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
   static func moduleName() -> String! { "ERPCapabilities" }
   static func requiresMainQueueSetup() -> Bool { false }
 
+  // MARK: - 常量导出（JS 同步读取，避免异步等待）
+
+  @objc(constantsToExport)
+  override func constantsToExport() -> [AnyHashable: Any] {
+    // H5 本地入口基座路径：iOS 没有 android_asset，WebView 需加载 App bundle 内的 h5/ 资源
+    // （开发者需把 h5/ 作为 folder reference 加进 App target，见 scripts/ios.js 的 sync-h5）。
+    ["H5BundleBasePath": Bundle.main.bundlePath]
+  }
+
   private let locationManager = CLLocationManager()
   private var locationResolver: RCTPromiseResolveBlock?
 

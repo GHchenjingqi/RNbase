@@ -10,7 +10,7 @@
  *
  * 对应规范 §4/§24/§26/§31/§51。
  */
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   AppState,
   BackHandler,
@@ -39,8 +39,8 @@ import { decideNavigation } from './navigation';
 import { classifyHttpError, classifyNativeError } from './error-handler';
 import { WebViewLoading } from './WebViewLoading';
 import { WebViewErrorPage } from './WebViewErrorPage';
-import { DOMAIN_WHITELIST } from '../config';
-import type { WebViewSource } from './types';
+import { DOMAIN_WHITELIST, REMOTE_H5_LOAD_TIMEOUT_MS } from '../config';
+import type { WebViewErrorInfo, WebViewSource } from './types';
 
 /**
  * Dev 模式 CORS 绕过注入：拦截 fetch / XMLHttpRequest，移除后端未放行的自定义 header
@@ -256,6 +256,18 @@ export function WebViewBridge({
   const controllerRef = useRef(controller);
   controllerRef.current = controller;
   const backAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 远程模式主资源加载超时兜底（见 config REMOTE_H5_LOAD_TIMEOUT_MS 说明）
+  const remoteLoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearRemoteLoadTimer = useCallback(() => {
+    if (remoteLoadTimerRef.current) {
+      clearTimeout(remoteLoadTimerRef.current);
+      remoteLoadTimerRef.current = null;
+    }
+  }, []);
+
+  // 卸载时清理远程加载超时计时器，避免定时器泄漏
+  useEffect(() => clearRemoteLoadTimer, [clearRemoteLoadTimer]);
 
   // 将 RN → H5 事件（如 system.darkmodechange / auth.logout / network.changed）
   // 通过 WebView postMessage 透传给 H5 侧订阅（规范 §62）。
@@ -263,7 +275,7 @@ export function WebViewBridge({
     if (!bridgeEnabled) {
       return;
     }
-    server.eventBus.setGlobalListener(e => {
+    server.eventBus.setGlobalListener((e) => {
       const wv = controller._webViewRef.current;
       if (wv && typeof wv.postMessage === 'function') {
         wv.postMessage(JSON.stringify(e));
@@ -276,7 +288,7 @@ export function WebViewBridge({
   // H5 侧通过 RN.ON('app.background' / 'app.resume', handler) 订阅。
   // （PermissionProvider 中另有 AppState 监听，仅用于权限刷新，互不冲突。）
   useEffect(() => {
-    const sub = AppState.addEventListener('change', next => {
+    const sub = AppState.addEventListener('change', (next) => {
       if (next === 'background') {
         server.eventBus.emit(BRIDGE_EVENTS.APP_BACKGROUND, {
           timestamp: Date.now(),
@@ -307,7 +319,7 @@ export function WebViewBridge({
       if (controllerRef.current.canGoBack() && wv) wv.goBack();
       else exitContainer();
     };
-    setNativeBackResultHandler(consumed => {
+    setNativeBackResultHandler((consumed) => {
       if (!consumed) fallback();
       else clearAckTimer();
     });
@@ -349,14 +361,16 @@ export function WebViewBridge({
   };
 
   const handleNativeError = (e: { nativeEvent: unknown }) => {
+    clearRemoteLoadTimer();
     const structured = classifyNativeError(
-      e.nativeEvent as Parameters<typeof classifyNativeError>[0],
+      e.nativeEvent as Parameters<typeof classifyNativeError>[0]
     );
     controller._onError(structured);
     onError?.(structured);
   };
 
   const handleHttpError = (e: { nativeEvent: unknown }) => {
+    clearRemoteLoadTimer();
     const structured = classifyHttpError(e.nativeEvent as Parameters<typeof classifyHttpError>[0]);
     // 鸿蒙：只记日志，不切错误页。port 侧 WebViewBaseOperate.ets 的 emitHttpError
     // 没有像 emitLoadingError 那样过滤 request.isMainFrame()，任何一个子资源
@@ -366,7 +380,7 @@ export function WebViewBridge({
     if (isHarmony()) {
       deviceLogger.warn(
         `httpError.ignored(sub-resource) code=${structured.httpStatus ?? '?'}` +
-          ` url=${structured.url ?? '?'}`,
+          ` url=${structured.url ?? '?'}`
       );
       return;
     }
@@ -381,11 +395,26 @@ export function WebViewBridge({
         // @ts-expect-error ref injection for react-native-webview v14
         ref={controller._webViewRef}
         source={webViewSource}
-        onLoadStart={event => {
+        onLoadStart={(event) => {
           controller._onLoadStart(event.nativeEvent.canGoBack);
           onLoadStart?.();
+          // 远程模式：主资源未在时限内到达即判超时（见 REMOTE_H5_LOAD_TIMEOUT_MS）
+          if (!bridgeEnabled) {
+            clearRemoteLoadTimer();
+            remoteLoadTimerRef.current = setTimeout(() => {
+              const timedOut: WebViewErrorInfo = {
+                type: 'timeout',
+                code: 'REMOTE_LOAD_TIMEOUT',
+                message: '远程站点主资源加载超时',
+                url: 'uri' in source ? source.uri : undefined,
+              };
+              controller._onError(timedOut);
+              onError?.(timedOut);
+            }, REMOTE_H5_LOAD_TIMEOUT_MS);
+          }
         }}
-        onLoadEnd={event => {
+        onLoadEnd={(event) => {
+          clearRemoteLoadTimer();
           controller._onLoadEnd(event.nativeEvent.canGoBack);
           onLoadEnd?.();
         }}

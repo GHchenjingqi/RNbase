@@ -10,7 +10,7 @@ export type NavigationDecision =
   | { action: 'open-external'; reason: string };
 
 /** 结构化 WebView 错误（规范 §26）。 */
-export type WebViewErrorType = 'network' | 'http' | 'render' | 'timeout' | 'unknown';
+export type WebViewErrorType = 'network' | 'http' | 'render' | 'timeout' | 'unknown' | 'config';
 
 export type WebViewErrorInfo = {
   type: WebViewErrorType;

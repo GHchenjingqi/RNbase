@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+# 取消同一分支上已在进行中的旧运行，节省资源。
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck / Lint / Format / Test
+    runs-on: ubuntu-latest
+    # 基座约束 node >= 22.11（见 package.json engines）
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Unit tests (jest)
+        run: npm test
+
+      # 说明：prettier 格式校验不在 CI 硬门禁内。仓库存在预存在的格式偏差
+      # （缺 .prettierrc 导致长期以默认 80 列检查），格式统一由提交钩子
+      # （.husky/pre-commit）对暂存文件自动修复向前约束；待全量
+      # `npm run format` 对齐后可再加回 format:check。
