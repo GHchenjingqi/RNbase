@@ -1,10 +1,14 @@
 {
   "_说明": "复制为 app-registry.json 后按本机路径改。基座不内置任何具体 App：这里只登记「有哪些子应用、目录在哪」。",
-  "activeApp": "app_h5",
+  "activeApp": "rn_h5",
   "apps": {
-    "app_h5": {
-      "dir": "../app_h5",
+    "rn_h5": {
+      "dir": "../RN_h5",
       "dist": "dist"
+    },
+    "gushici": {
+      "dir": "../gushici_h5",
+      "dist": "dist-file"
     }
   }
 }
