@@ -1,9 +1,7 @@
 # OSX
-#
 .DS_Store
 
 # Xcode
-#
 build/
 *.pbxuser
 !default.pbxuser
@@ -23,7 +21,6 @@ DerivedData
 **/.xcode.env.local
 
 # Android/IntelliJ
-#
 build/
 .idea
 .gradle
@@ -36,87 +33,82 @@ local.properties
 .kotlin/
 
 # node.js
-#
 node_modules/
 npm-debug.log
 yarn-error.log
 
-# fastlane
-#
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
-
-**/fastlane/report.xml
-**/fastlane/Preview.html
-**/fastlane/screenshots
-**/fastlane/test_output
-
-# Bundle artifact
-*.jsbundle
-
-# Ruby / CocoaPods
-**/Pods/
-/vendor/bundle/
-
-# Temporary files created by Metro to check the health of the file watcher
-.metro-health-check*
-
-# testing
-/coverage
-
-# Yarn
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
-
-# ===== 本地补充（不提交 git）=====
-
-# 打包产物（dist 下为 APK 等分发物）
+# React Native / Metro
 dist/
+.metro-health-check*
+*.tsbuildinfo
+.rn_temp/
 
-# Metro 文件系统缓存
-.bundle/
+# Lint / Typecheck / Test artifacts
+lint.txt
+lint-result.txt
+eslint-report.*
+coverage/
+.nyc_output/
+*.lcov
 
-# 日志与临时文件
+# Build outputs
+*.apk
+*.aab
+*.hap
+*.har
+*.ipa
+*.dSYM/
+*.app/
+
+# Generated build artifacts (由 npm run build:base 写入，不入库)
+version.json
+app-registry.json
+h5/
+platforms/android/app/src/main/res/drawable-*/
+platforms/android/app/src/main/res/mipmap-*/
+
+# Logs
 *.log
-metro.log
-*.hbc
-log/
+*.log.*
+logs/
 
-# ESLint / 测试缓存
-.eslintcache
-/coverage
-
-# 编辑器 / IDE
+# Editor/IDE
 .vscode/
+*.swp
+*.swo
+*~
+.*.swp
 .idea/
 *.iml
 
-# Windows 系统文件
+# OS
 Thumbs.db
+ehthumbs.db
 Desktop.ini
 
-# 本地环境变量（如有密钥/token 不入库）
+# Gradle wrapper jars (keep gradle-wrapper.properties)
+gradle/wrapper/gradle-wrapper.jar
+
+# hvigor / HarmonyOS
+oh_modules/
+hvigor/
+.hvigor/
+
+# Turbo/Next.js like build caches
+.turbo/
+.next/
+
+# pnpm / yarn v2+
+.pnpm-store/
+.yarn/
+
+# Local env / secrets
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
 
-# h5
-/h5
-/erp-mobile-split
-/h5.backup
-
-# ===== 品牌下发的派生物：单个 App 的配置不进基座仓库 =====
-# 真源只有两处，都在基座仓库外：<子应用>/app.config.json 与 <子应用>/app-brand/。
-# 下面这些是 brand:apply 的产物（改完子应用重跑即可再生），入库就等于把某个 App 的身份写进基座。
-/version.json
-/app-registry.json
-# 图标与闪屏位图：基座中性默认图在 src/main/brand-default/（入库），下发时覆盖到 res/ 下
-platforms/android/app/src/main/res/mipmap-*/ic_launcher.png
-platforms/android/app/src/main/res/mipmap-*/ic_launcher_round.png
-platforms/android/app/src/main/res/drawable-*/splash_logo.png
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/

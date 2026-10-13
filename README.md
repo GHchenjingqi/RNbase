@@ -273,7 +273,7 @@ npm test                   # jest（__tests__/ 全部测试）
 | 平台 | 命令前缀 | 产物 | 当前状态 |
 |------|----------|------|----------|
 | Android | `:android`（或短名 `dev`/`emulator`） | APK | ✅ 完整链路，已验证到装机 |
-| HarmonyOS | `:harmony` | HAP | ⚠️ 工程与脚本已就位；**仓库未装 RNOH 依赖**（RN 0.87.1 与 RNOH peer 精确锁的 0.84.1 冲突），装上前所有 `:harmony` 命令会被闸掉 |
+| HarmonyOS | `:harmony` | HAP | ✅ 已打通：基座已整仓降到 **RN 0.84.1**（与 RNOH 0.84.4 的 peer 精确锁对齐），RNOH 依赖已装，`npm run build:harmony` 可产出 unsigned HAP（仅模拟器） |
 | iOS | `:ios` / `ios:` | — | 🔒 预留位：原生模块已在，H5 入口与 `CLIENT_ID.ios` 未接，`ios:doctor` 会逐条列出 |
 
 ### 构建环境例外配置（可选）
@@ -294,20 +294,19 @@ qux.aapt2FromMaven=D:/path/to/real/aapt2.exe    # 指定未被替换的 aapt2 �
 ## 鸿蒙（RNOH）
 
 `harmony/` 是 DevEco / hvigor 工程，RN 侧靠 `@react-native-oh/react-native-harmony`（RNOH）跑在上面。
-**当前仓库状态：源码与脚本已就位，RNOH 依赖没装**，所以所有 `:harmony` 命令都会在闸上退出并打印判据，
-安卓 / iOS 链路不受任何影响。判据集中在 `scripts/harmony-ready.js`（`npm run doctor` 的「平台链路」一节同源）。
+**当前仓库状态：RNOH 依赖已装，基座已整仓降到 RN 0.84.1，`npm run build:harmony` 可正常出包。**
+判据集中在 `scripts/harmony-ready.js`（`npm run doctor` 的「平台链路」一节同源）。
 
-### 为什么不能直接 `npm i` 就完事
+### 为什么是 0.84.1
 
-实测（jingyi 基座 `node_modules/@react-native-oh/react-native-harmony/package.json`）：
-RNOH **0.84.4** 的 `peerDependencies` 把 `react-native` **精确锁在 0.84.1**，而本基座主干是 **0.87.1**。
+RNOH **0.84.4** 的 `peerDependencies` 把 `react-native` **精确锁在 0.84.1**，而本基座主干原本是 **0.87.1**。
 这不是「装装看」能过关的：装上就会把安卓侧一起拖回旧版本（babel / metro / @react-native/* 一整套都得跟着降）。
 两条路，选一条再动手：
 
-- 整仓降到 RN 0.84.1（含 `@react-native/*` 0.84.1 配套），三平台共用一份依赖；
-- 等 RNOH 出适配 0.87 的发布线（届时只需换版本号，`harmony-ready.js` 的兜底数字会自动让位给包内 peer）。
+- 整仓降到 RN 0.84.1（含 `@react-native/*` 0.84.1 配套），三平台共用一份依赖；**← 当前已选这条**
+- 等 RNOH 出适配 0.87 的发布线（届时只需换版本号，`harmony-ready.js` 的兜底数字会自动让位给包内 peer）
 
-### 依赖装法（降到 RN 0.84.1 之后）
+### 依赖装法（降到 RN 0.84.1 之后，当前已完成）
 
 ```sh
 npm i @react-native-oh/react-native-harmony@0.84.4

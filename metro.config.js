@@ -15,10 +15,8 @@ const url = require('url');
 /**
  * RNOH（鸿蒙）Metro 配置：只在 platform=harmony 时改写模块解析。
  *
- * 刻意做成「装了才生效」：基座主干（RN 0.87.1）并没有装 RNOH —— 它 0.84.4 的 peer 精确锁
- * react-native 0.84.1，装上就会把安卓/iOS 一起拖回旧版本。所以本文件加载时如果找不到 RNOH
- * 就静默跳过，安卓/iOS 打包完全不受影响；只有本次调用确实是给鸿蒙出包（argv 里带 harmony）
- * 时才把缺失变成硬错误，避免有人以为打出了鸿蒙包却拿到空产物。
+ * 本基座已整仓降到 RN 0.84.1（与 RNOH 0.84.4 的 peer 精确锁对齐）并安装了 RNOH，
+ * 因此加载时若找不到 RNOH 就是真的装错了/没装，直接报错提示而非静默跳过。
  */
 let createHarmonyMetroConfig = null;
 try {
@@ -28,8 +26,8 @@ try {
   if (process.argv.some(arg => /harmony/i.test(arg))) {
     throw new Error(
       `鸿蒙打包需要 @react-native-oh/react-native-harmony，但它无法加载：${err.message}\n` +
-        '  RNbase 主干是 react-native 0.87.1，而 RNOH 0.84.4 的 peer 精确锁 0.84.1；\n' +
-        '  要先按 README「鸿蒙（RNOH）」一节降版本装依赖，npm run doctor 会复查这一项。',
+        '  基座已是 react-native 0.84.1 + RNOH 0.84.4；请检查 @react-native-oh/react-native-harmony\n' +
+        '  等包是否装入了 node_modules（见 README「鸿蒙（RNOH）」一节）。',
     );
   }
 }

@@ -2,12 +2,10 @@
  * 鸿蒙（RNOH）构建前置体检：`hvigor.js` 与 `doctor.js` 共用同一份判据。
  *
  * 为什么需要这一层：harmony/ 工程是**源码层**搬进基座的，而 RNOH 0.84.4 的
- * peerDependencies 把 react-native 精确锁在 0.84.1（见 jingyi 基座的
- * `node_modules/@react-native-oh/react-native-harmony/package.json`）。
- * 基座主干是 RN 0.87.1 时根本装不上 RNOH，此时若直接跑 hvigorw，报的会是
- * 「找不到 oh_modules / 未知插件」这类看不出根因的错。所以这里把「缺什么、
- * 为什么缺、要装什么版本」一次讲清，并且**只在真正要出鸿蒙包时**拦（build 脚本），
- * 安卓/iOS 链路完全不受影响。
+ * peerDependencies 把 react-native 精确锁在 0.84.1。基座若仍停在 RN 0.87.1，
+ * 根本装不上 RNOH，此时直接跑 hvigorw 报的会是「找不到 oh_modules / 未知插件」
+ * 这类看不出根因的错。所以这里把「缺什么、为什么缺、要装什么版本」一次讲清，
+ * 并且**只在真正要出鸿蒙包时**拦（build 脚本），安卓/iOS 链路完全不受影响。
  */
 'use strict';
 
