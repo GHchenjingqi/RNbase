@@ -48,7 +48,9 @@
     "sync:api": "node scripts/sync-h5-api.js",
     "doctor": "node scripts/doctor.js",
     "doctor:hermesc": "node scripts/check-hermesc.js",
-    "apk:hash": "node scripts/apk-hash.js"
+    "apk:hash": "node scripts/apk-hash.js",
+    "gen:api-doc": "node scripts/gen-api-doc.js",
+    "gen:api-doc:check": "node scripts/gen-api-doc.js --check"
   },
   "dependencies": {
     "@react-native-oh/react-native-harmony": "^0.84.4",

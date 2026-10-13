@@ -38,6 +38,10 @@ jobs:
       - name: Unit tests (jest)
         run: npm test
 
+      # Bridge 能力清单漂移守卫：api.js 注册表变更必须同步重新生成文档。
+      - name: Bridge API doc drift check
+        run: npm run gen:api-doc:check
+
       # 说明：prettier 格式校验不在 CI 硬门禁内。仓库存在预存在的格式偏差
       # （缺 .prettierrc 导致长期以默认 80 列检查），格式统一由提交钩子
       # （.husky/pre-commit）对暂存文件自动修复向前约束；待全量
