@@ -13,12 +13,22 @@
 import { ManifestClient } from './manifest-client';
 import { checkForUpdate, compareVersion, type UpdateCheckContext } from './update-checker';
 import { PackageDownloader, type HttpDownloader } from './downloader';
-import { verifyPackage, type Sha256Hasher } from './verifier';
+import {
+  verifyPackage,
+  defaultSignatureVerifier,
+  type Sha256Hasher,
+  type SignatureVerifier,
+} from './verifier';
 import { PackageInstaller, type FileSystem, type Unzipper } from './installer';
 import { VersionActivator, type CurrentPointer } from './activator';
 import { UpdateStateMachine, type UpdateState } from './update-state';
 import type { H5Manifest, RolloutRule } from './types';
-import { UPDATE_CHECK_THROTTLE_MS, UPDATE_DOWNLOAD_MAX_RETRIES } from '../config';
+import {
+  UPDATE_CHECK_THROTTLE_MS,
+  UPDATE_DOWNLOAD_MAX_RETRIES,
+  H5_UPDATE_PUBLIC_KEY,
+  SIGNATURE_POLICY,
+} from '../config';
 
 export type UpdateOrchestratorOptions = {
   manifestClient: ManifestClient;
@@ -31,6 +41,10 @@ export type UpdateOrchestratorOptions = {
   context: UpdateCheckContext;
   /** 灰度规则 */
   rollout?: RolloutRule;
+  /** 签名校验器（RN/Hermes 需注入原生实现；不传则回落 defaultSignatureVerifier，缺失时为 null） */
+  signatureVerifier?: SignatureVerifier;
+  /** 签名公钥覆盖（默认回落 H5_UPDATE_PUBLIC_KEY；测试或按来源切换密钥时注入） */
+  signaturePublicKey?: string;
   /** 检查节流时间（毫秒），默认 24h */
   checkThrottleMs?: number;
   /** 下载选项 */
@@ -57,11 +71,16 @@ export type UpdateResult =
 
 export class UpdateOrchestrator {
   private readonly options: Required<
-    Omit<UpdateOrchestratorOptions, 'rollout' | 'downloadOptions' | 'onStateChange'>
+    Omit<
+      UpdateOrchestratorOptions,
+      'rollout' | 'downloadOptions' | 'onStateChange' | 'signatureVerifier' | 'signaturePublicKey'
+    >
   > & {
     rollout?: RolloutRule;
     downloadOptions?: UpdateOrchestratorOptions['downloadOptions'];
     onStateChange?: UpdateOrchestratorOptions['onStateChange'];
+    signatureVerifier?: SignatureVerifier;
+    signaturePublicKey?: string;
   };
   private readonly stateMachine: UpdateStateMachine;
   private lastCheckAt: number = 0;
@@ -80,6 +99,8 @@ export class UpdateOrchestrator {
       rollout: options.rollout,
       downloadOptions: options.downloadOptions,
       onStateChange: options.onStateChange,
+      signatureVerifier: options.signatureVerifier,
+      signaturePublicKey: options.signaturePublicKey,
     };
     this.stateMachine = new UpdateStateMachine();
     if (options.onStateChange) {
@@ -152,7 +173,7 @@ export class UpdateOrchestrator {
       this.stateMachine.transition('DOWNLOAD_START');
       const downloader = new PackageDownloader(this.options.httpDownloader, {
         maxRetries: this.options.downloadOptions?.maxRetries ?? UPDATE_DOWNLOAD_MAX_RETRIES,
-        onProgress: p => this.options.downloadOptions?.onProgress?.(p.percent),
+        onProgress: (p) => this.options.downloadOptions?.onProgress?.(p.percent),
       });
       const packageData = await downloader.download(manifest.packageUrl);
       this.stateMachine.transition('DOWNLOAD_COMPLETE');
@@ -163,6 +184,10 @@ export class UpdateOrchestrator {
         expectedSha256: manifest.sha256,
         expectedSize: manifest.size,
         hasher: this.options.hasher,
+        signature: manifest.signature,
+        publicKey: this.options.signaturePublicKey ?? H5_UPDATE_PUBLIC_KEY ?? undefined,
+        signatureVerifier: this.options.signatureVerifier ?? defaultSignatureVerifier ?? undefined,
+        signaturePolicy: SIGNATURE_POLICY,
       });
       if (!verifyResult.ok) {
         this.stateMachine.transition('VERIFY_FAILED');

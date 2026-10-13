@@ -19,6 +19,7 @@
  */
 import { deviceLogger } from './device-logger';
 import { currentOs } from '../platform/os';
+import { APP_VERSION } from '../config';
 
 type GlobalErrorHandler = (error: Error, isFatal?: boolean) => void;
 
@@ -36,14 +37,92 @@ function getRnErrorUtils(): RnErrorUtils | null {
   return null;
 }
 
+/**
+ * 崩溃记录（结构化，便于上报与聚合）。
+ * 仅含 message / stack(截断) / 上下文，不触碰业务参数（脱敏由 device-logger 负责）。
+ */
+export type CrashRecord = {
+  ts: number;
+  message: string;
+  stack: string;
+  context: string;
+  fatal: boolean;
+  os: string;
+  appVersion: string;
+};
+
+/** 崩溃上报器（可注入：自研网关 / Sentry React Native 桥接 / 测试 Mock）。 */
+export type CrashUploader = {
+  upload: (records: CrashRecord[]) => Promise<{ ok: boolean }>;
+};
+
+/** 离线环形缓冲上限（避免内存堆积）。 */
+const MAX_CRASH_BUFFER = 50;
+
+let crashBuffer: CrashRecord[] = [];
+let crashUploader: CrashUploader | null = null;
+
 let installed = false;
+
+/** 设置崩溃上报器（null 关闭上报，仅保留设备日志）。 */
+export function setCrashUploader(uploader: CrashUploader | null): void {
+  crashUploader = uploader;
+}
+
+/** 读取当前离线缓冲（测试 / 调试用）。 */
+export function getCrashBuffer(): CrashRecord[] {
+  return crashBuffer.slice();
+}
+
+/** 把一条崩溃记录入离线缓冲（超出上限丢弃最旧）。 */
+export function recordCrash(record: CrashRecord): void {
+  crashBuffer.push(record);
+  if (crashBuffer.length > MAX_CRASH_BUFFER) {
+    crashBuffer.shift();
+  }
+}
 
 /** 把一次崩溃写入设备日志（受日志级别阈值控制，原生未接入时降级 console）。 */
 export function reportCrash(error: Error, context: string, fatal = false): void {
   const stack = (error.stack ?? '').slice(0, 2000);
+  const record: CrashRecord = {
+    ts: Date.now(),
+    message: error.message,
+    stack,
+    context,
+    fatal,
+    os: currentOs(),
+    appVersion: APP_VERSION,
+  };
+  recordCrash(record);
   deviceLogger.error(
-    `crash context=${context} fatal=${fatal} os=${currentOs()} msg=${error.message} stack=${stack}`
+    `crash context=${context} fatal=${fatal} os=${record.os} appVersion=${record.appVersion} msg=${error.message} stack=${stack}`
   );
+  // 上报闭环：有上报器则异步冲刷（best-effort，不阻塞主流程）
+  if (crashUploader) {
+    flushCrashReports().catch(() => undefined);
+  }
+}
+
+/**
+ * 冲刷离线缓冲到上报器。成功则清空；失败保留以便下次重试。
+ * @returns 成功上报的条数。
+ */
+export async function flushCrashReports(): Promise<number> {
+  if (!crashUploader || crashBuffer.length === 0) {
+    return 0;
+  }
+  const batch = crashBuffer.slice();
+  try {
+    const res = await crashUploader.upload(batch);
+    if (res.ok) {
+      crashBuffer = [];
+      return batch.length;
+    }
+  } catch {
+    // 上报失败保留缓冲，下次重试
+  }
+  return 0;
 }
 
 /**
@@ -95,4 +174,52 @@ export function installGlobalErrorHandlers(): boolean {
   }
 
   return true;
+}
+
+/**
+ * 基于 fetch 的 HTTP 崩溃上报器工厂（无第三方依赖，规避 Sentry SDK 体积）。
+ *
+ * 上报体：`{ crashes: CrashRecord[] }`（JSON）。
+ * 适用于自研网关；若要接 Sentry React Native，可在外层包装其 `captureException`
+ * 后再调用 setCrashUploader，此处保持基座零强依赖。
+ *
+ * @param endpoint 上报地址（建议走内网网关，避免明文外发敏感栈信息）
+ * @param opts.timeoutMs 请求超时（默认 10s）
+ */
+export function createHttpCrashUploader(
+  endpoint: string,
+  opts?: { timeoutMs?: number }
+): CrashUploader {
+  const timeoutMs = opts?.timeoutMs ?? 10_000;
+  return {
+    async upload(records: CrashRecord[]) {
+      const g = globalThis as unknown as {
+        fetch?: (url: string, init: unknown) => Promise<{ ok: boolean }>;
+        AbortController?: new () => { abort: () => void; signal: unknown };
+        setTimeout?: (fn: () => void, ms: number) => unknown;
+        clearTimeout?: (h: unknown) => void;
+      };
+      if (typeof g.fetch !== 'function') {
+        return { ok: false };
+      }
+      const controller = g.AbortController ? new g.AbortController() : undefined;
+      const timer =
+        g.setTimeout && controller ? g.setTimeout(() => controller.abort(), timeoutMs) : undefined;
+      try {
+        const res = await g.fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ crashes: records }),
+          signal: controller ? controller.signal : undefined,
+        } as unknown as never);
+        return { ok: res.ok };
+      } catch {
+        return { ok: false };
+      } finally {
+        if (timer && g.clearTimeout) {
+          g.clearTimeout(timer);
+        }
+      }
+    },
+  };
 }

@@ -13,7 +13,12 @@ import { WebViewErrorPage } from './src/webview/WebViewErrorPage';
 import { getH5EntryUri } from './src/app/resolve-h5-entry';
 import { REMOTE_H5_ORIGIN, REMOTE_H5_URL, validateClientIds } from './src/config';
 import { runHarmonyNativeSelfTest } from './src/diagnostics/harmony-native-self-test';
-import { installGlobalErrorHandlers } from './src/diagnostics/crash-reporter';
+import {
+  installGlobalErrorHandlers,
+  setCrashUploader,
+  createHttpCrashUploader,
+} from './src/diagnostics/crash-reporter';
+import { CRASH_REPORT_ENDPOINT } from './src/config';
 import { deviceLogger } from './src/diagnostics/device-logger';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
 
@@ -41,6 +46,10 @@ export default function App() {
   // dev 下只上报、保留 RedBox。必须早于任何业务渲染，确保首屏前的异常也能捕获。
   useEffect(() => {
     installGlobalErrorHandlers();
+    // 崩溃上报闭环：配置了网关地址则注册 HTTP 上报器，崩溃经离线缓冲异步冲刷。
+    if (CRASH_REPORT_ENDPOINT) {
+      setCrashUploader(createHttpCrashUploader(CRASH_REPORT_ENDPOINT));
+    }
   }, []);
 
   // 打包前 clientId 校验（尤其 iOS 默认占位值会导致登录被拒）。

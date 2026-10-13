@@ -31,8 +31,20 @@ export type {
   DownloadProgress,
   HttpDownloader,
 } from './downloader';
-export { verifyPackage, createMockHasher, createFailingHasher } from './verifier';
-export type { VerifyOptions, VerifyResult, Sha256Hasher, SignatureVerifier } from './verifier';
+export {
+  verifyPackage,
+  createMockHasher,
+  createFailingHasher,
+  defaultSignatureVerifier,
+  createMockSignatureVerifier,
+} from './verifier';
+export type {
+  VerifyOptions,
+  VerifyResult,
+  Sha256Hasher,
+  SignatureVerifier,
+  SignaturePolicy,
+} from './verifier';
 export { PackageInstaller, createInMemoryFileSystem, createMockUnzipper } from './installer';
 export type { InstallerOptions, InstallResult, FileSystem, Unzipper } from './installer';
 export { VersionActivator, createInMemoryPointer } from './activator';

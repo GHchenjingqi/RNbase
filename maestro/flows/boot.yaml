@@ -1,0 +1,17 @@
+# 启动冒烟 e2e（P2-4 / Maestro）。
+# 运行：maestro test maestro/flows/boot.yaml（需已安装基座 apk 的设备/模拟器）
+# 说明：
+#  - appId 以 app.json / android/app/build.gradle 的 applicationId 为准，改动时同步此处
+#  - 断言尽量用「启动后 20s 内出现任一可见元素」级别的弱断言，
+#    兼容本地 H5 模式与远程站点模式两种形态，避免流程脆弱
+appId: com.rnbase
+name: boot smoke
+---
+- launchApp
+# 等待 WebView 承载的首屏就绪（本地 H5 握手超时 10s + 冗余）
+- extendedWaitUntil:
+    visible:
+      id: ".*" # 任一可见元素出现即认为首屏渲染（弱断言）
+    timeout: 20000
+# 截图留档（CI 上传 artifact 用）
+- takeScreenshot: boot-first-screen

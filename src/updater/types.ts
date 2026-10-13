@@ -20,6 +20,13 @@ export type H5Manifest = {
   size: number;
   publishedAt: string;
   forceUpdate?: boolean;
+  /**
+   * 包数字签名（base64，规范 §55）。
+   * 当基座配置了签名公钥（H5_UPDATE_PUBLIC_KEY）时，本字段为「必须」，
+   * 缺失或校验失败将拒绝该更新包（防篡改 / 防中间人替换）。
+   * 未配置公钥时为可选（灰度观察期）。
+   */
+  signature?: string;
 };
 
 export type UpdateState =

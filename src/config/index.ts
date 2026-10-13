@@ -9,6 +9,7 @@
  */
 import type { ImageCompressOptions } from '../media/types';
 import type { PerformanceBaseline } from '../performance/types';
+import type { SignaturePolicy } from '../updater/verifier';
 import versionInfo from '../../version.json';
 
 /** App 版本号，统一从项目根 version.json 读取（与 Android versionName / iOS MARKETING_VERSION 保持一致）。 */
@@ -82,6 +83,24 @@ export const LOG_RETENTION_DAYS = 7;
 export const LOG_FILE_DIR = 'logs';
 
 /**
+ * ===================== 崩溃上报（P2 可观测闭环） =====================
+ */
+
+/**
+ * 崩溃上报网关地址（可选）。
+ *
+ *  - 为空（默认）：崩溃仅写入设备日志（device-logger），不上报远端；
+ *  - 配置后：App 启动注册 HTTP 上报器（createHttpCrashUploader），
+ *    崩溃经 recordCrash 入离线缓冲后异步冲刷，形成「捕获 → 落盘 → 上报」闭环。
+ *
+ * 通过 version.json 的 `crashReportEndpoint` 注入（避免硬编码入库）。
+ */
+export const CRASH_REPORT_ENDPOINT: string | null = (() => {
+  const raw = (versionInfo as { crashReportEndpoint?: unknown }).crashReportEndpoint;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+})();
+
+/**
  * ===================== 更新器配置（updater） =====================
  */
 
@@ -102,6 +121,45 @@ export const UPDATE_CHECK_THROTTLE_MS = 24 * 60 * 60 * 1000;
 
 /** H5 READY 确认超时（毫秒），默认 15000。 */
 export const UPDATE_READY_TIMEOUT_MS = 15000;
+
+/**
+ * ===================== H5 包签名校验（P2 安全闭环） =====================
+ */
+
+/**
+ * H5 更新包签名公钥（SPKI PEM，RSASSA-PKCS1-v1_5 / SHA-256）。
+ *
+ *  - 为空（默认）：签名校验为 `optional`（灰度观察期，manifest 带签名才校验）；
+ *  - 配置后：校验策略升级为 `required`，manifest 未携带签名或校验失败直接拒绝该更新包
+ *    （防篡改 / 防中间人替换整包）。
+ *
+ * 通过 version.json 的 `h5PublicKey` 注入（避免硬编码入库），CI/打包脚本亦可覆盖。
+ * 注意：RN/Hermes 无 Web Crypto，需同时注入原生签名校验器（见 UpdateOrchestrator）。
+ */
+export const H5_UPDATE_PUBLIC_KEY: string | null = (() => {
+  const raw = (versionInfo as { h5PublicKey?: unknown }).h5PublicKey;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+})();
+
+/** 由是否配置公钥推导签名校验策略。 */
+export const SIGNATURE_POLICY: SignaturePolicy = H5_UPDATE_PUBLIC_KEY ? 'required' : 'optional';
+
+/**
+ * ===================== TLS 证书锁定（P2 安全闭环） =====================
+ */
+
+/**
+ * 可信证书 pin 列表（证书 SPKI 的 SHA-256，base64）。
+ *
+ *  - 为空（默认）：观察模式，不强制锁定（见 ssl-pinning.ts validatePinning）；
+ *  - 配置后：原生信任管理器在握手指纹校验时只放行命中 pin 的证书，防中间人。
+ *
+ * 通过 version.json 的 `trustedCertPins` 注入（避免硬编码入库）。
+ */
+export const TRUSTED_CERT_PINS: string[] = (() => {
+  const raw = (versionInfo as { trustedCertPins?: unknown }).trustedCertPins;
+  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : [];
+})();
 
 /**
  * ===================== 媒体配置（media） =====================
