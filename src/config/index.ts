@@ -283,6 +283,18 @@ export const PERF_DEFAULT_BASELINES: PerformanceBaseline[] = [
 export const H5_MANIFEST_URL = 'https://mobile-erp.example.com/manifest.json';
 
 /**
+ * Feature Flag 开关地址（P3 通用基座能力，运行时开关不发版止血）。
+ * 约定与 manifest 同源：{base}/flags.json；version.json 的 `flagsUrl` 可覆盖。
+ */
+export const FEATURE_FLAGS_URL: string | null = (() => {
+  const raw = (versionInfo as { flagsUrl?: unknown }).flagsUrl;
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    return raw.trim();
+  }
+  return H5_MANIFEST_URL ? H5_MANIFEST_URL.replace(/\/manifest\.json$/, '/flags.json') : null;
+})();
+
+/**
  * 「基座 + URL」容器模式开关（version.json 的 `remoteUrl` 字段）。
  *
  * 填了就是一个纯 WebView 壳：WebView 直接加载该地址，不再解析本地 H5、不做 H5 子包更新、
