@@ -853,7 +853,7 @@ RECORD_AUDIO / POST_NOTIFICATIONS / VIBRATE / NFC / REQUEST_INSTALL_PACKAGES
 | `appManager.isInstalled` / `openApp` / `openAppStore` / `openSystemSettings` | ✅ | ❌ | 包名/Intent 分区是 Android 概念；iOS 的 `canOpenURL` 需 `LSApplicationQueriesSchemes` 白名单，结果不可信，故**故意不实现** |
 | `appManager.openAppSettings` | ✅ | ✅ | iOS 用 `UIApplication.openSettingsURLString`（唯一入口） |
 | `appManager.getInstalledApps` | ❌ | ❌ | 原生不枚举应用列表（隐私 + 11+ 可见性噪音） |
-| `notification.setBadge` / `playSound` / `sendNotification` | ✅ | ❌ | 渠道 `base_notify` / `base_badge`；提示音用 `RingtoneManager` 默认通知铃声 |
+| `notification.setBadge` / `playSound` / `sendNotification` | ✅ | ❌ | 渠道 `base_notify` / `base_badge`；提示音用 `RingtoneManager` 默认通知铃声；同 (title, content) 5s 滑动窗口去重（复用 id 原地更新 + `setOnlyAlertOnce`，重复调用不叠条不重响） |
 | `notification.getToken` | ✅（模拟值） | ✅（模拟值） | 项目未接 FCM/厂商推送，返回 `mock-token-emulator` 供 H5 联调 |
 | `nfc.isAvailable` / `readTag` / `writeNdef` | ✅ | ❌ | iOS 未接 CoreNFC |
 | brightness / flashlight / sensor / biometric / contacts / calendar / bluetooth / audio / storage / networkInfo / qr / image / haptics / speech / backgroundTask / inAppReview | ❌ | ❌ | 桥接层已注册、原生方法未实现 → 一律 `DEVICE_UNSUPPORTED` |

@@ -47,6 +47,8 @@ import me.leolin.shortcutbadger.ShortcutBadger
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) :
     ReactContextBaseJavaModule(reactContext) {
@@ -376,12 +378,28 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
         }
     }
 
-    /** 实际发送通知（权限已确认后调用）。 */
+    /** 实际发送通知（权限已确认后调用）。
+     * 去重：同一 (title, content) 在滑动窗口内重复到达（H5 侧双发、消息重复派发等）
+     * 复用同一 notificationId 原地更新 —— 通知栏只保留一条，不重复响铃；
+     * 窗口外再次发送视为新消息，正常新开一条。 */
     private fun doSendNotification(title: String, content: String, promise: Promise) {
         try {
             ensureNotifyNotificationChannel()
             val channelId = "base_notify"
-            val notificationId = (System.currentTimeMillis() % 10000).toInt()
+            val now = System.currentTimeMillis()
+            val effectiveTitle = title.ifEmpty { "新消息" }
+            val fingerprint = "$effectiveTitle\u0001$content"
+            val notificationId: Int
+            val recent = recentNotifications[fingerprint]
+            if (recent != null && now - recent.second < NOTIFY_DEDUP_WINDOW_MS) {
+                // 窗口内重复：复用 id 原地更新（滑动窗口，按最后一次刷新续期）
+                notificationId = recent.first
+                recentNotifications[fingerprint] = notificationId to now
+            } else {
+                notificationId = nextNotificationId.getAndIncrement()
+                recentNotifications[fingerprint] = notificationId to now
+                purgeStaleNotifications(now)
+            }
 
             val intent = reactContext.packageManager.getLaunchIntentForPackage(reactContext.packageName)
             val pendingIntent = android.app.PendingIntent.getActivity(
@@ -393,10 +411,11 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
 
             val builder = androidx.core.app.NotificationCompat.Builder(reactContext, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(title.ifEmpty { "新消息" })
+                .setContentTitle(effectiveTitle)
                 .setContentText(content)
                 .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(content))
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setOnlyAlertOnce(true)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
 
@@ -409,6 +428,16 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
             promise.resolve(notifyResult)
         } catch (e: Exception) {
             promise.reject("NOTIFY_FAILED", e.localizedMessage ?: "通知发送失败")
+        }
+    }
+
+    /** 清理去重表中长期未刷新的指纹，防止常驻内存增长（保留 12 个窗口周期）。 */
+    private fun purgeStaleNotifications(now: Long) {
+        val iterator = recentNotifications.entries.iterator()
+        while (iterator.hasNext()) {
+            if (now - iterator.next().value.second > NOTIFY_DEDUP_WINDOW_MS * 12) {
+                iterator.remove()
+            }
         }
     }
 
@@ -1295,5 +1324,12 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
         private const val MAX_IMAGE_EDGE = 1024
         /** JPEG 压缩质量（0-100）。 */
         private const val JPEG_QUALITY = 80
+
+        /** 通知栏同内容去重窗口（毫秒）：窗口内重复调用折叠为同一条通知。 */
+        private const val NOTIFY_DEDUP_WINDOW_MS = 5_000L
+        /** 通知 id 进程内自增器（替代时间戳取模：后者每 10s 回绕，不同通知撞 id 相互覆盖）。 */
+        private val nextNotificationId = AtomicInteger(1000)
+        /** 同内容通知去重表：fingerprint -> (notificationId, 最近发送时间)。 */
+        private val recentNotifications = ConcurrentHashMap<String, Pair<Int, Long>>()
     }
 }

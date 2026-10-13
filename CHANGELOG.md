@@ -5,6 +5,17 @@
 
 ## [Unreleased]
 
+### Fixed（Android 通知栏重复通知，2026-10-13）
+- `BaseCapabilitiesModule.doSendNotification` 修复通知 id 生成缺陷：
+  `System.currentTimeMillis() % 10000` 每 10s 回绕，不同通知可能撞 id 相互覆盖
+  （通知丢失 + PendingIntent requestCode 互顶），改为进程内 AtomicInteger 自增。
+- 新增同 (title, content) 5s 滑动窗口去重：窗口内重复调用（H5 双发、消息重复派发等）
+  复用同一 notificationId 原地更新 + `setOnlyAlertOnce` —— 通知栏只保留一条、不重复响铃；
+  窗口外视为新消息正常新开一条。去重表按 12 个窗口周期自动清理防内存增长。
+- 说明：原生侧无任何「恢复已删通知」机制（全仓库唯一 notify() 调用点，无持久化/重放/重试）；
+  若每次进 App 通知重新出现，为 H5 侧在 ready/resume 时重新调用了 SENDNOTIFICATION，
+  可查 `filesDir/logs/device-*.log` 的 `notification.sendNotification` 调用记录定位调用来源与次数。
+
 ### Changed（ERP→Base 全平台命名去业务化，2026-10-13）
 - 依据 ADR-0003 判定线清理业务语义残留（源自抽离前宿主项目「精易ERP」）：
   `ERPCapabilities/ERPNetwork/ERPPermissions/ERPH5/ERPLog/ERPSystem/ERPUpdate` → `Base*`；
