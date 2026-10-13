@@ -30,18 +30,20 @@ jobs:
         run: npm ci
 
       - name: Ensure version.json exists (fallback for CI)
+        # 注意：heredoc 内容与结束符 EOF 必须顶格（写在 run 块的基准缩进上），
+        # 多缩进会导致 bash 找不到结束符报 "here-document delimited by end-of-file"。
         run: |
           if [ ! -f version.json ]; then
-            cat <<'EOF' > version.json
-            {
-              "appName": "RNBase",
-              "apkName": "RNBase",
-              "applicationId": "com.qux.base",
-              "versionName": "1.0.0",
-              "versionCode": 1,
-              "remoteUrl": ""
-            }
-            EOF
+            cat > version.json <<'EOF'
+          {
+            "appName": "RNBase",
+            "apkName": "RNBase",
+            "applicationId": "com.qux.base",
+            "versionName": "1.0.0",
+            "versionCode": 1,
+            "remoteUrl": ""
+          }
+          EOF
             echo "Created fallback version.json for CI"
           fi
 
