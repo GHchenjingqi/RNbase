@@ -17,8 +17,10 @@ jest.mock('../src/app/resolve-h5-entry', () => ({
 
 import App from '../App';
 
+// CI runner（2 核）上整棵 App 树的挂载 + effect 可超 5s（实测 5.14s），
+// 显式放宽超时避免慢机器偶发超时失败（本地快速机器无感）。
 test('renders correctly', async () => {
   await ReactTestRenderer.act(() => {
     ReactTestRenderer.create(<App />);
   });
-});
+}, 30_000);
