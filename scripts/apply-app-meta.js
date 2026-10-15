@@ -60,6 +60,8 @@ const NEUTRAL = {
   versionCode: 1,
   splashBackgroundColor: '#08080D',
   remoteUrl: '',
+  statusBarStyle: '',
+  h5DevUrl: '',
 };
 
 // 鸿蒙工程（可选）：仓库里没有 harmony/ 时下面的下发整段跳过。
@@ -345,9 +347,37 @@ function main() {
   //    remoteUrl 例外：它是「基座 + URL」容器模式的开关，不属于品牌下发范围。
   //    子应用 app.config.json 里声明了就用它，没声明就原样保留现值，
   //    否则手改一次开关、下次 brand:apply 就把它清了（表现是 APK 悄悄变回本地 H5 模式）。
-  const prevRemoteUrl = fs.existsSync(BASE_VERSION) ? readJson(BASE_VERSION).remoteUrl : undefined;
-  // --reset 连这个开关一起清掉：中性基座就是本地模式。
+  //    statusBarStyle 同理：容器级覆盖开关（状态栏图标深浅，远程模式拿不到 Bridge 时
+  //    只能靠它），声明了就用，没声明保留现值。
+  //    h5DevUrl 同理：debug 期 H5 入口开关（见 src/config/index.ts 的 H5_DEV_SERVER_URL），
+  //    真机联调要填宿主机局域网地址，手改一次就被清掉的话等于白改。
+  const prev = fs.existsSync(BASE_VERSION) ? readJson(BASE_VERSION) : {};
+  const prevRemoteUrl = prev.remoteUrl;
+  const prevStatusBarStyle = prev.statusBarStyle;
+  const prevH5DevUrl = prev.h5DevUrl;
+  // --reset 连这几个开关一起清掉：中性基座就是本地模式 + 跟随系统 + 默认 dev 入口。
   const remoteUrl = reset ? '' : rawCfg.remoteUrl !== undefined ? rawCfg.remoteUrl : prevRemoteUrl;
+  const statusBarStyle =
+    reset ? '' : rawCfg.statusBarStyle !== undefined ? rawCfg.statusBarStyle : prevStatusBarStyle;
+  const h5DevUrl = reset ? '' : rawCfg.h5DevUrl !== undefined ? rawCfg.h5DevUrl : prevH5DevUrl;
+  if (
+    statusBarStyle &&
+    !['default', 'light-content', 'dark-content'].includes(String(statusBarStyle))
+  ) {
+    fail(
+      `statusBarStyle 非法：${statusBarStyle}（应为 default / light-content / dark-content，留空表示跟随系统深浅色）`,
+    );
+  }
+  // 留空 = 用平台默认 dev 入口；off = 显式关闭直连；其余必须是 http(s) 地址。
+  if (
+    h5DevUrl &&
+    String(h5DevUrl).toLowerCase() !== 'off' &&
+    !/^https?:\/\/\S+/i.test(String(h5DevUrl))
+  ) {
+    fail(
+      `h5DevUrl 非法：${h5DevUrl}（应为 http(s) 地址、'off'，或留空用平台默认 dev 入口）`,
+    );
+  }
   fs.mkdirSync(baseDir, { recursive: true });
   fs.writeFileSync(
     BASE_VERSION,
@@ -359,6 +389,8 @@ function main() {
         versionName: cfg.versionName,
         versionCode: cfg.versionCode,
         remoteUrl: remoteUrl === undefined ? '' : remoteUrl,
+        statusBarStyle: statusBarStyle === undefined ? '' : statusBarStyle,
+        h5DevUrl: h5DevUrl === undefined ? '' : h5DevUrl,
       },
       null,
       2,

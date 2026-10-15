@@ -10,6 +10,7 @@
 import type { ImageCompressOptions } from '../media/types';
 import type { PerformanceBaseline } from '../performance/types';
 import type { SignaturePolicy } from '../updater/verifier';
+import { isIos } from '../platform/os';
 import versionInfo from '../../version.json';
 
 /** App 版本号，统一从项目根 version.json 读取（与 Android versionName / iOS MARKETING_VERSION 保持一致）。 */
@@ -341,6 +342,63 @@ export const REMOTE_H5_URL: string | null = normalizeRemoteUrl(
 export const IS_REMOTE_H5 = REMOTE_H5_URL !== null;
 
 /**
+ * ===================== 调试期直连本地 H5（仅 debug 生效） =====================
+ */
+
+/**
+ * 子应用 dev server 在宿主机上的默认端口。
+ *
+ * 三端统一 5173（vite 默认）：鸿蒙一直这么跑（`hdc rport tcp:5173`），安卓/iOS 对齐
+ * 同一个端口后，子应用只需起一次 dev server，改端口的地方只剩这一处常量。
+ */
+export const H5_DEV_SERVER_PORT = 5173;
+
+/** version.json 的 `h5DevUrl` 显式关闭值：只改 RN 代码、不想起 dev server 时用。 */
+const H5_DEV_ENTRY_OFF = 'off';
+
+/**
+ * debug 期 H5 入口：直接指向宿主机上跑着的子应用 dev server。
+ *
+ * 为什么需要：子应用改一行要走 `build → sync:base → 重装 APK/HAP`，反馈循环以分钟计；
+ * debug 期让 WebView 直接吃宿主机源码，保存即生效，不必重新装机。
+ * 由此也推出一条结论：**debug 期不需要 H5 子包热更新（src/updater 那条 OTA 链路）** ——
+ * 入口就是宿主机源码本身，下载子包换入口反而会把页面拉回旧包（见 AppRoot 的分支）。
+ *
+ * 三端到宿主机的可达路径不同，默认值按平台给：
+ *  - 安卓：设备侧 127.0.0.1 由 `adb reverse tcp:5173` 映射到宿主机（scripts/adb-forward.js）；
+ *  - 鸿蒙：设备侧 127.0.0.1 由 `hdc rport tcp:5173` 映射（scripts/harmony-dev.js）；
+ *  - iOS：模拟器与宿主机共享网络栈，`http://localhost:5173/` 直达；
+ *    真机需把 version.json 的 `h5DevUrl` 填成宿主机局域网地址（ATS 已开
+ *    NSAllowsLocalNetworking，明文 HTTP 到内网地址放行）。
+ *
+ * 取值规则（version.json 的 `h5DevUrl`，由 scripts/apply-app-meta.js 保留现值）：
+ *  - 留空 / 缺失 / 非法：用平台默认（安卓、鸿蒙 127.0.0.1，iOS localhost）；
+ *  - 合法 http(s)：用它，缺尾斜杠自动补（子应用 vite 是 base:'./'，没尾斜杠相对路径基准会错）；
+ *  - `off`（不区分大小写）：显式关闭，退回内置 H5。
+ *
+ * release 恒为 null：正式包绝不能指向宿主机地址。
+ */
+export const H5_DEV_SERVER_URL: string | null = (() => {
+  if (!(typeof __DEV__ !== 'undefined' && __DEV__)) {
+    return null;
+  }
+  const raw = (versionInfo as { h5DevUrl?: unknown }).h5DevUrl;
+  if (typeof raw === 'string') {
+    const value = raw.trim();
+    if (value.toLowerCase() === H5_DEV_ENTRY_OFF) {
+      return null;
+    }
+    // 复用 remoteUrl 那套 scheme 校验：这个值会进 WebView 的 source.uri。
+    const normalized = normalizeRemoteUrl(value);
+    if (normalized) {
+      return normalized.endsWith('/') ? normalized : `${normalized}/`;
+    }
+  }
+  const host = isIos() ? 'localhost' : '127.0.0.1';
+  return `http://${host}:${H5_DEV_SERVER_PORT}/`;
+})();
+
+/**
  * 远程站点模式「主资源加载超时」（毫秒，默认 30000）。
  *
  * 仅在 bridgeEnabled=false（远程站点）时启用：从 onLoadStart 起算，
@@ -384,6 +442,11 @@ export const DOMAIN_WHITELIST: string[] = (() => {
       'http://127.0.0.1:8081',
       'http://10.0.2.2:8081'
     );
+    // debug 期 H5 直连宿主机 dev server：不进白名单会被 decideNavigation 判成
+    // untrusted_origin 弹系统浏览器，首屏直接飞出容器。按 origin 匹配（去尾斜杠）。
+    if (H5_DEV_SERVER_URL) {
+      list.push(H5_DEV_SERVER_URL.replace(/\/+$/, ''));
+    }
   }
   return list;
 })();

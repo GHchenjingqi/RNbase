@@ -75,8 +75,11 @@ sequenceDiagram
 ```
 
 - H5 → RN 请求超时 30s；耗时操作（如下载）拆成「起任务 + 轮询」两条请求。
-- 硬件返回键不直接退出，原生推 `native.back` 事件给 H5 决策，H5 用
-  `app.nativeBackResult({ consumed })` 回执，400ms 超时由容器兜底（goBack / 退出）。
+- 硬件返回键不直接退出：有 Bridge 时原生推 `native.back` 事件给 H5 决策，H5 用
+  `app.nativeBackResult({ consumed })` 回执，400ms 超时由容器兜底。
+  兜底**不靠 JS 侧导航快照**判断能否回退（react-native-webview v14 的 ref 已无 `canGoBack`，
+  SPA `pushState` / hash 路由 / 错误页重载下快照会过期），而是按键那一刻读原生真值
+  `WebView.canGoBack()`；退无可退也**不直接退出**，只提示「再按一次退出应用」（详见 4.3）。
 - 软键盘显隐推 `keyboard.change` 事件，edge-to-edge 下避让交给 H5。
 
 ### 2.3 H5 子包动态更新链路
@@ -95,7 +98,7 @@ flowchart LR
     G -->|正常| I[stable]
 ```
 
-> 整包 APK 升级是另一条独立链路（`update` Bridge 模块 + 原生 `ERPUpdateModule.kt`），
+> 整包 APK 升级是另一条独立链路（`update` Bridge 模块 + 原生 `BaseUpdateModule.kt`），
 > 仅 Android，走 `startDownload` 起任务 + `getProgress` 轮询 + FileProvider 拉起安装器，
 > 校验链：尺寸核对 → zip 魔数 → SHA-256。两者互不混用。
 
@@ -191,7 +194,8 @@ RNbase/
 │   ├── platform/               #   平台判定唯一入口（os.ts：currentOs / isHarmony / isIos）
 │   ├── config/                 #   配置（CLIENT_ID / APP_VERSION / 远程模式开关）
 │   └── components/             #   RN UI 组件
-├── scripts/                    # 一键脚本：安卓 / 鸿蒙 / iOS / 品牌 / 版本 / doctor / api.js 同步
+├── scripts/                    # 一键脚本：安卓 / 鸿蒙 / iOS / 品牌 / 子应用 / 版本 / doctor / api.js 同步
+├── rnbuild-studio.exe          # 打包工作台 RNBuild Studio（放根目录即用；独立仓库产物，*.exe 不入库，见 5.8）
 ├── dist/                       # 打包产物投递目录（按包名分目录，构建后校验一致才投递）
 ├── docs/                       # ADR 决策记录、BRIDGE_API.generated.md（npm run gen:api-doc 生成）
 ├── App.tsx                     # RN 入口：WebView 加载 H5 入口资源
@@ -209,7 +213,8 @@ RNbase/
 <子应用>/
 ├─ app.config.json      版本与品牌唯一真源：appName / apkName / applicationId /
 │                       versionName / versionCode / splashBackgroundColor，
-│                       可选 remoteUrl（远程站点开关）、statusBarStyle（状态栏深浅覆盖）
+│                       可选 remoteUrl（远程站点开关）、statusBarStyle（状态栏深浅覆盖）、
+│                       h5DevUrl（debug 期 H5 入口，见 4.4）
 ├─ app-brand/
 │  ├─ icon.png          一张方形主图（建议 ≥1024），npm run brand:gen 切五套密度
 │  └─ android/          mipmap / drawable 产物目录
@@ -292,7 +297,42 @@ APK，留空则为本地 H5 模式，行为不变。该模式下：
   站点不写浏览器历史（纯组件切换的 SPA）时也是这个行为，不会一次误触就杀掉 App；
 - 站点离线即白屏，无本地兜底。
 
-### 4.4 项目边界（职责划分）
+### 4.4 Debug 期直连本地 H5（三端统一端口 5173）
+
+debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子应用 dev server，改一行保存即生效，
+不必再走 `build → sync:base → 重装 APK/HAP`。开关是 `src/config/index.ts` 的
+`H5_DEV_SERVER_URL`（release 恒为 `null`，正式包不可能指向宿主机地址）。
+
+| 平台 | 默认入口 | 设备侧到宿主机的可达路径 |
+|---|---|---|
+| Android | `http://127.0.0.1:5173/` | `adb reverse tcp:5173`（`scripts/adb-forward.js`，`npm run dev` / `build:android` 自动配） |
+| 鸿蒙 | `http://127.0.0.1:5173/` | `hdc rport tcp:5173 tcp:5173`（`scripts/hvigor.js`，装机时自动配） |
+| iOS | `http://localhost:5173/` | 模拟器与宿主机共享网络栈，免转发；ATS 已开 `NSAllowsLocalNetworking` |
+
+前提只有一个：**子应用自己的 dev server 得起在 5173**（`npm run dev`，vite 默认端口）。
+它**不是** Metro dev-server —— Metro 只 serve 被 require 的资源，H5 外部引用的
+`./js/api.js` 会 404，导致 `window.RN` 未定义、Bridge 全部超时。
+
+三种取值（`version.json` 的 `h5DevUrl`，`brand:apply` 会保留现值不会被清）：
+
+| 值 | 行为 |
+|---|---|
+| 留空 / 缺失 | 用上表的平台默认 |
+| `http(s)://…` | 用它（**iOS 真机**联调填宿主机局域网地址，如 `http://192.168.1.20:5173/`） |
+| `off` | 显式关闭，退回包内 H5（只改 RN 代码、不想起 dev server 时用） |
+
+两条连带结论：
+
+- **debug 期不需要 H5 子包热更新**：入口就是宿主机源码，更新链路此时不启动
+  （`AppRoot` 的 `IS_REMOTE_H5 || H5_DEV_SERVER_URL` 分支）。所以「debug 下隐藏热更新入口」
+  这件事在基座侧是自动成立的，H5 侧要跟着隐藏可用已有的 `DEVICE.GETPLATFORM().isTesting`
+  （就是 `__DEV__`），无需新增开关。
+- dev server 没起的表现是 WebView 加载失败页（可点重新加载），不是静默白屏；
+  端口转发漏配的表现是 H5 永远等不到 `app.ready`，停在握手超时。
+- **远程站点模式优先级最高**：`version.json` 的 `remoteUrl` 非空时入口就是那个站点，
+  debug 直连不生效（见 4.3）。想直连本地 H5 就先把 `remoteUrl` 清空。
+
+### 4.5 项目边界（职责划分）
 
 | 层 | 负责 | 不负责 |
 |---|---|---|
@@ -339,16 +379,21 @@ npm run stop                 # 停 App + 释放端口 + gradlew --stop
 | **协议同步** | `npm run sync:api`（api.js 同步到子应用模板与基座 H5）· `gen:api-doc`（生成 Bridge API 文档） |
 | **质量** | `npm run typecheck` · `lint` · `test` · `format` / `format:check` |
 
-当前质量基线：tsc 无错、eslint 0 warning、prettier 通过、`npm test` **43 套件 / 492 用例全绿**（测试集中在 `__tests__/`，覆盖 WebView、Bridge、更新回滚、media、observability、performance、security、权限网络等模块）。
+当前质量基线：tsc 无错、eslint 0 warning、`npm test` **45 套件 / 510 用例全绿**（测试集中在 `__tests__/`，覆盖 WebView、Bridge、更新回滚、media、observability、performance、security、权限网络等模块）。
+Prettier 未进 CI 硬门禁（仓库存在预存在格式偏差），统一由提交钩子对暂存文件自动修复向前约束。
+
+> `media.test.ts` 的上传重试用例靠 `setTimeout` 等时序，全量跑（尤其带 `--coverage` 插桩变慢时）
+> 偶发 1～2 例失败，单跑该套件必过——是测试自身的时序敏感，非产品缺陷。
 
 ### 5.4 改代码如何生效
 
 | 改动位置 | 生效方式 |
 |---|---|
-| `h5/index.html`（H5 产物） | Metro 终端按 `r` 热载，无需重编原生 |
+| 子应用源码（`h5/` 的上游工程） | debug 包直接吃它的 dev server，保存即生效（见 4.4），无需 `build:base` / 重装 |
+| `h5/index.html`（已同步进基座的产物） | 按 `r` 热载 WebView；debug 直连开启时不参与入口（关掉直连或打 release 才读它） |
 | `src/` 下 JS/TS | Metro Fast Refresh 秒级热更（鸿蒙需设备侧 hdc 转发在位） |
 | Android 原生（Kotlin/Manifest/Gradle） | 重新构建安装 |
-| 鸿蒙原生（ArkTS `ets/` / C++ `cpp/`） | 重新出 HAP（`npm run install:harmony`）；改 TurboModule 方法名/签名须同步改 `cpp/ERPTurboModules.h` 的方法名单，漏一边的表现是「方法存在但一调就抛错」 |
+| 鸿蒙原生（ArkTS `ets/` / C++ `cpp/`） | 重新出 HAP（`npm run install:harmony`）；改 TurboModule 方法名/签名须同步改 `cpp/BaseTurboModules.h` 的方法名单，漏一边的表现是「方法存在但一调就抛错」 |
 | 新增测试 | 放 `__tests__/` 对应模块目录，src 下不存放测试文件 |
 
 ### 5.5 代码规范
@@ -382,3 +427,37 @@ cp -r h5-subapp-setup <你的AI工具workspace>/.user_skills/     # Linux / macO
 
 协议同步链：基座 `h5/js/api.js` ← `scripts/api.js` ←→ 子应用模板 `js/api.js`；
 子应用打包后用 `node scripts/inject-h5-api.js <dist>` 覆盖产物 `dist/js/api.js`，保证三处 md5 一致。
+
+### 5.8 新建子应用脚手架（`scripts/create-subapp.js`）
+
+一个「子应用」要完整可用，需要三样东西同时成立，本脚本一次补齐（模板目录里只有第 1 项，
+第 2、3 项此前靠手工复制，这是它存在的唯一理由）：
+
+1. 工程本体（Vite + Vue / React 模板，已含 hash 路由、相对路径、`public/js/api.js`）
+2. 对接脚本（`scripts/` 三个薄壳：`sync-to-base` / `inject-api` / `apply-app-meta`）
+3. 在基座 `app-registry.json` 里登记，才会被 `app:use` / `gradle` / `hvigor` 认出来
+
+```bash
+# 带源码的子应用（建在基座**同级**目录）
+node scripts/create-subapp.js --name demo_h5 --framework vue --app-name "演示应用"
+node scripts/create-subapp.js --name demo_h5 --framework react --app-name "演示" \
+     --application-id com.qux.demo --apk-name Demo
+
+# 仅配置应用（远程站点打包用：无源码、无需 npm install，见 4.3）
+node scripts/create-subapp.js --name xingce_app --no-source \
+     --app-name "行测" --application-id com.qux.xingce --remote-url https://xxx.host/
+```
+
+### 5.9 打包工作台（RNBuild Studio）
+
+`rnbuild-studio.exe` 是配套的桌面打包工作台（Tauri 2 + Vue3，独立仓库，非本仓库源码），
+把 exe **直接放在基座根目录**即可用，无需配置：它靠同级的特征文件
+（`app-registry.json` + `scripts/apply-app-meta.js`）判定「我所在的目录就是基座」，
+随后按注册表识别活动子应用、调基座的 npm 脚本出包。
+
+- 该 exe **不入库**（`.gitignore` 的 `*.exe`），换机器只需重新拷一份。
+- 它的「新建子应用」向导直接 spawn `scripts/create-subapp.js`（见 5.8），不自己复制文件，
+  避免两处模板实现漂移。
+- 构建日志默认落在工作台侧；若落在基座内，日志同样不入库（`.gitignore` 的 `*.log`）。
+
+命令行等价于工作台能力，CI / 无桌面环境下直接用第 5.3 节的 npm 脚本即可。

@@ -4,5 +4,7 @@
   "applicationId": "com.qux.base",
   "versionName": "1.0.0",
   "versionCode": 1,
-  "remoteUrl": ""
+  "remoteUrl": "",
+  "statusBarStyle": "",
+  "h5DevUrl": ""
 }

@@ -232,9 +232,9 @@ function bundleName() {
 /**
  * debug 包运行要的两条设备侧端口反向转发（幂等）：
  *  - 设备 8081 -> 宿主机 Metro：RN bundle 从 Metro 拉；
- *  - 设备 5173 -> 宿主机 vite：src/app/resolve-h5-entry.ts 的 HARMONY_DEV_ENTRY 就是
- *    http://127.0.0.1:5173/，缺这条则 H5 永远等不到 app.ready，停在基座诊断页。
- * 安卓侧的等价物是 scripts/dev.js 里的 adb reverse，两端都要有 5173 这条，行为才一致。
+ *  - 设备 5173 -> 宿主机 vite：debug 期 H5 入口就是它（src/config/index.ts 的
+ *    H5_DEV_SERVER_URL，三端统一端口），缺这条则 H5 永远等不到 app.ready，停在基座诊断页。
+ * 安卓侧的等价物是 scripts/adb-forward.js 里的 adb reverse，两端都要有 5173 这条，行为才一致。
  * release 包读包内离线包，这两条都用不上，但配上也不影响。
  */
 function ensureDevForwards() {

@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const { resolveActiveApp, readApplicationId } = require('./active-app');
 const { killPort } = require('./free-port');
-const { setupAdbReverse } = require('./adb-forward');
+const { setupAdbReverse, H5_DEV_PORT } = require('./adb-forward');
 const { gradleHomeArgs, aapt2OverrideArgs } = require('./gradle-home');
 
 const root = path.join(__dirname, '..');
@@ -100,6 +100,12 @@ async function main() {
   }
   console.log('[dev] 设备就绪，配置 adb reverse 端口转发 ...');
   setupAdbReverse(PORT, 'dev');
+  // debug 包的 H5 入口是宿主机 dev server（README 4.4），不是包内 assets：
+  // 子应用的 vite 没起着的话 H5 会停在加载失败页，这里提前说一声免得当成白屏 bug 排查。
+  console.log(
+    `[dev] H5 入口直连宿主机 dev server http://127.0.0.1:${H5_DEV_PORT}/ —— 请在子应用里跑 npm run dev；` +
+      `只想调 RN 代码就把 version.json 的 h5DevUrl 设为 off`,
+  );
 
   // 打包前自动注入唯一源 api.js（scripts/api.js → 基座 h5/js/api.js 与活动子应用产物 js/api.js），
   // 保证打进 APK 的 Bridge 协议始终与基座一致（等价于先执行 node scripts/inject-h5-api.js）。

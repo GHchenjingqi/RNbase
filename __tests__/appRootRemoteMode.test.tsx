@@ -11,6 +11,9 @@ const SITE = 'https://gushici.app.workbuddy.host/';
 const SITE_ORIGIN = 'https://gushici.app.workbuddy.host';
 
 const mockRemote = { on: false };
+// debug 期「直连本机 H5」开关（src/config 的 H5_DEV_SERVER_URL）。它依赖 __DEV__，
+// jest 里恒为 true，不 mock 的话本地模式这组用例会被 debug 分支抢走。
+const mockDevServer: { url: string | null } = { url: null };
 
 const mockBridgeProps: Record<string, unknown> = {};
 const mockRuntime = {
@@ -31,6 +34,9 @@ jest.mock('../src/config', () => ({
   },
   get REMOTE_H5_ORIGIN() {
     return mockRemote.on ? SITE_ORIGIN : null;
+  },
+  get H5_DEV_SERVER_URL() {
+    return mockDevServer.url;
   },
 }));
 
@@ -85,6 +91,7 @@ beforeEach(() => {
     delete mockBridgeProps[key];
   }
   mockDiagnostic.renders = 0;
+  mockDevServer.url = null;
   mockRuntime.resolveEntry.mockClear();
   mockRuntime.checkForUpdate.mockClear();
 });
@@ -149,6 +156,12 @@ describe('AppRoot 本地模式（对照）', () => {
       jest.advanceTimersByTime(11000);
     });
     expect(mockDiagnostic.renders).toBe(1);
+  });
+
+  it('debug 直连本机 H5 时不跑子包热更新（入口就是宿主机源码，拉包只会把它拉回旧版本）', async () => {
+    mockDevServer.url = 'http://127.0.0.1:5173/';
+    await boot();
+    expect(mockRuntime.checkForUpdate).not.toHaveBeenCalled();
   });
 });
 

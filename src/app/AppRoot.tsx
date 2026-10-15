@@ -21,6 +21,7 @@ import { DiagnosticPage } from '../components/DiagnosticPage';
 import { logger } from '../diagnostics/logger';
 import {
   DOMAIN_WHITELIST,
+  H5_DEV_SERVER_URL,
   HANDSHAKE_TIMEOUT_MS,
   IS_REMOTE_H5,
   REMOTE_H5_ORIGIN,
@@ -103,9 +104,13 @@ export function AppRoot({
 
   // 后台更新检查：有可用版本则下载并激活，成功后刷新 WebView 使用新包。
   // 本次启动仍用旧包（WebView 已按旧入口渲染），冷启动后 resolveH5Source 取新入口。
-  // 远程模式下整段跳过：页面在站点那边，本地没有可激活的子包，跑一次只会白拉 manifest 并可能换 key 重载。
+  // 两种情况下整段跳过：
+  //  - 远程模式：页面在站点那边，本地没有可激活的子包，跑一次只会白拉 manifest 并可能换 key 重载；
+  //  - debug 直连本机 H5（H5_DEV_SERVER_URL）：入口就是宿主机源码、保存即生效，
+  //    这时拉子包激活只会把 WebView 重载到一个比源码旧的包上，跟开发反馈循环打架。
+  //    这条也是「debug 期隐藏热更新」的落点——不是藏 UI，而是这条链路压根不启动。
   useEffect(() => {
-    if (IS_REMOTE_H5) {
+    if (IS_REMOTE_H5 || H5_DEV_SERVER_URL) {
       return;
     }
     let cancelled = false;

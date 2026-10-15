@@ -5,6 +5,42 @@
 
 ## [Unreleased]
 
+### Added（debug 期三端统一「直连本地 H5」，2026-10-15）
+- 背景：debug 下改一行 H5 要走 `build → sync:base → 重装 APK/HAP`，反馈循环以分钟计。
+  此前只有鸿蒙支持直连宿主机 dev server，安卓恒读 `file:///android_asset/index.html`、
+  iOS 恒读 bundle 内 `h5/index.html` —— 三端 debug 体验不一致。
+- `src/config/index.ts` 新增 `H5_DEV_SERVER_PORT`(5173) 与 `H5_DEV_SERVER_URL`：
+  仅 `__DEV__` 生效，release 恒为 `null`（正式包不可能指向宿主机地址）。默认值按平台给：
+  安卓/鸿蒙 `http://127.0.0.1:5173/`、iOS `http://localhost:5173/`；
+  `version.json` 的 `h5DevUrl` 可覆盖（iOS 真机填宿主机局域网地址），`off` 显式关闭。
+  复用 `normalizeRemoteUrl` 那套 scheme 校验，缺尾斜杠自动补（子应用 vite 是 `base:'./'`）。
+  dev 白名单自动追加该 origin，否则首屏导航会被判 `untrusted_origin` 弹系统浏览器。
+- `src/app/resolve-h5-entry.ts`：debug 优先返回 dev server 地址，三端统一；
+  不再追加防缓存参数（dev server 靠 HMR 保持最新）。鸿蒙 `HARMONY_DEV_ENTRY` 常量随之删除，
+  改由 config 统一供给，鸿蒙默认端口不变（仍是 5173）。
+- `scripts/adb-forward.js` 补 `adb reverse tcp:5173`（安卓此前缺这条，hvigor.js 的注释早就
+  写了「两端都要有 5173 这条，行为才一致」）；`scripts/hvigor.js` 注释同步。
+- `scripts/apply-app-meta.js`：`h5DevUrl` 与 `remoteUrl`/`statusBarStyle` 同等待遇，
+  子应用未声明时保留 version.json 现值，避免 `brand:apply` 把真机联调地址清掉。
+- 连带结论（已在 README 4.4 记录）：debug 直连时 H5 子包热更新链路不启动
+  （`AppRoot` 的 `IS_REMOTE_H5 || H5_DEV_SERVER_URL` 分支），所以「debug 下隐藏热更新」
+  在基座侧自动成立；H5 侧要跟着隐藏用已有的 `DEVICE.GETPLATFORM().isTesting`。
+- 单测：`resolve-h5-entry` 补 debug 三端分支（含「iOS 无原生路径也不返回 null」），
+  `appRootRemoteMode` 补「直连时不跑子包热更新」。
+
+### Added（新建子应用脚手架 + 打包工作台配套，2026-10-15 补记）
+- 新增 `scripts/create-subapp.js`：一次补齐「一个子应用可用」的三要素 —— 工程本体
+  （Vite + Vue/React 模板：hash 路由 / 相对路径 / `public/js/api.js`）
+  + 对接脚本（`sync-to-base` / `inject-api` / `apply-app-meta` 三个薄壳）
+  + 在基座 `app-registry.json` 登记（否则 `app:use` / gradle / hvigor 认不出来）。
+  此前模板目录里只有第一项，后两项靠手工复制。支持 `--no-source` 建「仅配置应用」
+  （远程站点打包用，无源码、无需 npm install）。
+- `h5-subapp-setup/assets/shared-scripts/` 落地三个子应用侧薄壳脚本的唯一真源。
+- `package.json` 加 `npm run subapp:create`；`.gitignore` 加 `*.exe`（打包工作台
+  RNBuild Studio 放基座根目录即用，不入库）与 `h5.backup/`（sync-to-base 的旧内容备份）。
+- 文档：README 新增 5.8（脚手架用法）与 5.9（打包工作台：靠同级特征文件识别基座目录，
+  「新建子应用」向导直接 spawn `create-subapp.js` 以免两处模板漂移）。
+
 ### Fixed（安卓返回键一次误触即退出 App，2026-10-15）
 - 根因：容器兜底靠 JS 侧导航事件快照判断 WebView 能否回退，而 react-native-webview v14
   的 ref 上已无 `canGoBack` 命令（命令表只剩 goBack/reload/…）；SPA 同文档路由（`pushState`）、
