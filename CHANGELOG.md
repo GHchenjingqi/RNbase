@@ -5,6 +5,16 @@
 
 ## [Unreleased]
 
+### Fixed（安卓 Gradle wrapper 锁回 9.0.0，2026-10-15）
+
+- 现象：`gradle-wrapper.properties` 指向 9.4.1 时构建必失败——
+  `Execution failed for task ':gradle-plugin:settings-plugin:compileKotlin'` →
+  `Internal compiler error`。9.4.1 自带的 kotlin-stdlib 是 2.3.0，与本项目 Kotlin 2.2.0
+  （`build.gradle` 的 `kotlinVersion`）对不上。
+- 处理：wrapper 固定到 **9.0.0**（实测 `./gradlew help` BUILD SUCCESSFUL）。
+  AGP 8.12.0 由 RN 0.84 的 `@react-native/gradle-plugin` 带入，官方只要求 Gradle ≥ 8.13，
+  光看兼容表看不出这个上限，故在 README 5.6 记一条「别升到 9.4+」，防止被照表升回去。
+
 ### Added（debug 期三端统一「直连本地 H5」，2026-10-15）
 - 背景：debug 下改一行 H5 要走 `build → sync:base → 重装 APK/HAP`，反馈循环以分钟计。
   此前只有鸿蒙支持直连宿主机 dev server，安卓恒读 `file:///android_asset/index.html`、

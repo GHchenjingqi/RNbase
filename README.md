@@ -413,6 +413,9 @@ Prettier 未进 CI 硬门禁（仓库存在预存在格式偏差），统一由�
 
 ### 5.6 已知环境坑（速查）
 
+- **Gradle 别升到 9.4+（锁在 9.0.0）**：9.4.1 下 RN 的 `gradle-plugin` 编译 Kotlin 直接
+  `Internal compiler error`（其 kotlin-stdlib 2.3.0 与本项目 Kotlin 2.2.0 冲突），
+  9.0.0 实测通过。AGP 8.12 的最低 Gradle 是 8.13，光看官方兼容表看不出这个上限，别照表升级。
 - **hermesc 编译失败（release 报 `.hbc` 不存在）**：`node_modules/hermes-compiler` 被装坏，用 `npm pack hermes-compiler` 重下覆盖；`npm run doctor:hermesc` 可单独验证。
 - **release 打包前先停 Metro**，否则 metro-cache 清理冲突报 `ENOTEMPTY`。
 - **AAPT2 daemon 失败**：`gradlew --stop` + `clean`，勿直接删 `~/.gradle/caches/transforms`。
