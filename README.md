@@ -200,7 +200,8 @@ RNbase/
 ├── docs/                       # ADR 决策记录、BRIDGE_API.generated.md（npm run gen:api-doc 生成）
 ├── App.tsx                     # RN 入口：WebView 加载 H5 入口资源
 ├── app-registry.json           # 活动子应用注册表（activeApp + 各子应用目录；模板见 *.example.json）
-├── version.json                # 构建期派生产物（品牌下发脚本从子应用 app.config.json 重写，勿手改）
+├── version.json                # 构建期派生产物（不入库：由 npm install 从 version.example.json 生成，
+│                               #   之后由品牌下发脚本按子应用 app.config.json 重写，勿手改）
 ├── DEVICE_CAPABILITIES.md      # 设备能力 API 文档
 └── __tests__/                  # 全部单测集中于此（src 下不存放测试文件）
 ```
@@ -355,7 +356,7 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 ### 5.2 快速开始
 
 ```sh
-npm ci                       # 安装依赖
+npm ci                       # 安装依赖（prepare 钩子顺带从 version.example.json 生成 version.json）
 npm run doctor               # 只读自查：依赖/活动子应用/version.json/h5 产物/api.js 一致性/
                              # 配置/hermesc，末尾「平台链路」列出各平台还差什么
 npm run emulator             # 起 Android 模拟器（Pixel_10）
@@ -364,6 +365,12 @@ npm run stop                 # 停 App + 释放端口 + gradlew --stop
 ```
 
 改完环境先跑 `npm run doctor`，它会告诉你差什么，而不是到构建报错里猜。
+
+> `version.json` 与 `app-registry.json` 都是**本地产物，不入基仓库**（`.gitignore` 已忽略，
+> 模板分别是 `version.example.json` / `app-registry.example.json`）。基座本身不内置任何 App 值——
+> 品牌信息只在子应用侧 `app.config.json` 里，由 `app:use` / `brand:apply` 下发到基座，
+> 这样「行测」「古诗」这类具体业务就不会在基座 diff 里留下痕迹。
+> 万一 `version.json` 被误删，`npm run init:version` 可从模板重建。
 
 ### 5.3 常用命令
 

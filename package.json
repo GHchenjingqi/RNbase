@@ -51,7 +51,9 @@
     "apk:hash": "node scripts/apk-hash.js",
     "gen:api-doc": "node scripts/gen-api-doc.js",
     "gen:api-doc:check": "node scripts/gen-api-doc.js --check",
-    "subapp:create": "node scripts/create-subapp.js"
+    "subapp:create": "node scripts/create-subapp.js",
+    "init:version": "node scripts/init-version.js",
+    "prepare": "node scripts/init-version.js"
   },
   "dependencies": {
     "@react-native-oh/react-native-harmony": "^0.84.4",
