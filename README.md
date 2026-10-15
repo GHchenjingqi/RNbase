@@ -1,5 +1,24 @@
 # RNbase — RN + H5 混合架构基座
 
+[![CI](https://github.com/GHchenjingqi/RNbase/actions/workflows/ci.yml/badge.svg)](https://github.com/GHchenjingqi/RNbase/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![React Native](https://img.shields.io/badge/React%20Native-0.84-61dafb.svg)](https://reactnative.dev/)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20HarmonyOS%20%7C%20iOS-lightgrey.svg)](./README.md)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/GHchenjingqi/RNbase/pulls)
+
+> **English** — A production-ready **React Native + WebView hybrid app shell**. RN stays a stable native container, your H5 sub-app carries all the business code, and a single controlled Bridge is the only boundary between them. Ships with 41 native capability modules, H5 bundle OTA (with auto rollback) and full-APK upgrade. Targets Android / HarmonyOS / iOS.
+> 配套桌面打包工作台：[**RNBuildStudio**](https://github.com/GHchenjingqi/RNBuildStudio)（可视化出包，不用记命令行）
+
+## 0. 30 秒了解：它解决什么问题
+
+| 你现在的痛点 | RNbase 的做法 |
+|---|---|
+| 改一个按钮也要重新打包上架，发版被应用商店卡住 | **H5 子包独立 OTA**：检查 → 下载 → 校验 → 原子切换 → 失败自动回滚，业务迭代不走商店 |
+| H5 和原生各写一套调用，改了这边忘了那边 | Bridge 能力清单**唯一真源** `scripts/api.js`，两侧 `md5` 必须一致（`npm run sync:api`），漂移直接报错 |
+| 每个 App 都要复制一遍壳、改包名图标闪屏 | **基座是纯模板**：应用名 / 包名 / 图标 / 闪屏 / 版本全部由子应用声明，换品牌不动壳 |
+| 前端出身，搞不定 Gradle / hvigor 出包 | 桌面工作台 [RNBuildStudio](https://github.com/GHchenjingqi/RNBuildStudio) 点几下出 Android / 鸿蒙包 |
+| 三端各写一套原生能力 | 一套 Bridge 协议，Android 与鸿蒙已落地，iOS 预留 |
+
 React Native + WebView + H5 混合架构。RN 作为稳定的 App Runtime / Native Container，WebView 承载 H5 子应用，Native Bridge 是两者之间唯一受控的能力边界。本基座不承载业务功能，只提供容器、通信协议与设备能力，业务全部在 H5 子应用中实现。
 
 ## 1. 项目介绍
