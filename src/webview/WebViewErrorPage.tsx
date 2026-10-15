@@ -5,9 +5,10 @@
  * - 重新加载：重试当前版本
  * - 使用上一版本：手动回滚到历史稳定版本（Phase 8）
  * - 联系客服：跳转客服渠道（预留接口）
+ * 底色与文字跟随系统深浅色（与 WebViewBridge 的 chromeBackground 同值）。
  */
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import type { WebViewErrorInfo } from './types';
 import { getErrorSuggestion, getErrorTitle } from './error-handler';
 
@@ -35,6 +36,8 @@ export function WebViewErrorPage({
   currentVersion,
   networkStatus,
 }: WebViewErrorPageProps) {
+  const isDarkMode = useColorScheme() === 'dark';
+  const styles = createStyles(isDarkMode);
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
@@ -71,83 +74,85 @@ export function WebViewErrorPage({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-    gap: 12,
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFF3CD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  icon: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#856404',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    textAlign: 'center',
-  },
-  suggestion: {
-    fontSize: 14,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  detail: {
-    fontSize: 12,
-    color: '#999999',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  meta: {
-    fontSize: 11,
-    color: '#AAAAAA',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  button: {
-    marginTop: 16,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    minWidth: 160,
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    marginTop: 8,
-  },
-  secondaryButtonText: {
-    color: '#007AFF',
-  },
-  supportButton: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  supportButtonText: {
-    fontSize: 14,
-    color: '#999999',
-    textDecorationLine: 'underline',
-  },
-});
+function createStyles(dark: boolean) {
+  return StyleSheet.create({
+    container: {
+      ...StyleSheet.absoluteFill,
+      backgroundColor: dark ? '#08080D' : '#FFFFFF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 32,
+      gap: 12,
+    },
+    iconContainer: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: dark ? '#3A3120' : '#FFF3CD',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    icon: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: dark ? '#FFD666' : '#856404',
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: dark ? '#E8E8E8' : '#333333',
+      textAlign: 'center',
+    },
+    suggestion: {
+      fontSize: 14,
+      color: dark ? '#AAAAAA' : '#666666',
+      textAlign: 'center',
+    },
+    detail: {
+      fontSize: 12,
+      color: dark ? '#888888' : '#999999',
+      textAlign: 'center',
+      marginTop: 4,
+    },
+    meta: {
+      fontSize: 11,
+      color: dark ? '#777777' : '#AAAAAA',
+      textAlign: 'center',
+      marginTop: 4,
+    },
+    button: {
+      marginTop: 16,
+      paddingHorizontal: 32,
+      paddingVertical: 12,
+      backgroundColor: '#007AFF',
+      borderRadius: 8,
+      minWidth: 160,
+      alignItems: 'center',
+    },
+    buttonText: {
+      fontSize: 16,
+      color: '#FFFFFF',
+      fontWeight: '500',
+    },
+    secondaryButton: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: '#007AFF',
+      marginTop: 8,
+    },
+    secondaryButtonText: {
+      color: '#007AFF',
+    },
+    supportButton: {
+      marginTop: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    supportButtonText: {
+      fontSize: 14,
+      color: dark ? '#888888' : '#999999',
+      textDecorationLine: 'underline',
+    },
+  });
+}

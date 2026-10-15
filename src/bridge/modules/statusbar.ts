@@ -7,13 +7,35 @@ import { StatusBar, Platform } from 'react-native';
 import type { BridgeServer } from '../bridge-server';
 import { BridgeException } from '../bridge-error';
 
+export type BarStyle = 'default' | 'light-content' | 'dark-content';
+
+/**
+ * H5 经 Bridge 接管的 barStyle（未接管为 null）。
+ * 组合根（App.tsx）的声明式 <StatusBar barStyle> 会在深浅色切换等重渲染时重新生效，
+ * 会把 H5 设置的样式冲回默认 —— 这里记录接管状态，组合根据此决定是否还按系统值覆盖。
+ */
+let h5BarStyleOverride: BarStyle | null = null;
+let h5BarStyleListener: ((style: BarStyle) => void) | null = null;
+
+/** 组合根注册监听：H5 每次接管 barStyle 时收到通知（返回清理函数语义由调用方处理）。 */
+export function setH5BarStyleListener(cb: ((style: BarStyle) => void) | null): void {
+  h5BarStyleListener = cb;
+}
+
+/** 当前 H5 接管的 barStyle；未接管为 null（组合根按系统深浅色渲染）。 */
+export function getH5BarStyleOverride(): BarStyle | null {
+  return h5BarStyleOverride;
+}
+
 export function registerStatusBarModule(server: BridgeServer): void {
   server.registerModule('statusBar', {
     /** 设置状态栏样式：default（黑字）/ light-content（白字）。 */
     setBarStyle(params) {
-      const p = params as { style?: 'default' | 'light-content' | 'dark-content' } | undefined;
+      const p = params as { style?: BarStyle } | undefined;
       const style = p?.style ?? 'default';
-      StatusBar.setBarStyle(style as 'default' | 'light-content' | 'dark-content', true);
+      StatusBar.setBarStyle(style, true);
+      h5BarStyleOverride = style;
+      h5BarStyleListener?.(style);
       return { ok: true };
     },
 

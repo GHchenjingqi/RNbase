@@ -123,6 +123,13 @@ export const BRIDGE_EVENTS = {
    * （关弹层 → 退路由 → 退出确认），H5 用 app.nativeBackResult 回执是否已消化。
    */
   NATIVE_BACK: 'native.back',
+  /**
+   * 安全区变化：{ top, right, bottom, left }（dp）。
+   * 旋转 / 分屏 / 折叠屏展开导致 insets 变化时推送。本地模式 URL query 里的 safeTop 等
+   * 只按首载值冻结（否则 insets 变化会改 URI 触发 WebView 整页重载），运行期变化一律以
+   * 本事件为准；window.RN_SAFE_AREA 也是首载快照，H5 重排请读本事件 payload。
+   */
+  SAFE_AREA_CHANGE: 'system.safeareachange',
 } as const;
 
 export type BridgeEventName = (typeof BRIDGE_EVENTS)[keyof typeof BRIDGE_EVENTS];

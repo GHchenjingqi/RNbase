@@ -208,7 +208,8 @@ RNbase/
 ```
 <子应用>/
 ├─ app.config.json      版本与品牌唯一真源：appName / apkName / applicationId /
-│                       versionName / versionCode / splashBackgroundColor，可选 remoteUrl
+│                       versionName / versionCode / splashBackgroundColor，
+│                       可选 remoteUrl（远程站点开关）、statusBarStyle（状态栏深浅覆盖）
 ├─ app-brand/
 │  ├─ icon.png          一张方形主图（建议 ≥1024），npm run brand:gen 切五套密度
 │  └─ android/          mipmap / drawable 产物目录
@@ -233,7 +234,45 @@ npm run app:use -- app_h5 --sync # 切换子应用 + 同步产物 + 下发品牌
 npm run brand:apply -- --app <目录>  # 仅重新下发品牌（自带回读校验，任一项不符即失败）
 npm run brand:reset              # 复原成中性基座（提交基座前跑）
 npm run version:bump             # 版本迭代（patch/minor/major），versionCode 自动 +1
+npm run subapp:create -- --name demo_h5 --framework vue --app-name "演示应用"
 ```
+
+#### 新建子应用
+
+`subapp:create` 在基座**同级目录**建一个新子应用，一次做完此前需要手工完成的三件事：
+
+1. 复制 `h5-subapp-setup/assets/<vue|react>-template`（已含 hash 路由、相对路径、IIFE 输出、`public/js/api.js`）
+2. 补齐对接脚本 `scripts/`（`sync-to-base` / `inject-api` / `apply-app-meta` 三个薄壳，模板里没有）
+3. 写入 `app.config.json` 并在 `app-registry.json` 登记 —— **不登记则 `app:use` 不认这个子应用**
+
+同时改写 `package.json` 的 scripts（`build` / `build:base` / `sync:base` / `sync:api`，与既有子应用对齐）
+与 `index.html`（标题改为应用名、在 `api.js` 之前注入 `window.__H5_APP_ID__`）。
+
+```sh
+npm run subapp:create -- --name demo_h5 --framework vue \
+  --app-name "演示应用" --application-id com.qux.demo --apk-name Demo
+cd ../demo_h5 && npm install && npm run build:base
+cd ../RNbase && npm run app:use -- demo_h5 --sync
+```
+
+参数：`--name`（必填，目录名）/ `--framework`（必填，vue|react）/ `--app-name` /
+`--application-id` / `--apk-name` / `--app-id` / `--version-name` / `--version-code` /
+`--splash` / `--dist` / `--no-register`（只建工程不登记）/ `--force`（覆盖已存在目录）。
+
+**仅配置应用**（远程站点打包用，无源码）：
+
+```sh
+npm run subapp:create -- --name xingce_app --no-source \
+  --app-name "行测" --application-id com.qux.xingce --remote-url https://xxx.host/
+npm run app:use -- xingce_app          # 注意：不带 --sync（它没有产物可同步）
+```
+
+`--no-source` 只生成 `app.config.json`（含 `remoteUrl`）+ `app-brand/`，不复制模板、不补
+对接脚本、不需要 `npm install`；`--remote-url` 为必填且须 `http(s)`。适合「同一个基座给
+不同网址各打一个包」——每个网址一份独立配置，互不覆盖。这类应用**不能带 `--sync`**
+（没有 `scripts/sync-to-base.js`）。
+
+打包工作台（RNBuild Studio）的「新建应用」页直接调用本脚本，不自己复制文件。
 
 不同 `applicationId` 的包在设备上可并排安装、互不覆盖。`version.json` 与品牌位图均已
 `.gitignore`，克隆后从 `*.example.json` 复制正式名，再 `brand:apply` 下发。
@@ -244,9 +283,13 @@ npm run version:bump             # 版本迭代（patch/minor/major），version
 APK，留空则为本地 H5 模式，行为不变。该模式下：
 
 - 不注入 Bridge、不建消息通道，**远程站点拿不到任何原生能力**（有意边界：第三方 origin 一旦拿到 `window.ReactNativeWebView` 即等于拿到全部能力，域名换绑或被篡改即成攻击面）；
+- 状态栏图标深浅拿不到 Bridge 可调，改由子应用 `app.config.json` 的 `statusBarStyle`（`default` / `light-content` / `dark-content`）声明，经 `brand:apply` 写入 `version.json`；不填则跟随系统深浅色；
 - 只认 `http(s)` 且有 host 的 URL（校验在 `normalizeRemoteUrl`）；
 - 不做 H5 子包更新检查，`app.ready` 握手不等待；
-- 硬件返回键走兜底路径：WebView 能回退就 goBack，退无可退才退出；站点若不写 history（纯组件切换的 SPA），子页按返回即退出，基座补不了；
+- 硬件返回键走容器兜底（页面没有 Bridge 可问）：先按**原生真值**判断 WebView 还能不能回退
+  （按键那一刻读 `WebView.canGoBack()`，见 `BaseSystem.webViewGoBack`），能就 `goBack()`；
+  退无可退**不直接退出**，只提示「再按一次退出应用」，2 秒内再按一次才退出。
+  站点不写浏览器历史（纯组件切换的 SPA）时也是这个行为，不会一次误触就杀掉 App；
 - 站点离线即白屏，无本地兜底。
 
 ### 4.4 项目边界（职责划分）

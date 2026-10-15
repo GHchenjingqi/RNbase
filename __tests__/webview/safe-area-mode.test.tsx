@@ -12,14 +12,16 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
+const mockInsets = { current: { top: 24, bottom: 16, left: 8, right: 12 } };
+
 jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({ top: 24, bottom: 16, left: 8, right: 12 }),
+  useSafeAreaInsets: () => mockInsets.current,
 }));
 
 jest.mock('react-native-webview', () => {
   const ReactMod = require('react');
   const MockWebView = ReactMod.forwardRef((props: Record<string, unknown>, ref: unknown) =>
-    ReactMod.createElement('mock-webview', { ...props, ref }),
+    ReactMod.createElement('mock-webview', { ...props, ref })
   );
   return { __esModule: true, default: MockWebView, WebView: MockWebView };
 });
@@ -37,11 +39,11 @@ function snapshot(bridgeEnabled: boolean) {
       React.createElement(WebViewBridge, {
         source: { uri: bridgeEnabled ? ASSET : SITE },
         bridgeEnabled,
-      }),
+      })
     );
   });
   const root = tree!.root;
-  const webViewProps = root.findAll(n => n.type === 'mock-webview')[0].props as Record<
+  const webViewProps = root.findAll((n) => n.type === 'mock-webview')[0].props as Record<
     string,
     unknown
   >;
@@ -92,5 +94,29 @@ describe('安全区：远程注入 CSS / 本地注入能力值，两条路不叠
     expect(uri.startsWith(ASSET)).toBe(true);
     expect(uri).toContain('safeTop=24');
     expect(uri).toContain('safeBottom=16');
+  });
+
+  test('本地模式：insets 运行期变化不重拼 URL（旋转/分屏不再触发整页重载）', () => {
+    let tree: ReactTestRenderer | undefined;
+    const element = () => React.createElement(WebViewBridge, { source: { uri: ASSET } });
+    act(() => {
+      tree = create(element());
+    });
+    const uriBefore = (
+      tree!.root.findAll((n) => n.type === 'mock-webview')[0].props as Record<string, unknown>
+    ).source as { uri: string };
+    act(() => {
+      mockInsets.current = { top: 48, bottom: 32, left: 0, right: 0 };
+      tree!.update(element());
+    });
+    const uriAfter = (
+      tree!.root.findAll((n) => n.type === 'mock-webview')[0].props as Record<string, unknown>
+    ).source as { uri: string };
+    act(() => {
+      tree!.unmount();
+    });
+    // URL query 冻结在首载 insets；运行期变化走 system.safeareachange 事件，不改 source
+    expect(uriAfter.uri).toBe(uriBefore.uri);
+    expect(uriAfter.uri).toContain('safeTop=24');
   });
 });

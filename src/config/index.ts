@@ -101,6 +101,21 @@ export const CRASH_REPORT_ENDPOINT: string | null = (() => {
 })();
 
 /**
+ * 状态栏样式容器级覆盖（可选）。
+ *
+ * 通过子应用 app.config.json 的 `statusBarStyle`（default / light-content / dark-content）
+ * 经 apply-app-meta.js 下发到 version.json。适用场景：远程站点模式拿不到 Bridge，
+ * H5 无法调 RN.STATUSBAR.SETBARSTYLE，只能靠配置声明站点配色的状态栏深浅。
+ * 优先级：H5 Bridge 接管 > 本配置 > 系统深浅色；未配置（'' / 非法值）为 null。
+ */
+export type StatusBarStyleValue = 'default' | 'light-content' | 'dark-content';
+
+export const STATUS_BAR_STYLE: StatusBarStyleValue | null = (() => {
+  const raw = (versionInfo as { statusBarStyle?: unknown }).statusBarStyle;
+  return raw === 'default' || raw === 'light-content' || raw === 'dark-content' ? raw : null;
+})();
+
+/**
  * ===================== 更新器配置（updater） =====================
  */
 

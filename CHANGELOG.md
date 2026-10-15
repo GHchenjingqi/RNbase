@@ -5,6 +5,24 @@
 
 ## [Unreleased]
 
+### Fixed（安卓返回键一次误触即退出 App，2026-10-15）
+- 根因：容器兜底靠 JS 侧导航事件快照判断 WebView 能否回退，而 react-native-webview v14
+  的 ref 上已无 `canGoBack` 命令（命令表只剩 goBack/reload/…）；SPA 同文档路由（`pushState`）、
+  hash 路由、错误页重载、回退后再前进等场景快照会过期，快照为 false 时旧实现直接
+  `BackHandler.exitApp()` —— 真机表现即「子页面按一次返回键直接退出 App」，
+  套壳网站（`remoteUrl` 模式：页面拿不到 Bridge、`native.back` 没人回执）必现。
+- Android 新增 `BaseSystem.webViewGoBack()`：在按键那一刻于 UI 线程遍历视图树找到 WebView，
+  `canGoBack()` 为真才 `goBack()`，判断与动作在同一原子回调里完成；不依赖 JS 侧 ref 是否已挂上
+  （旧实现「WebView 未挂载即退出」也是误杀来源）。
+- 新增 `src/webview/back-policy.ts`：退无可退**不再直接退出**，改为提示「再按一次退出应用」
+  并给 2s 确认窗口（`EXIT_CONFIRM_WINDOW_MS`）；原生查询失败一律按「退不了」处理，
+  宁可多要一次确认也不误杀 App。
+- `WebViewBridge`：删除「WebView 尚未挂载就直接退出」分支（改由原生真值兜底）；
+  远程模式不再空等 400ms 的 H5 回执（那个 origin 没有 Bridge 通道），直接走容器兜底；
+  新增退出提示浮层（不吃事件，2s 自动收起）。
+- 单测 `__tests__/webview/back-policy.test.ts` 锁住四条不变量：能回退必回退 /
+  第一次按键不退出 / 窗口内二次才退出 / 原生异常不退出。
+
 ### Fixed（Android 通知栏重复通知，2026-10-13）
 - `BaseCapabilitiesModule.doSendNotification` 修复通知 id 生成缺陷：
   `System.currentTimeMillis() % 10000` 每 10s 回绕，不同通知可能撞 id 相互覆盖

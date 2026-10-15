@@ -10,13 +10,23 @@ jest.mock('react-native', () => ({
   NativeModules: { BaseCapabilities: { H5BundleBasePath: '/fake/bundle' } },
 }));
 
+// REMOTE_H5_URL 来自 version.json——那是构建期派生文件（.gitignore），会随
+// app:use / brand:apply 变化。不 mock 的话，本机切一次子应用这个测试就红一次，
+// 断言的其实是机器状态而不是代码行为。这里固定为「未配置」，远程分支单独用用例覆盖。
+jest.mock('../src/config', () => ({
+  __esModule: true,
+  REMOTE_H5_URL: null,
+}));
+
 import { getH5EntryUri, appendCacheBustQuery } from '../src/app/resolve-h5-entry';
 
 const RN = require('react-native');
+const config = require('../src/config');
 
 describe('getH5EntryUri', () => {
   beforeEach(() => {
     RN.NativeModules.BaseCapabilities = { H5BundleBasePath: '/fake/bundle' };
+    config.REMOTE_H5_URL = null;
   });
 
   test('iOS 本地模式使用 H5BundleBasePath 拼出 bundle 内 h5 入口', () => {
@@ -28,6 +38,13 @@ describe('getH5EntryUri', () => {
     RN.Platform.OS = 'ios';
     RN.NativeModules.BaseCapabilities = {};
     expect(getH5EntryUri()).toBeNull();
+  });
+
+  test('iOS 未暴露 H5BundleBasePath 但已配置远程地址时回落到远程地址', () => {
+    RN.Platform.OS = 'ios';
+    RN.NativeModules.BaseCapabilities = {};
+    config.REMOTE_H5_URL = 'https://remote.example/';
+    expect(getH5EntryUri()).toBe('https://remote.example/');
   });
 
   test('安卓模式使用 android_asset（带防缓存参数）', () => {

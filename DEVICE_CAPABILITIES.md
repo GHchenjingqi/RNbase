@@ -500,6 +500,13 @@ Android 15+ edge-to-edge 下 `StatusBar.currentHeight` 已废弃返回 0，这�
 顶部 inset**（`WindowInsets`，含刘海 cutout）；未注入/读不到时为 `0`，H5 应回退
 `env(safe-area-inset-top)` 或默认值。
 
+**深浅色与安全区的同步取值**：
+- H5 加载前容器注入 `window.RN_APPEARANCE`（`'dark' | 'light'`，首载快照），首帧即可同步读取，
+  不必先按浅色渲染再等 `GETDARKMODE` 回包；运行期切换仍以 `system.darkmodechange` 事件为准。
+- `window.RN_SAFE_AREA` 与 URL query 的 `safeTop` 等都是**首载快照**；旋转 / 分屏 / 折叠屏
+  展开 insets 变化时推送事件 `system.safeareachange`
+  （payload `{ top, right, bottom, left }`，dp），H5 重排以该事件为准，页面不会因此重载。
+
 **`RN.SYSTEM.GETPLATFORM()` → `{ os: 'android' | 'ios' | 'windows' | 'macos' | 'web' }`** —
 取自 RN `Platform.OS`，比 H5 侧 UA 判断更准。
 
@@ -775,8 +782,22 @@ RN.VERSION  RN.SDK_VERSION  RN.PROTOCOL_VERSION  RN.APP_ID  RN.ENV  RN.PLATFORM 
 >
 > **`native.back` 的决策权在 H5**：容器不再让系统直接 finish Activity，而是先问 H5
 > （关弹层 → 退路由 → 退出确认）。400ms（`NATIVE_BACK_ACK_TIMEOUT_MS`）内无回执按未消化处理，
-> 由容器兜底：WebView 可回退就 `goBack()`，退无可退才退出 App。
-> 键盘弹出时返回键**先收键盘**（容器消化，不推 `native.back`），与原生页面行为一致。
+> 由容器兜底（见下方「返回键兜底」）。键盘弹出时返回键**先收键盘**（容器消化，不推 `native.back`），
+> 与原生页面行为一致。
+>
+> **返回键兜底（`src/webview/back-policy.ts`）**：H5 回执 `consumed=false`、超时未回执，
+> 或远程模式没有 Bridge 通道时，容器按两级处理 ——
+> ① 先问原生「WebView 还能回退吗」：安卓走 `BaseSystem.webViewGoBack`，在按键那一刻读
+> `WebView.canGoBack()`，为真才 `goBack()`（判断与动作在 UI 线程同一回调里原子完成）；
+> 鸿蒙 / iOS 没有该原生接口，退回 JS 侧导航事件快照；
+> ② 退无可退**不立刻退出**：先提示「再按一次退出应用」，2 秒（`EXIT_CONFIRM_WINDOW_MS`）内
+> 再按一次才真正退出。
+>
+> **为什么必须这么做**：react-native-webview v14 删掉了 ref 上的 `canGoBack()` 命令
+> （命令表只剩 goBack/reload/…），JS 只能读导航事件里的快照，而快照在 SPA 同文档路由
+> （`pushState`）、hash 路由、错误页重载、回退后再前进等场景会过期 —— 快照说「退不了」，
+> 旧实现就直接 finish Activity，真机表现即「子页面按一次返回键直接退出 App」，
+> 套壳网站（`remoteUrl` 模式）里必现。
 
 > 事件经 `BridgeEventBus` 推送。`WebViewBridge.tsx` 挂载时已调用
 > `server.eventBus.setGlobalListener((e) => webViewRef.current?.postMessage(JSON.stringify(e)))`
@@ -964,7 +985,10 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
   裸 `file://` 会被 ArkWeb 拒掉（17100003，直接崩进程）。导航白名单相应放行 `asset://` / `resource://`。
 - **WebView 容器**：鸿蒙侧不因 `source.uri` 变化重建 source（ArkWeb 会因此重载，navigationId 1→2）；
   `onHttpError` **只记日志不弹错误页**（ArkWeb 会把子资源失败也报上来，按主帧判不可靠）。
-- **返回键**：只有页面级返回（RNOH 没有安卓 `BackPressedDispatcher` 那条全局链路）。
+- **返回键**：只有页面级返回（RNOH 没有安卓 `BackPressedDispatcher` 那条全局链路），
+  `Index.ets` 的 `onBackPress` 往 JS 发 `hardwareBackPress`。容器兜底用 JS 侧导航事件快照
+  （鸿蒙暂无 `webViewGoBack` 那条原生真值接口，见 §4.2「返回键兜底」）；快照为假时也只提示
+  「再按一次退出应用」，不会一次误触就退出。
 - **原生方法注册是双份的**：ArkTS 的 `public async` 方法 + `cpp/BaseTurboModules.h` 的
   `ARK_ASYNC_METHOD_METADATA(名字, 参数个数)`，两边必须逐一对应，且**全部方法都是 async**
   （同步方法会在 JS 线程上等主线程 → 死锁）。改签名忘了改 C++ 的表现是「方法存在但一调就抛」。
@@ -989,10 +1013,11 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
   跟站点配色一致（容器 `paddingTop` 试过，透出 RN 窗口背景会切出一条白条）。这条注入不写任何
   `window.*`，给第三方 origin 的能力面仍是零。两条路由 `bridgeEnabled` 二选一，不会同时生效。
 - 握手与 H5 子包更新检查跳过：第三方页不会发 `app.ready`，等握手就是 10s 后进诊断页。
-- 硬件返回键只剩容器兜底（`native.back` 没人回执）：WebView 能回退就 `goBack()`，退无可退才退出。
-  可回退状态取自导航事件的 `canGoBack`——react-native-webview v14 删掉了 ref 上的 `canGoBack()`
-  命令，只能这么拿（`src/webview/web-view-controller.ts`）。站点不写浏览器历史（纯组件切换的
-  单页）时，栈里只有一条记录，子页面按返回即退出 App。
+- 硬件返回键只剩容器兜底（`native.back` 没人回执）：先在按键那一刻按**原生真值**判断
+  WebView 还能不能回退（`BaseSystem.webViewGoBack`，内部读 `WebView.canGoBack()` 并原子 goBack），
+  能就 `goBack()`；退无可退**不直接退出**，只提示「再按一次退出应用」，2 秒内再按一次才退出。
+  站点不写浏览器历史（纯组件切换的单页）时返回键同样是「先提示、再退出」，
+  不会一次误触就把 App 杀掉（决策与状态在 `src/webview/back-policy.ts`，有单测）。
 - 需要原生能力请回到本地 H5 子应用 + `api.js` 协议，本文档其余章节讲的都是那条链路。
 
 ---
@@ -1027,7 +1052,8 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
 | `harmony/oh-package.json5` | 用 `file:../node_modules/...` 指到 RNOH HAR —— 这就是 `harmony/` 必须在仓库根的原因 |
 | `src/config/index.ts` | 集中配置；`REMOTE_H5_URL` / `IS_REMOTE_H5` / `REMOTE_H5_ORIGIN` 是远程模式开关（scheme 白名单校验在这里） |
 | `src/app/resolve-h5-source.ts` | H5 入口决策：远程模式直接返回 `remoteUrl`，否则本地激活版本 → 内置兜底页 |
-| `src/webview/web-view-controller.ts` | WebView 加载状态机；`canGoBack()` 的状态从导航事件里取（v14 无该命令），返回键兜底靠它 |
+| `src/webview/web-view-controller.ts` | WebView 加载状态机；`canGoBack()` 的状态从导航事件里取（v14 无该命令），返回键兜底的快照来源 |
+| `src/webview/back-policy.ts` | 返回键兜底策略：原生真值回退 → 「再按一次退出应用」二次确认（`EXIT_CONFIRM_WINDOW_MS`） |
 | `src/diagnostics/harmony-native-self-test.ts` | 上机后的原生能力自检（写设备日志，`App.tsx` 自动触发一次） |
 | `scripts/harmony-ready.js` | 鸿蒙版本闸的唯一判据（RNOH / CLI / HAR / DevEco 工具位置），`hvigor.js`、`harmony-dev.js`、`doctor.js` 共用 |
 | `scripts/hvigor.js` | 跨平台跑 hvigorw：出包前拷 `h5/` 进 rawfile、校验 hermesc、注入 api.js，产物投递 `dist/<applicationId>/`，`--install` 走 hdc 装包并拉起 |

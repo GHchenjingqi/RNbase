@@ -11,16 +11,23 @@ import { PermissionManagerProvider } from './src/permissions/PermissionProvider'
 import { WebViewBridge } from './src/webview/WebViewBridge';
 import { WebViewErrorPage } from './src/webview/WebViewErrorPage';
 import { getH5EntryUri } from './src/app/resolve-h5-entry';
-import { REMOTE_H5_ORIGIN, REMOTE_H5_URL, validateClientIds } from './src/config';
+import {
+  CRASH_REPORT_ENDPOINT,
+  REMOTE_H5_ORIGIN,
+  REMOTE_H5_URL,
+  STATUS_BAR_STYLE,
+  validateClientIds,
+} from './src/config';
 import { runHarmonyNativeSelfTest } from './src/diagnostics/harmony-native-self-test';
 import {
   installGlobalErrorHandlers,
   setCrashUploader,
   createHttpCrashUploader,
 } from './src/diagnostics/crash-reporter';
-import { CRASH_REPORT_ENDPOINT } from './src/config';
 import { deviceLogger } from './src/diagnostics/device-logger';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
+import { setH5BarStyleListener } from './src/bridge/modules/statusbar';
+import type { BarStyle } from './src/bridge/modules/statusbar';
 
 // H5 入口两条路（开关是 version.json 的 remoteUrl，见 README「基座 + URL（远程站点模式）」）：
 //  - 远程模式：入口就是那个站点，不读内置 assets，也不给第三方 origin 注入 Bridge
@@ -35,6 +42,13 @@ export default function App() {
   // 入口每次冷启动算一次就够；但本地模式为 null 时「重新加载」需重算，故用 state。
   const [h5Uri, setH5Uri] = useState<string | null>(() => REMOTE_H5_URL ?? getH5EntryUri());
   const isRemote = REMOTE_H5_URL !== null;
+  // barStyle 仲裁，优先级：H5 Bridge 接管 > version.json 的 statusBarStyle（远程模式
+  // 没有 Bridge，只能靠配置声明）> 系统深浅色。远程模式无 Bridge，天然只有后两级。
+  const [h5BarStyle, setH5BarStyle] = useState<BarStyle | null>(null);
+  useEffect(() => {
+    setH5BarStyleListener((style) => setH5BarStyle(style));
+    return () => setH5BarStyleListener(null);
+  }, []);
 
   // 鸿蒙原生能力自检（Phase 4 验收通道）：结果写设备日志，登录前即可用 hdc 取回。
   // 非 harmony 平台直接 return，安卓/iOS 启动链路零成本。
@@ -66,7 +80,9 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar
+        barStyle={h5BarStyle ?? STATUS_BAR_STYLE ?? (isDarkMode ? 'light-content' : 'dark-content')}
+      />
       <PermissionManagerProvider>
         <AppErrorBoundary>
           {h5Uri ? (
