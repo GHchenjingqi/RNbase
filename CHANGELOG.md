@@ -5,6 +5,21 @@
 
 ## [Unreleased]
 
+### Fixed（打包脚本不再被 EPIPE 打断，2026-10-15）
+
+- 现象：打包跑到一半，node 包装进程崩在 `Error: EPIPE: broken pipe, write`
+  （`scripts/gradle.js` 的 tee 写 `process.stdout`），构建日志停在某个 Task 上，
+  gradle 子进程被丢下没人收尾——**构建本身没问题，是「日志没人看」把打包打死了**。
+- 成因：stdout 是管道时（RNBuild Studio / CI 读日志 / 命令行被 `| head` 截断），
+  读端一关闭，再写就触发 EPIPE。EPIPE 是 socket 上 emit 的 `'error'` 事件，
+  没有任何监听就升级为 uncaughtException，进程直接退出。
+- 修复：抽出 `scripts/log-tee.js`，给 `process.stdout` / `process.stderr` 装 EPIPE
+  兜底——管道断了就只记 `log/<name>.log`，构建照常跑完、照常投递 APK。
+  四个脚本（`gradle.js` / `hvigor.js` / `dev.js` / `harmony-dev.js`）原先各有一份
+  同样的 tee 实现，统一改为复用这一份，避免修一处漏三处。
+- 实测：同一段写入在断管场景下，旧实现退出码 1（崩），新实现退出码 0，
+  `log/` 下 20 万行日志完整落盘；`node scripts/gradle.js help` BUILD SUCCESSFUL。
+
 ### Added（基座默认视觉：桌面图标 + 3 秒倒计时启动闪屏，2026-10-15）
 
 - AI 生成一套中性默认视觉（流动曲线 + 浅色渐变，不代表任何具体 App）并接入三端：

@@ -18,6 +18,7 @@ const { gradleHomeArgs, aapt2OverrideArgs } = require('./gradle-home');
 const { setupAdbReverse } = require('./adb-forward');
 const { check: checkHermesc } = require('./check-hermesc');
 const { writeApkHash } = require('./apk-hash');
+const { createTee } = require('./log-tee');
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
@@ -136,21 +137,8 @@ function collectApk(variant, versionInfo) {
   return 0;
 }
 
-/** 创建一个 tee 流：同时输出到终端和日志文件（每次运行覆盖） */
-function createTee(filename) {
-  const stream = fs.createWriteStream(path.join(logDir, filename), {
-    flags: 'w',
-  });
-  return {
-    write(chunk) {
-      process.stdout.write(chunk);
-      stream.write(chunk);
-    },
-    end() {
-      stream.end();
-    },
-  };
-}
+// 创建 tee 流用共享实现：终端管道断开（工作台关窗 / 停止任务 / `| head`）时
+// 不能让 EPIPE 把构建打死，详见 scripts/log-tee.js。
 
 console.log(`[gradle] 工作目录: ${androidDir}`);
 console.log(`[gradle] 任务: ${args.join(' ')}`);

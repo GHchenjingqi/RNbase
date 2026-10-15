@@ -18,6 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const { assertHarmonyReady, discoverTools, readBundleName } = require('./harmony-ready');
 const { check: checkHermesc } = require('./check-hermesc');
+const { createTee } = require('./log-tee');
 
 const argv = process.argv.slice(2);
 if (argv.length === 0) {
@@ -65,18 +66,8 @@ function hapFileName(versionInfo) {
     : `${name}-${mode}.hap`;
 }
 
-function createTee(filename) {
-  const stream = fs.createWriteStream(path.join(logDir, filename), { flags: 'w' });
-  return {
-    write(chunk) {
-      process.stdout.write(chunk);
-      stream.write(chunk);
-    },
-    end() {
-      stream.end();
-    },
-  };
-}
+// 创建 tee 流用共享实现：终端管道断开（工作台关窗 / 停止任务 / `| head`）时
+// 不能让 EPIPE 把构建打死，详见 scripts/log-tee.js。
 
 /**
  * hvigor 子进程环境：缺 DEVECO_SDK_HOME / NODE_HOME 时 hvigorw 直接失败。

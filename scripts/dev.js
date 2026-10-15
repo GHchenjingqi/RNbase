@@ -14,6 +14,7 @@ const { resolveActiveApp, readApplicationId } = require('./active-app');
 const { killPort } = require('./free-port');
 const { setupAdbReverse, H5_DEV_PORT } = require('./adb-forward');
 const { gradleHomeArgs, aapt2OverrideArgs } = require('./gradle-home');
+const { createTee } = require('./log-tee');
 
 const root = path.join(__dirname, '..');
 const androidDir = path.join(root, 'platforms', 'android');
@@ -22,21 +23,8 @@ fs.mkdirSync(logDir, { recursive: true });
 const isWin = process.platform === 'win32';
 const PORT = 8082;
 
-/** 创建一个 tee 流：同时输出到终端和日志文件（每次运行覆盖） */
-function createTee(filename) {
-  const stream = fs.createWriteStream(path.join(logDir, filename), {
-    flags: 'w',
-  });
-  return {
-    write(chunk) {
-      process.stdout.write(chunk);
-      stream.write(chunk);
-    },
-    end() {
-      stream.end();
-    },
-  };
-}
+// 创建 tee 流用共享实现：终端管道断开（工作台关窗 / 停止任务 / `| head`）时
+// 不能让 EPIPE 把 dev server 打死，详见 scripts/log-tee.js。
 
 /** 检测是否有已连接的 Android 设备（adb devices 状态为 device） */
 function hasConnectedDevice() {
