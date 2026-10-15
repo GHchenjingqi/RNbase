@@ -195,7 +195,7 @@ RNbase/
 │   ├── config/                 #   配置（CLIENT_ID / APP_VERSION / 远程模式开关）
 │   └── components/             #   RN UI 组件
 ├── scripts/                    # 一键脚本：安卓 / 鸿蒙 / iOS / 品牌 / 子应用 / 版本 / doctor / api.js 同步
-├── rnbuild-studio.exe          # 打包工作台 RNBuild Studio（放根目录即用；独立仓库产物，*.exe 不入库，见 5.8）
+├── rnbuild-studio.exe          # 打包工作台 RNBuild Studio（放根目录即用；独立仓库产物，*.exe 不入库，见 5.9）
 ├── dist/                       # 打包产物投递目录（按包名分目录，构建后校验一致才投递）
 ├── docs/                       # ADR 决策记录、BRIDGE_API.generated.md（npm run gen:api-doc 生成）
 ├── App.tsx                     # RN 入口：WebView 加载 H5 入口资源
@@ -450,8 +450,9 @@ node scripts/create-subapp.js --name xingce_app --no-source \
 
 ### 5.9 打包工作台（RNBuild Studio）
 
-`rnbuild-studio.exe` 是配套的桌面打包工作台（Tauri 2 + Vue3，独立仓库，非本仓库源码），
-把 exe **直接放在基座根目录**即可用，无需配置：它靠同级的特征文件
+`rnbuild-studio.exe` 是配套的桌面打包工作台（Tauri 2 + Vue3），源码在独立仓库
+**<https://github.com/GHchenjingqi/RNBuildStudio>**（本仓库不含其源码，也不含 exe 本身）。
+把构建出的 exe **放在基座根目录**即可用，无需配置：它靠同级的特征文件
 （`app-registry.json` + `scripts/apply-app-meta.js`）判定「我所在的目录就是基座」，
 随后按注册表识别活动子应用、调基座的 npm 脚本出包。
 
