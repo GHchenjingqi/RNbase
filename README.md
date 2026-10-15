@@ -333,7 +333,29 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 - **远程站点模式优先级最高**：`version.json` 的 `remoteUrl` 非空时入口就是那个站点，
   debug 直连不生效（见 4.3）。想直连本地 H5 就先把 `remoteUrl` 清空。
 
-### 4.5 项目边界（职责划分）
+### 4.5 默认图标与启动闪屏
+
+基座内置一套**中性默认视觉**（AI 生成的流动曲线 + 浅色渐变，不代表任何具体 App），
+子应用不提供品牌资源时直接使用，提供后由 `brand:apply` 整体覆盖：
+
+| 资产 | 位置 | 说明 |
+|---|---|---|
+| 桌面图标 | 安卓 `brand-default/mipmap-*/ic_launcher{,_round}.png`（由 `brand:gen` 从 1024 主图切五套密度） | 中性默认图 |
+| 启动图标 / 分层图标 | 鸿蒙 `entry/.../media/startIcon.png`（`startWindowIcon`）与 `foreground/background.png`（`layered_image.json`） | 鸿蒙图标走 DevEco 图形化配置，`brand:apply` 不覆盖，换名/换图手工改 |
+| iOS 全尺寸图标 | `platforms/ios/qux/Images.xcassets/AppIcon.appiconset/`（iphone 20–60pt 全 scale + 1024 marketing） | 需 macOS 打包机出包验证 |
+| 闪图 | `src/assets/splash/splash-default.jpg` | 由 RN 侧 `SplashOverlay` 加载，三端同一张图 |
+
+**启动闪屏（3 秒倒计时）是 RN 跨端实现**（`src/app/SplashOverlay.tsx`）：全屏闪图 +
+秒级倒计时 + 淡出，点击任意位置可跳过；WebView 在闪屏下方照常装载，结束时直接露出页面。
+时长走 `version.json` 的 `splashDurationMs`（毫秒，默认 3000，**0 = 关闭**，上限 15000），
+与 `remoteUrl` / `statusBarStyle` / `h5DevUrl` 同属容器级开关——子应用 `app.config.json`
+声明了才覆盖，否则 `brand:apply` 保留现值。
+
+原生侧只负责遮盖 RN 装载前的空白：安卓 `colors.xml` 的 `splash_bg`、鸿蒙
+`start_window_background`，默认都是与闪图同系的浅色 `#EAEFF7`，衔接处不闪白。
+安卓默认闪屏仍遵守「无品牌 = 纯色无 logo」的约定（`brand:apply` 会校验），不内置默认 logo。
+
+### 4.6 项目边界（职责划分）
 
 | 层 | 负责 | 不负责 |
 |---|---|---|

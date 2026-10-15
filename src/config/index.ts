@@ -342,6 +342,28 @@ export const REMOTE_H5_URL: string | null = normalizeRemoteUrl(
 export const IS_REMOTE_H5 = REMOTE_H5_URL !== null;
 
 /**
+ * 启动闪屏展示时长（毫秒，version.json 的 `splashDurationMs` 字段）。
+ *
+ * 闪屏由 RN 侧 SplashOverlay 跨端实现（全屏闪图 + 倒计时 + 淡出），三端表现一致；
+ * 原生侧只保留纯色 windowBackground（colors.xml 的 splash_bg）遮盖 RN 装载前的空白。
+ * 未配置 = 3000（默认体验）；显式 0 = 关闭；负值/非数字按默认处理；
+ * 上限 15000——配置手滑不至于把用户锁在启动页半分钟。
+ */
+export const SPLASH_DURATION_MS: number = (() => {
+  const DEFAULT_MS = 3000;
+  const MAX_MS = 15000;
+  const raw = (versionInfo as { splashDurationMs?: unknown }).splashDurationMs;
+  if (raw === undefined || raw === null || raw === '') {
+    return DEFAULT_MS;
+  }
+  const n = typeof raw === 'number' ? raw : Number(String(raw).trim());
+  if (!Number.isFinite(n) || n < 0) {
+    return DEFAULT_MS;
+  }
+  return Math.min(Math.round(n), MAX_MS);
+})();
+
+/**
  * ===================== 调试期直连本地 H5（仅 debug 生效） =====================
  */
 

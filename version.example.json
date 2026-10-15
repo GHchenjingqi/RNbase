@@ -6,5 +6,6 @@
   "versionCode": 1,
   "remoteUrl": "",
   "statusBarStyle": "",
-  "h5DevUrl": ""
+  "h5DevUrl": "",
+  "splashDurationMs": 3000
 }

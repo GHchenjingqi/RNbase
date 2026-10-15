@@ -15,6 +15,7 @@ import {
   CRASH_REPORT_ENDPOINT,
   REMOTE_H5_ORIGIN,
   REMOTE_H5_URL,
+  SPLASH_DURATION_MS,
   STATUS_BAR_STYLE,
   validateClientIds,
 } from './src/config';
@@ -26,8 +27,10 @@ import {
 } from './src/diagnostics/crash-reporter';
 import { deviceLogger } from './src/diagnostics/device-logger';
 import { AppErrorBoundary } from './src/components/AppErrorBoundary';
+import { SplashOverlay } from './src/app/SplashOverlay';
 import { setH5BarStyleListener } from './src/bridge/modules/statusbar';
 import type { BarStyle } from './src/bridge/modules/statusbar';
+import splashDefaultImage from './src/assets/splash/splash-default.jpg';
 
 // H5 入口两条路（开关是 version.json 的 remoteUrl，见 README「基座 + URL（远程站点模式）」）：
 //  - 远程模式：入口就是那个站点，不读内置 assets，也不给第三方 origin 注入 Bridge
@@ -45,6 +48,9 @@ export default function App() {
   // barStyle 仲裁，优先级：H5 Bridge 接管 > version.json 的 statusBarStyle（远程模式
   // 没有 Bridge，只能靠配置声明）> 系统深浅色。远程模式无 Bridge，天然只有后两级。
   const [h5BarStyle, setH5BarStyle] = useState<BarStyle | null>(null);
+  // 启动闪屏：盖在 WebView 上面倒数 3 秒（点击可跳过），期间 H5 在底下照常装载。
+  // SPLASH_DURATION_MS 为 0 时直接不渲染（关闭闪屏）。
+  const [splashVisible, setSplashVisible] = useState(SPLASH_DURATION_MS > 0);
   useEffect(() => {
     setH5BarStyleListener((style) => setH5BarStyle(style));
     return () => setH5BarStyleListener(null);
@@ -103,6 +109,13 @@ export default function App() {
           )}
         </AppErrorBoundary>
       </PermissionManagerProvider>
+      {splashVisible ? (
+        <SplashOverlay
+          durationMs={SPLASH_DURATION_MS}
+          imageSource={splashDefaultImage}
+          onFinish={() => setSplashVisible(false)}
+        />
+      ) : null}
     </SafeAreaProvider>
   );
 }

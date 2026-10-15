@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 闪屏底色（通用兜底）。H5 子应用下发品牌资源时会覆盖此值。 -->
-    <color name="splash_bg">#08080D</color>
+    <!-- 闪屏底色（通用兜底）。与默认闪图同系浅色，RN 启动后的倒计时闪屏由
+         SplashOverlay 加载真图，这里只遮盖装载前的空白。H5 子应用下发品牌资源时会覆盖此值。 -->
+    <color name="splash_bg">#EAEFF7</color>
 </resources>

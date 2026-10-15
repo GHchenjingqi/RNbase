@@ -5,6 +5,24 @@
 
 ## [Unreleased]
 
+### Added（基座默认视觉：桌面图标 + 3 秒倒计时启动闪屏，2026-10-15）
+
+- AI 生成一套中性默认视觉（流动曲线 + 浅色渐变，不代表任何具体 App）并接入三端：
+  安卓 `brand-default` 五套 mipmap（复用 `brand:gen` 从 1024 主图切出）、
+  鸿蒙 `app_icon` / `startIcon` / 分层图标 `foreground` + `background`、
+  iOS `AppIcon.appiconset` 全尺寸（iphone 20–60pt 全 scale + 1024 marketing）。
+- 启动闪屏为 **RN 跨端实现**（新组件 `src/app/SplashOverlay.tsx`）：全屏闪图
+  （`src/assets/splash/splash-default.jpg`）+ 秒级倒计时 + 300ms 淡出，点击任意位置可跳过；
+  WebView 在闪屏下方照常装载，结束时直接露出页面，不额外等待。三端一份实现、表现一致。
+- 时长走 `version.json` 的 `splashDurationMs`（毫秒，默认 3000，**0 = 关闭**，上限 15000）；
+  `apply-app-meta` 将其列为容器级开关（与 `remoteUrl`/`statusBarStyle`/`h5DevUrl` 同类，
+  子应用声明了才覆盖，否则保留现值，`--reset` 回默认）。
+- 安卓 `colors.xml` 的 `splash_bg` 与鸿蒙 `start_window_background` 默认色
+  从深色 `#08080D` 改为与闪图同系的浅色 `#EAEFF7`，遮盖 RN 装载前空白、衔接不闪白。
+  安卓默认闪屏仍遵守「无品牌 = 纯色无 logo」约定（`brand:apply` 校验不变）。
+- 测试：新增 `__tests__/splashOverlay.test.tsx` 4 例（首帧倒计时 / 逐秒递减到时回调 /
+  点击跳过 / 0 关闭 / 回调仅一次）。
+
 ### Fixed（安卓 Gradle wrapper 锁回 9.0.0，2026-10-15）
 
 - 现象：`gradle-wrapper.properties` 指向 9.4.1 时构建必失败——

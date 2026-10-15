@@ -58,7 +58,9 @@ const NEUTRAL = {
   applicationId: 'com.qux.base',
   versionName: '1.0.0',
   versionCode: 1,
-  splashBackgroundColor: '#08080D',
+  // 基座默认闪屏底色：与默认闪图同系（AI 生成的浅色流动曲线，整体均色略提亮）。
+  // RN 启动后的倒计时闪屏由 SplashOverlay 加载真图，这里只负责遮盖装载前的空白。
+  splashBackgroundColor: '#EAEFF7',
   remoteUrl: '',
   statusBarStyle: '',
   h5DevUrl: '',
@@ -106,7 +108,7 @@ function validate(cfg) {
   const apkName = String(cfg.apkName || '').trim();
   const versionName = String(cfg.versionName || '').trim();
   const versionCode = Number(cfg.versionCode);
-  const splashBackgroundColor = String(cfg.splashBackgroundColor || '#08080D').trim();
+  const splashBackgroundColor = String(cfg.splashBackgroundColor || '#EAEFF7').trim();
 
   if (!appName) fail('app.config.json 缺少 appName');
   if (!/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)+$/.test(applicationId)) {
@@ -351,15 +353,27 @@ function main() {
   //    只能靠它），声明了就用，没声明保留现值。
   //    h5DevUrl 同理：debug 期 H5 入口开关（见 src/config/index.ts 的 H5_DEV_SERVER_URL），
   //    真机联调要填宿主机局域网地址，手改一次就被清掉的话等于白改。
+  //    splashDurationMs 同理：启动闪屏时长（毫秒，0 关闭；见 src/config 的 SPLASH_DURATION_MS），
+  //    属容器行为而非品牌字段，子应用声明了才覆盖，否则保留现值。
   const prev = fs.existsSync(BASE_VERSION) ? readJson(BASE_VERSION) : {};
   const prevRemoteUrl = prev.remoteUrl;
   const prevStatusBarStyle = prev.statusBarStyle;
   const prevH5DevUrl = prev.h5DevUrl;
-  // --reset 连这几个开关一起清掉：中性基座就是本地模式 + 跟随系统 + 默认 dev 入口。
+  const prevSplashDurationMs = prev.splashDurationMs;
+  // --reset 连这几个开关一起清掉：中性基座就是本地模式 + 跟随系统 + 默认 dev 入口 + 默认闪屏时长。
   const remoteUrl = reset ? '' : rawCfg.remoteUrl !== undefined ? rawCfg.remoteUrl : prevRemoteUrl;
   const statusBarStyle =
     reset ? '' : rawCfg.statusBarStyle !== undefined ? rawCfg.statusBarStyle : prevStatusBarStyle;
   const h5DevUrl = reset ? '' : rawCfg.h5DevUrl !== undefined ? rawCfg.h5DevUrl : prevH5DevUrl;
+  const DEFAULT_SPLASH_MS = 3000;
+  let splashDurationMs =
+    reset || rawCfg.splashDurationMs !== undefined
+      ? rawCfg.splashDurationMs
+      : prevSplashDurationMs;
+  if (splashDurationMs === undefined || splashDurationMs === null || splashDurationMs === '') {
+    splashDurationMs = DEFAULT_SPLASH_MS;
+  }
+  const splashMsNum = Number(splashDurationMs);
   if (
     statusBarStyle &&
     !['default', 'light-content', 'dark-content'].includes(String(statusBarStyle))
@@ -378,6 +392,11 @@ function main() {
       `h5DevUrl 非法：${h5DevUrl}（应为 http(s) 地址、'off'，或留空用平台默认 dev 入口）`,
     );
   }
+  if (!Number.isInteger(splashMsNum) || splashMsNum < 0 || splashMsNum > 15000) {
+    fail(
+      `splashDurationMs 非法：${splashDurationMs}（应为 0–15000 的整数毫秒，0 表示关闭闪屏）`,
+    );
+  }
   fs.mkdirSync(baseDir, { recursive: true });
   fs.writeFileSync(
     BASE_VERSION,
@@ -391,6 +410,7 @@ function main() {
         remoteUrl: remoteUrl === undefined ? '' : remoteUrl,
         statusBarStyle: statusBarStyle === undefined ? '' : statusBarStyle,
         h5DevUrl: h5DevUrl === undefined ? '' : h5DevUrl,
+        splashDurationMs: splashMsNum,
       },
       null,
       2,
