@@ -60,10 +60,14 @@ coverage/
 *.dSYM/
 *.app/
 
+# 打包工作台 exe（RNBuild Studio，放基座根目录使用，不入库）
+*.exe
+
 # Generated build artifacts (由 npm run build:base 写入，不入库)
 version.json
 app-registry.json
 h5/
+h5.backup/            # 子应用 sync-to-base 每次同步前的旧内容备份（只保留最近一份）
 platforms/android/app/src/main/res/drawable-*/
 platforms/android/app/src/main/res/mipmap-*/
 
