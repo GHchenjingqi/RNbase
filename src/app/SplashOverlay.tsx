@@ -13,11 +13,13 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Image,
   Pressable,
   StyleSheet,
   Text,
+  View,
   type ImageSourcePropType,
 } from 'react-native';
 
@@ -33,13 +35,36 @@ export interface SplashOverlayProps {
   imageSource: ImageSourcePropType;
   /** 闪屏结束（淡出完成）后回调；点击跳过同样走这里。只回调一次。 */
   onFinish: () => void;
+  /**
+   * 倒计时走完后是否继续等待（默认 false）。
+   * true = 页面还没加载好就继续盖着闪屏，显示「正在载入」而不是露出白屏；
+   * 变为 false（或超过 holdMaxMs 兜底）才淡出。
+   */
+  holdUntil?: boolean;
+  /** 等待阶段的兜底上限（毫秒），避免网络异常时一直卡在闪屏。 */
+  holdMaxMs?: number;
 }
 
-export function SplashOverlay({ durationMs, imageSource, onFinish }: SplashOverlayProps) {
+export function SplashOverlay({
+  durationMs,
+  imageSource,
+  onFinish,
+  holdUntil = false,
+  holdMaxMs = 8000,
+}: SplashOverlayProps) {
   const opacity = useRef(new Animated.Value(1)).current;
   const finishedRef = useRef(false);
   // 初始值直接算好，首帧就显示「3」而不是从 0 跳变。
   const [remainingSec, setRemainingSec] = useState(() => Math.ceil(durationMs / 1000));
+  // 倒计时已走完、但页面还没就绪：进入等待态（显示载入中，不露出白屏）
+  const [waiting, setWaiting] = useState(false);
+  // 用 ref 读最新的 holdUntil：它只决定「倒计时走完后是等待还是退场」，
+  // 若直接进倒计时 effect 的依赖，页面中途加载完会让 effect 重跑、startedAt 重置
+  // → 倒计时从头再数一遍（数字回跳）。
+  const holdUntilRef = useRef(holdUntil);
+  useEffect(() => {
+    holdUntilRef.current = holdUntil;
+  }, [holdUntil]);
 
   const finish = useCallback(() => {
     if (finishedRef.current) return;
@@ -60,17 +85,36 @@ export function SplashOverlay({ durationMs, imageSource, onFinish }: SplashOverl
       setRemainingSec(Math.max(0, Math.ceil(left / 1000)));
       if (left <= 0) {
         clearInterval(timer);
-        finish();
+        // 倒计时结束：页面已就绪就直接退场，否则进入等待态继续盖着白屏
+        if (holdUntilRef.current) setWaiting(true);
+        else finish();
       }
     }, TICK_MS);
     return () => clearInterval(timer);
   }, [durationMs, finish]);
 
+  // 等待态：holdUntil 转 false（页面加载完成）即退场；超时兜底也要退场，
+  // 否则网络异常时会永远卡在闪屏上。
+  useEffect(() => {
+    if (!waiting) return undefined;
+    if (!holdUntil) {
+      finish();
+      return undefined;
+    }
+    const cap = setTimeout(() => finish(), holdMaxMs);
+    return () => clearTimeout(cap);
+  }, [waiting, holdUntil, holdMaxMs, finish]);
+
   return (
     <Animated.View style={[styles.root, { opacity }]} testID="splash-overlay">
       <Pressable style={styles.fill} onPress={finish} accessibilityLabel="跳过启动闪屏">
         <Image source={imageSource} style={styles.fill} resizeMode="cover" />
-        {remainingSec > 0 ? (
+        {waiting ? (
+          <View style={styles.loadingBox} testID="splash-loading">
+            <ActivityIndicator size="small" color="#6B7280" />
+            <Text style={styles.loadingText}>正在翻开诗卷…</Text>
+          </View>
+        ) : remainingSec > 0 ? (
           <Text style={styles.countdown} testID="splash-countdown">
             {remainingSec}
           </Text>
@@ -99,6 +143,18 @@ const styles = StyleSheet.create({
     fontSize: 44,
     lineHeight: 52,
     // 深灰蓝：在浅色渐变闪图上够清楚，又不像纯黑那么生硬。
+    color: '#6B7280',
+  },
+  // 等待态：倒计时走完但页面还没加载好时显示，避免露出白屏
+  loadingBox: {
+    position: 'absolute',
+    bottom: '10%',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 14,
     color: '#6B7280',
   },
 });

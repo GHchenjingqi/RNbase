@@ -558,6 +558,8 @@ export function WebViewBridge({
         }}
         javaScriptEnabled
         domStorageEnabled
+        // 显式开启 HTTP 缓存：远程站点的 JS/CSS 带内容哈希，缓存命中可显著加快二次启动
+        cacheEnabled
         // 远程模式连消息通道也不建：v14 建通道走 androidx.webkit 的 addWebMessageListener，
         // 该类在 API 28 上不存在（装机实测抛 ClassNotFoundException 并被吞掉），
         // 关掉既符合「不暴露能力」，也省掉一条无用的异常。

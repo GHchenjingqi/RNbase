@@ -5,6 +5,21 @@
 
 ## [Unreleased]
 
+### Added（闪屏等待 H5 首屏就绪，不再露白屏，2026-10-15）
+
+- `SplashOverlay` 新增 `holdUntil` / `holdMaxMs`：倒计时走完后若页面还没加载完成，
+  闪屏继续盖着并显示「正在翻开诗卷…」，直到 `onLoadEnd` 上报（`App.tsx` 经
+  `WebViewBridge` 的 `onLoadEnd` 拿到）或超过 8s 兜底才淡出；等待态仍可点击跳过。
+- `WebViewBridge` 显式开启 `cacheEnabled`：远程站点资源带内容哈希，二次启动走 HTTP 缓存。
+- 回归测试：`__tests__/splashOverlay.test.tsx` 从 4 例补到 9 例（等待态进入 /
+  加载完成退场 / 超时兜底 / 等待中点击跳过 / 倒计时不被重启）。
+
+### Fixed（等待态实现导致倒计时回跳，2026-10-15）
+
+- `holdUntil` 原先挂在倒计时 effect 的依赖里，而 effect 内用 `Date.now()` 记起点：
+  页面在倒计时途中加载完成会让 effect 重跑、起点重置 → **数字回跳、白等一遍**。
+  改为用 ref 读取最新值，倒计时只随 `durationMs` 变化重启。
+
 ### Fixed（打包脚本不再被 EPIPE 打断，2026-10-15）
 
 - 现象：打包跑到一半，node 包装进程崩在 `Error: EPIPE: broken pipe, write`

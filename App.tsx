@@ -4,7 +4,7 @@
  * 权限体系与 Bridge 由子模块承载；此处仅做生命周期容器与组合装配，
  * H5 业务运行时通过 WebView 加载（规则 4：业务代码不外溢到 RN）。
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StatusBar, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PermissionManagerProvider } from './src/permissions/PermissionProvider';
@@ -51,6 +51,10 @@ export default function App() {
   // 启动闪屏：盖在 WebView 上面倒数 3 秒（点击可跳过），期间 H5 在底下照常装载。
   // SPLASH_DURATION_MS 为 0 时直接不渲染（关闭闪屏）。
   const [splashVisible, setSplashVisible] = useState(SPLASH_DURATION_MS > 0);
+  // 页面是否已完成首次加载。闪屏倒计时结束后若页面还没好，
+  // 闪屏继续盖着（显示「正在翻开诗卷…」），避免露出 WebView 的白屏。
+  const [h5Loaded, setH5Loaded] = useState(false);
+  const handleH5Loaded = useCallback(() => setH5Loaded(true), []);
   useEffect(() => {
     setH5BarStyleListener((style) => setH5BarStyle(style));
     return () => setH5BarStyleListener(null);
@@ -96,6 +100,7 @@ export default function App() {
               source={{ uri: h5Uri }}
               bridgeEnabled={!isRemote}
               trustedOrigins={isRemote && REMOTE_H5_ORIGIN ? [REMOTE_H5_ORIGIN] : undefined}
+              onLoadEnd={handleH5Loaded}
             />
           ) : (
             <WebViewErrorPage
@@ -113,6 +118,9 @@ export default function App() {
         <SplashOverlay
           durationMs={SPLASH_DURATION_MS}
           imageSource={splashDefaultImage}
+          // 倒计时走完但页面尚未加载完时继续等待（最多 8s），不露出白屏
+          holdUntil={!h5Loaded}
+          holdMaxMs={8000}
           onFinish={() => setSplashVisible(false)}
         />
       ) : null}

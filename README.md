@@ -367,7 +367,9 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 | 闪图 | `src/assets/splash/splash-default.jpg` | 由 RN 侧 `SplashOverlay` 加载，三端同一张图 |
 
 **启动闪屏（3 秒倒计时）是 RN 跨端实现**（`src/app/SplashOverlay.tsx`）：全屏闪图 +
-秒级倒计时 + 淡出，点击任意位置可跳过；WebView 在闪屏下方照常装载，结束时直接露出页面。
+秒级倒计时 + 淡出，点击任意位置可跳过；WebView 在闪屏下方照常装载。
+**倒计时走完时若页面还没加载好，闪屏继续盖着并显示「正在翻开诗卷…」，直到
+`onLoadEnd` 到达或超过 8s 兜底才淡出**——避免网络慢时露出 WebView 白屏（`holdUntil` / `holdMaxMs`）。
 时长走 `version.json` 的 `splashDurationMs`（毫秒，默认 3000，**0 = 关闭**，上限 15000），
 与 `remoteUrl` / `statusBarStyle` / `h5DevUrl` 同属容器级开关——子应用 `app.config.json`
 声明了才覆盖，否则 `brand:apply` 保留现值。
