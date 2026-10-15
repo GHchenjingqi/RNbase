@@ -20,7 +20,7 @@ const typed = gen as {
     h5Only: string[];
     common: string[];
   };
-  renderDoc: (registry: Registry, rnModules: string[], date: string) => string;
+  renderDoc: (registry: Registry, rnModules: string[]) => string;
   dashToCamel: (s: string) => string;
 };
 
@@ -81,7 +81,7 @@ describe('gen-api-doc 纯函数', () => {
 
   test('renderDoc 生成含能力表与漂移段的 Markdown', () => {
     const registry = typed.parseH5Registry(API_SAMPLE);
-    const md = typed.renderDoc(registry, ['app', 'log', 'appManager', 'toast'], '2026-10-13');
+    const md = typed.renderDoc(registry, ['app', 'log', 'appManager', 'toast']);
     expect(md).toContain('# Bridge 能力清单（自动生成）');
     expect(md).toContain('`RN.APP.GETINFO` | app.getInfo');
     expect(md).toContain('`RN.APPMANAGER.ISINSTALLED` | appManager.isInstalled');

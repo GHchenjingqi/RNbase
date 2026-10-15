@@ -81,12 +81,14 @@ function computeDrift(h5ModuleNames, rnModuleNames) {
 }
 
 /** 渲染生成的 Markdown 文档。 */
-function renderDoc({ modules, appManager }, rnModules, generatedAt) {
+function renderDoc({ modules, appManager }, rnModules) {
   const lines = [];
   lines.push('# Bridge 能力清单（自动生成）');
   lines.push('');
   lines.push('> 由 `scripts/gen-api-doc.js` 从 `scripts/api.js` 注册表自动生成，请勿手改。');
-  lines.push(`> 生成时间：${generatedAt}；漂移校验：\`node scripts/gen-api-doc.js --check\`。`);
+  // 故意不写「生成时间」：内容没变、日期也会变，CI 的 --check 门禁就会每天自己红。
+  // 文件什么时候变的，git log 一查便知。
+  lines.push('> 漂移校验：`node scripts/gen-api-doc.js --check`。');
   lines.push('> 详细使用说明见根目录 `DEVICE_CAPABILITIES.md`（手写文档）。');
   lines.push('');
 
@@ -156,7 +158,7 @@ function main() {
 
   const registry = parseH5Registry(apiSource);
   const rnModules = parseRnModules(bridgeSource);
-  const md = renderDoc(registry, rnModules, new Date().toISOString().slice(0, 10));
+  const md = renderDoc(registry, rnModules);
 
   if (check) {
     const existing = fs.existsSync(docPath) ? fs.readFileSync(docPath, 'utf8') : '';

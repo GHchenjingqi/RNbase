@@ -1,7 +1,7 @@
 # Bridge 能力清单（自动生成）
 
 > 由 `scripts/gen-api-doc.js` 从 `scripts/api.js` 注册表自动生成，请勿手改。
-> 生成时间：2026-10-13；漂移校验：`node scripts/gen-api-doc.js --check`。
+> 漂移校验：`node scripts/gen-api-doc.js --check`。
 > 详细使用说明见根目录 `DEVICE_CAPABILITIES.md`（手写文档）。
 
 ## H5 SDK 暴露的能力（15 模块）
