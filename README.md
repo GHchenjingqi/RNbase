@@ -1,5 +1,7 @@
 # RNbase — RN + H5 混合架构基座
 
+![RNbase banner](docs/banner.jpg)
+
 [![CI](https://github.com/GHchenjingqi/RNbase/actions/workflows/ci.yml/badge.svg)](https://github.com/GHchenjingqi/RNbase/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![React Native](https://img.shields.io/badge/React%20Native-0.84-61dafb.svg)](https://reactnative.dev/)
