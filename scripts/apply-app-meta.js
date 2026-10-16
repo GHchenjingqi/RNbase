@@ -40,7 +40,22 @@ const { resolveActiveApp } = require('./active-app');
 
 const ROOT = path.resolve(__dirname, '..');
 const baseDir = path.resolve(process.env.BASE_DIR || ROOT);
-const ANDROID_MAIN = path.join(baseDir, 'platforms', 'android', 'app', 'src', 'main');
+
+/**
+ * 自动定位 Android 工程目录：优先 platforms/android（新基座布局），回退顶层 android（旧布局）。
+ * 这样同一份品牌下发脚本能服务两种布局——某些基座仍是重构前的顶层 android/ 目录。
+ */
+function resolveAndroidMain() {
+  for (const rel of [
+    ['platforms', 'android'],
+    ['android'],
+  ]) {
+    const p = path.join(baseDir, ...rel, 'app', 'src', 'main');
+    if (fs.existsSync(p)) return p;
+  }
+  return path.join(baseDir, 'platforms', 'android', 'app', 'src', 'main');
+}
+const ANDROID_MAIN = resolveAndroidMain();
 const RES_DIR = path.join(ANDROID_MAIN, 'res');
 const BRAND_DEFAULT = path.join(ANDROID_MAIN, 'brand-default');
 const BASE_VERSION = path.join(baseDir, 'version.json');
