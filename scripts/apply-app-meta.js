@@ -346,9 +346,9 @@ function main() {
 
   // 1. 品牌字段与版本写入基座 version.json（build.gradle 配置期读取）——整体重写，
   //    保证不会残留上一个子应用的字段，也不会因外部脚本改写而丢字段。
-  //    remoteUrl 例外：它是「基座 + URL」容器模式的开关，不属于品牌下发范围。
-  //    子应用 app.config.json 里声明了就用它，没声明就原样保留现值，
-  //    否则手改一次开关、下次 brand:apply 就把它清了（表现是 APK 悄悄变回本地 H5 模式）。
+  //    remoteUrl 与品牌字段同级，由子应用 app.config.json 持有：声明了=远程模式，
+  //    未声明=本地子应用，必须清空（加载基座 h5/ 本地产物）。历史坑：早期"未声明保留现值"
+  //    会让本地子应用静默继承上一个远程子应用的 URL——"选了本地还走远程"的根因，已修。
   //    statusBarStyle 同理：容器级覆盖开关（状态栏图标深浅，远程模式拿不到 Bridge 时
   //    只能靠它），声明了就用，没声明保留现值。
   //    h5DevUrl 同理：debug 期 H5 入口开关（见 src/config/index.ts 的 H5_DEV_SERVER_URL），
@@ -356,12 +356,11 @@ function main() {
   //    splashDurationMs 同理：启动闪屏时长（毫秒，0 关闭；见 src/config 的 SPLASH_DURATION_MS），
   //    属容器行为而非品牌字段，子应用声明了才覆盖，否则保留现值。
   const prev = fs.existsSync(BASE_VERSION) ? readJson(BASE_VERSION) : {};
-  const prevRemoteUrl = prev.remoteUrl;
   const prevStatusBarStyle = prev.statusBarStyle;
   const prevH5DevUrl = prev.h5DevUrl;
   const prevSplashDurationMs = prev.splashDurationMs;
   // --reset 连这几个开关一起清掉：中性基座就是本地模式 + 跟随系统 + 默认 dev 入口 + 默认闪屏时长。
-  const remoteUrl = reset ? '' : rawCfg.remoteUrl !== undefined ? rawCfg.remoteUrl : prevRemoteUrl;
+  const remoteUrl = reset ? '' : rawCfg.remoteUrl !== undefined ? rawCfg.remoteUrl : '';
   const statusBarStyle =
     reset ? '' : rawCfg.statusBarStyle !== undefined ? rawCfg.statusBarStyle : prevStatusBarStyle;
   const h5DevUrl = reset ? '' : rawCfg.h5DevUrl !== undefined ? rawCfg.h5DevUrl : prevH5DevUrl;
