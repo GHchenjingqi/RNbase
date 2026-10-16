@@ -374,6 +374,9 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 与 `remoteUrl` / `statusBarStyle` / `h5DevUrl` 同属容器级开关——子应用 `app.config.json`
 声明了才覆盖，否则 `brand:apply` 保留现值。
 
+闪图上**居中叠加应用中文名**（取自 `version.json` 的 `appName`，打包时由子应用下发）；
+倒计时改为右上角的**黑色圆形角标、白字缩小**，不再占用画面中部，与应用名错开。
+
 原生侧只负责遮盖 RN 装载前的空白：安卓 `colors.xml` 的 `splash_bg`、鸿蒙
 `start_window_background`，默认都是与闪图同系的浅色 `#EAEFF7`，衔接处不闪白。
 安卓默认闪屏仍遵守「无品牌 = 纯色无 logo」的约定（`brand:apply` 会校验），不内置默认 logo。

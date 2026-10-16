@@ -36,6 +36,11 @@ export interface SplashOverlayProps {
   /** 闪屏结束（淡出完成）后回调；点击跳过同样走这里。只回调一次。 */
   onFinish: () => void;
   /**
+   * 应用中文名：居中叠加在闪图上（由基座 config 的 APP_NAME 经 version.json 下发）。
+   * 为空则不显示，避免通用模板图上出现空文字。
+   */
+  appName?: string;
+  /**
    * 倒计时走完后是否继续等待（默认 false）。
    * true = 页面还没加载好就继续盖着闪屏，显示「正在载入」而不是露出白屏；
    * 变为 false（或超过 holdMaxMs 兜底）才淡出。
@@ -49,6 +54,7 @@ export function SplashOverlay({
   durationMs,
   imageSource,
   onFinish,
+  appName,
   holdUntil = false,
   holdMaxMs = 8000,
 }: SplashOverlayProps) {
@@ -109,15 +115,22 @@ export function SplashOverlay({
     <Animated.View style={[styles.root, { opacity }]} testID="splash-overlay">
       <Pressable style={styles.fill} onPress={finish} accessibilityLabel="跳过启动闪屏">
         <Image source={imageSource} style={styles.fill} resizeMode="cover" />
+        {appName ? (
+          <Text style={styles.appName} testID="splash-appname" numberOfLines={1}>
+            {appName}
+          </Text>
+        ) : null}
         {waiting ? (
           <View style={styles.loadingBox} testID="splash-loading">
             <ActivityIndicator size="small" color="#6B7280" />
             <Text style={styles.loadingText}>正在翻开诗卷…</Text>
           </View>
         ) : remainingSec > 0 ? (
-          <Text style={styles.countdown} testID="splash-countdown">
-            {remainingSec}
-          </Text>
+          <View style={styles.countdownBadge}>
+            <Text style={styles.countdownText} testID="splash-countdown">
+              {remainingSec}
+            </Text>
+          </View>
         ) : null}
       </Pressable>
     </Animated.View>
@@ -136,14 +149,39 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  countdown: {
+  // 应用中文名：居中叠加在闪图上，深色字 + 白色描边阴影，在浅色渐变图上够清楚。
+  appName: {
     position: 'absolute',
-    bottom: '10%',
-    alignSelf: 'center',
-    fontSize: 44,
-    lineHeight: 52,
-    // 深灰蓝：在浅色渐变闪图上够清楚，又不像纯黑那么生硬。
-    color: '#6B7280',
+    top: '50%',
+    left: 0,
+    right: 0,
+    transform: [{ translateY: '-50%' }],
+    textAlign: 'center',
+    fontSize: 30,
+    fontWeight: '600',
+    color: '#2C2C2A',
+    textShadowColor: 'rgba(255, 255, 255, 0.85)',
+    textShadowRadius: 4,
+    textShadowOffset: { width: 0, height: 1 },
+  },
+  // 倒计时：右上角黑色圆形角标，白字、缩小字号，避开中部的应用名。
+  countdownBadge: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countdownText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 26,
   },
   // 等待态：倒计时走完但页面还没加载好时显示，避免露出白屏
   loadingBox: {

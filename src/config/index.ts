@@ -15,6 +15,9 @@ import versionInfo from '../../version.json';
 
 /** App 版本号，统一从项目根 version.json 读取（与 Android versionName / iOS MARKETING_VERSION 保持一致）。 */
 export const APP_VERSION = versionInfo.versionName;
+/** 应用中文名：打包时由子应用 app.config.json 经 apply-app-meta.js 下发到 version.json，
+ *  闪屏居中展示、状态栏/分享等需要「显示名」处复用同一真源。 */
+export const APP_NAME = String(versionInfo.appName ?? '');
 
 export const BRIDGE_VERSION = '1.0.1';
 
