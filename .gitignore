@@ -119,3 +119,6 @@ hvigor/
 
 # WorkBuddy agent workspace data
 .workbuddy/
+
+# 打包工作台「直接用 h5/ 打包」写入的一次性临时应用身份（.studio-adhoc/<slug>/app.config.json）
+.studio-adhoc/

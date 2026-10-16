@@ -155,10 +155,22 @@ if (args.some(a => /^(assemble|install|bundle|package)/.test(a))) {
 
   // 打包前自动注入唯一源 api.js（scripts/api.js → 基座 h5/js/api.js 与活动子应用产物 js/api.js），
   // 保证打进 APK 的 Bridge 协议始终与基座一致（等价于先执行 node scripts/inject-h5-api.js）。
-  // 子应用来自 app-registry.json，不硬编码具体工程路径。
-  const app = resolveActiveApp();
-  console.log(`[gradle] 活动子应用: ${app.name}（产物 ${app.distDir}）`);
-  ['h5', app.distDir].forEach(target => {
+  // 「直接用 h5/ 打包」模式允许没有活动子应用：此时只注入基座 h5/，不因缺 activeApp 而失败；
+  // 有活动子应用时，若它的产物目录不存在（未构建）也跳过注入，避免对空目录报错。
+  let app = null;
+  try {
+    app = resolveActiveApp();
+  } catch (e) {
+    console.warn(
+      `[gradle] 无活动子应用（${e.message}）——按「直接用 h5/ 打包」处理：只注入基座 h5/，品牌取自 version.json`,
+    );
+  }
+  const injectTargets = ['h5'];
+  if (app && fs.existsSync(app.distDir)) {
+    console.log(`[gradle] 活动子应用: ${app.name}（产物 ${app.distDir}）`);
+    injectTargets.push(app.distDir);
+  }
+  injectTargets.forEach(target => {
     const r = spawnSync(process.execPath, [path.join(__dirname, 'inject-h5-api.js'), target], {
       stdio: 'inherit',
     });
