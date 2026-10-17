@@ -95,6 +95,8 @@ export function createBridgeServer(
     setBadge: merged.notification?.setBadge,
     playSound: merged.notification?.playSound,
     sendNotification: merged.notification?.sendNotification,
+    // 通知深链 pull：目前只有安卓原生有，缺失时本模块对 H5 报 DEVICE_UNSUPPORTED（不报错、不崩）
+    getPendingNotification: merged.notification?.getPendingNotification,
   });
   registerLogModule(server);
   registerNetworkModule(server, networkAdapter ?? resolveNativeNetworkAdapter());

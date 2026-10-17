@@ -47,11 +47,19 @@ export interface BaseCapabilitiesNative {
   }>;
   setBadge(count: number): Promise<{ ok: boolean }>;
   playSound(duration?: number): Promise<{ ok: boolean }>;
+  /**
+   * @param payload 通知深链负载（H5 写的不透明字符串，安卓随 PendingIntent 存取）；'' = 不深链。
+   */
   sendNotification(
     title: string,
     content: string,
-    opts?: { channelId?: string }
+    payload?: string
   ): Promise<{ ok: boolean; notificationId?: number }>;
+  /**
+   * 取走待消费的通知深链负载（取一次即清）。仅安卓有；声明成可选，
+   * 让鸿蒙（.ets 未实现）在 RN 侧也走「能力缺失」那条路。
+   */
+  getPendingNotification?(): Promise<{ payload?: string }>;
 
   // ── 新增能力（原生未实现时方法不存在） ──
   clipboardGetString?(): Promise<{ text: string }>;
@@ -223,6 +231,13 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
     return {};
   }
 
+  /**
+   * 通知深链的 pull 只有安卓实现了（鸿蒙 BaseCapabilitiesTurboModule.ets 没有这个方法）。
+   * 按存在与否绑定：缺失时整条不注册，桥层据此回 DEVICE_UNSUPPORTED，
+   * H5 那边静默退回「点通知只打开 App」，不会在鸿蒙上抛 NativeModules 取到 undefined。
+   */
+  const pullPendingNotification = nativeModule.getPendingNotification?.bind(nativeModule);
+
   return {
     // ── 已有能力 ──
     scanner: {
@@ -276,14 +291,27 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
       },
       playSound: () =>
         nativeModule.playSound(3000).catch((e) => wrapNativeError(e, '提示音播放失败')),
-      // 原生 sendNotification(title, content, promise) 只接受 2 个参数，不传 opts
-      sendNotification: async (title, content) => {
+      // 原生 sendNotification(title, content, payload, promise)：第三个参数是通知深链负载
+      sendNotification: async (title, content, payload) => {
         try {
-          return await nativeModule.sendNotification(title, content);
+          return await nativeModule.sendNotification(title, content, payload ?? '');
         } catch (e) {
           wrapNativeError(e, '通知发送失败');
         }
       },
+      // 原生没有 getPendingNotification（鸿蒙 / 纯浏览器）时整条不注册，桥层报 DEVICE_UNSUPPORTED
+      ...(pullPendingNotification
+        ? {
+            getPendingNotification: async () => {
+              try {
+                const r = await pullPendingNotification();
+                return { payload: r?.payload ?? '' };
+              } catch (e) {
+                wrapNativeError(e, '通知深链读取失败');
+              }
+            },
+          }
+        : {}),
     },
 
     // ── 新增能力（原生方法存在时才挂载适配器） ──

@@ -9,10 +9,26 @@
  *   Native.notification.getToken() -> { token: string | null }
  *   Native.notification.setBadge({ count: 3 })
  *   Native.notification.playSound() -> { ok: boolean }
- *   Native.notification.sendNotification({ title, content }) -> { ok, notificationId }
+ *   Native.notification.sendNotification({ title, content, payload }) -> { ok, notificationId }
+ *   Native.notification.getPendingNotification() -> { payload: string }   // 通知深链，取一次即清
  */
 import { BridgeException } from '../bridge-error';
 import type { BridgeServer } from '../bridge-server';
+
+/** 深链负载上限（字符数）：它要进 PendingIntent 的 extra，超大值会让系统侧事务超限。 */
+const MAX_PAYLOAD_LENGTH = 512;
+
+/** 归一化深链负载：非字符串 / 空 / 超长一律收敛，超长直接丢弃（回空串=不深链）。 */
+function normalizePayload(value: unknown): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  const text = value.trim();
+  if (!text || text.length > MAX_PAYLOAD_LENGTH) {
+    return '';
+  }
+  return text;
+}
 
 export type NotificationAdapter = {
   getToken?: () => Promise<string | null>;
@@ -21,7 +37,13 @@ export type NotificationAdapter = {
   sendNotification?: (
     title: string,
     content: string,
+    payload?: string,
   ) => Promise<{ ok: boolean; notificationId?: number }>;
+  /**
+   * 取走待消费的通知深链负载（安卓实现，取一次即清）。
+   * 只有安卓原生有这个方法，适配器按存在与否注册；缺失时本模块报 DEVICE_UNSUPPORTED。
+   */
+  getPendingNotification?: () => Promise<{ payload?: string | null }>;
 };
 
 export function registerNotificationModule(
@@ -58,7 +80,7 @@ export function registerNotificationModule(
     },
 
     async sendNotification(params) {
-      const p = params as { title?: string; content?: string } | undefined;
+      const p = params as { title?: string; content?: string; payload?: unknown } | undefined;
       const title = p?.title ?? '';
       const content = p?.content ?? '';
       if (!content) {
@@ -67,7 +89,20 @@ export function registerNotificationModule(
       if (!adapter.sendNotification) {
         throw new BridgeException('DEVICE_UNSUPPORTED', '通知能力未接入');
       }
-      return adapter.sendNotification(title, content);
+      return adapter.sendNotification(title, content, normalizePayload(p?.payload));
+    },
+
+    /**
+     * 通知深链：取走原生暂存的负载（一次性，取走即清）。
+     * 为什么让 H5 主动拉而不是原生把页面推进去：冷启动时 H5 还没起来，推过去必然丢。
+     * 返回值固定为 { payload: string }，无负载时是空串，由 H5 自己判空与解析。
+     */
+    async getPendingNotification() {
+      if (!adapter.getPendingNotification) {
+        throw new BridgeException('DEVICE_UNSUPPORTED', '通知深链能力未接入');
+      }
+      const res = await adapter.getPendingNotification();
+      return { payload: normalizePayload(res?.payload) };
     },
   });
 }

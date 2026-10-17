@@ -77,10 +77,21 @@ export interface NotificationAdapter {
   getToken?: () => Promise<string | null>;
   setBadge?: (count: number) => Promise<boolean>;
   playSound?: () => Promise<{ ok: boolean }>;
+  /**
+   * @param payload 通知深链负载（H5 写的不透明字符串，安卓只随 PendingIntent 存取）。
+   *   缺省/空串 = 点击通知只打开 App。目前只有安卓实现，鸿蒙收下后忽略。
+   */
   sendNotification?: (
     title: string,
     content: string,
+    payload?: string,
   ) => Promise<{ ok: boolean; notificationId?: number }>;
+  /**
+   * 取走待消费的通知深链负载（安卓-only，取一次即清）。
+   * 声明成可选：原生模块没有这个方法时（鸿蒙 / 纯浏览器）适配器不注册它，
+   * 桥层据此回 DEVICE_UNSUPPORTED，H5 侧静默退回「只打开 App」。
+   */
+  getPendingNotification?(): Promise<{ payload?: string | null }>;
   cancelNotification?(notificationId: number): Promise<{ ok: boolean }>;
   cancelAll?(): Promise<{ ok: boolean }>;
 }

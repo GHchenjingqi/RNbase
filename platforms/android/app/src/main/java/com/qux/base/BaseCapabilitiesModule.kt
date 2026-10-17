@@ -33,12 +33,14 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.facebook.react.bridge.ActivityEventListener
 import com.facebook.react.bridge.BaseActivityEventListener
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableNativeArray
 import com.facebook.react.bridge.WritableNativeMap
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
 import com.google.zxing.integration.android.IntentIntegrator
@@ -160,6 +162,14 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
 
     init {
         reactContext.addActivityEventListener(activityEventListener)
+        // 通知深链负载到达时推一条事件给 RN JS（WebViewBridge 再转成 bridge 事件发给 H5）。
+        // 只在模块存活期挂：invalidate 里摘掉，避免 ReactContext 销毁后 static 还引用着它。
+        notificationArrivedListener = { emitNotificationTap() }
+    }
+
+    override fun invalidate() {
+        notificationArrivedListener = null
+        super.invalidate()
     }
 
     /**
@@ -325,12 +335,16 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
 
     /**
      * 发送通知栏消息（模拟推送）。
-     * 在系统通知栏展示一条通知，点击后打开 App 主页面。
+     * 在系统通知栏展示一条通知，点击后打开 App；带 payload 时同时把它随 PendingIntent
+     * 交给 MainActivity，H5 起桥后调 getPendingNotification 取走并跳到对应页面（通知深链）。
      * Android 8.0+ 使用 base_notify 通知渠道（高优先级，会弹出横幅）。
      * Android 13+ 自动检查并请求 POST_NOTIFICATIONS 运行时权限，授权后发送。
+     *
+     * @param payload 深链负载：H5 写的字符串（子应用一般为 JSON），本端不理解其内容，
+     *   只负责存取。空/缺省时通知退回「只打开 App」。
      */
     @ReactMethod
-    fun sendNotification(title: String, content: String, promise: Promise) {
+    fun sendNotification(title: String, content: String, payload: String?, promise: Promise) {
         try {
             // Android 13+（API 33）需要 POST_NOTIFICATIONS 运行时权限，否则通知被系统静默丢弃
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -358,7 +372,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
                                 val granted = grantResults.isNotEmpty() &&
                                     grantResults[0] == PackageManager.PERMISSION_GRANTED
                                 if (granted) {
-                                    doSendNotification(title, content, promise)
+                                    doSendNotification(title, content, payload, promise)
                                 } else {
                                     promise.reject(
                                         "PERMISSION_DENIED",
@@ -372,7 +386,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
                     return
                 }
             }
-            doSendNotification(title, content, promise)
+            doSendNotification(title, content, payload, promise)
         } catch (e: Exception) {
             promise.reject("NOTIFY_FAILED", e.localizedMessage ?: "通知发送失败")
         }
@@ -382,7 +396,7 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
      * 去重：同一 (title, content) 在滑动窗口内重复到达（H5 侧双发、消息重复派发等）
      * 复用同一 notificationId 原地更新 —— 通知栏只保留一条，不重复响铃；
      * 窗口外再次发送视为新消息，正常新开一条。 */
-    private fun doSendNotification(title: String, content: String, promise: Promise) {
+    private fun doSendNotification(title: String, content: String, payload: String?, promise: Promise) {
         try {
             ensureNotifyNotificationChannel()
             val channelId = "base_notify"
@@ -402,6 +416,14 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
             }
 
             val intent = reactContext.packageManager.getLaunchIntentForPackage(reactContext.packageName)
+            // 深链负载挂在启动 Intent 的 extra 上：冷启动由 MainActivity.onCreate 读，
+            // App 存活时（清单 launchMode=singleTask）由 onNewIntent 读。
+            // PendingIntent 用 FLAG_IMMUTABLE 只禁止接收方改这个 Intent，不影响发送方预先写入 extra。
+            // 去重复用同一 id 时，requestCode 相同 + FLAG_UPDATE_CURRENT 会让新负载覆盖旧的，
+            // 即通知栏只留最后一条的目标——与「折叠成一条」的语义一致。
+            if (intent != null && !payload.isNullOrEmpty()) {
+                intent.putExtra(EXTRA_NOTIFICATION_PAYLOAD, payload)
+            }
             val pendingIntent = android.app.PendingIntent.getActivity(
                 reactContext,
                 notificationId,
@@ -455,6 +477,37 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
             val notificationManager =
                 reactContext.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
             notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    /**
+     * 取走待消费的通知深链负载（一次性，取走即清）。
+     *
+     * 为什么要 H5 主动取而不是原生直接推给页面：冷启动拿到 Intent 的那一刻 RN 实例
+     * 还没建好、H5 更是没起来，任何推送都会丢；一次性消费则天然避免「点通知的事件」和
+     * 「App 回前台的 app.resume」两条路把同一条通知跳两次。
+     * 无负载时回空串（不回 null，省得 H5 两边判）。
+     */
+    @ReactMethod
+    fun getPendingNotification(promise: Promise) {
+        val payload = pendingNotificationPayload
+        pendingNotificationPayload = null
+        val result = WritableNativeMap()
+        result.putString("payload", payload ?: "")
+        promise.resolve(result)
+    }
+
+    /** 通知负载到达事件：只带「有货」信号，不带数据，H5 收到后自己来 pull。 */
+    private fun emitNotificationTap() {
+        try {
+            reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit(NOTIFICATION_TAP_EVENT, Arguments.createMap().apply {
+                    putDouble("ts", System.currentTimeMillis().toDouble())
+                })
+        } catch (e: Exception) {
+            // React 实例已销毁 / JS 模块尚未就绪：负载仍留在 pending 里，H5 起桥后照样能 pull 到
+            android.util.Log.d("BaseCapabilities", "emitNotificationTap skipped: ${e.localizedMessage}")
         }
     }
 
@@ -1331,5 +1384,37 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
         private val nextNotificationId = AtomicInteger(1000)
         /** 同内容通知去重表：fingerprint -> (notificationId, 最近发送时间)。 */
         private val recentNotifications = ConcurrentHashMap<String, Pair<Int, Long>>()
+
+        /**
+         * 通知深链负载的 Intent extra key。
+         * 值是 H5 传给 sendNotification 的 payload（子应用一般为 JSON 字符串），原生不解析其内容。
+         */
+        private const val EXTRA_NOTIFICATION_PAYLOAD = "base_notif_payload"
+
+        /** 负载到达时推给 RN JS 的事件名，RN 侧订阅见 src/webview/WebViewBridge.tsx。 */
+        private const val NOTIFICATION_TAP_EVENT = "baseNotificationTap"
+
+        /**
+         * 待 H5 取走的深链负载。放进程级 static：冷启动 MainActivity 拿到 Intent 那一刻
+         * RN 实例可能还没建好、H5 更是没起来，先存着，起桥后由 getPendingNotification 取走。
+         */
+        @Volatile
+        private var pendingNotificationPayload: String? = null
+
+        /** 由本模块 init 挂载、invalidate 摘除；Activity 侧只负责喊一声。 */
+        @Volatile
+        private var notificationArrivedListener: (() -> Unit)? = null
+
+        /**
+         * MainActivity 在 onCreate / onNewIntent 里调用：收下通知 Intent 的负载，
+         * 再喊模块推事件让 H5 立刻来取。此刻 H5 若还没起来，事件丢失也不要紧——
+         * 负载还留在 pending 里，起桥后的首次 pull 照样拿得到。
+         */
+        fun handleNotificationIntent(intent: Intent?) {
+            val payload = intent?.getStringExtra(EXTRA_NOTIFICATION_PAYLOAD) ?: return
+            if (payload.isEmpty()) return
+            pendingNotificationPayload = payload
+            notificationArrivedListener?.invoke()
+        }
     }
 }

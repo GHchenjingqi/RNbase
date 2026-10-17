@@ -644,6 +644,7 @@
       SETBADGE: 'setBadge',
       PLAYSOUND: 'playSound',
       SENDNOTIFICATION: 'sendNotification',
+      GETPENDINGNOTIFICATION: 'getPendingNotification',
     },
     PERMISSION: {
       REQUEST: 'request',

@@ -77,7 +77,7 @@ class BaseCapabilitiesTurboModule : public ArkTSTurboModule {
         ARK_ASYNC_METHOD_METADATA(getCurrentPosition, 0),
         ARK_ASYNC_METHOD_METADATA(setBadge, 1),
         ARK_ASYNC_METHOD_METADATA(playSound, 1),
-        ARK_ASYNC_METHOD_METADATA(sendNotification, 2),
+        ARK_ASYNC_METHOD_METADATA(sendNotification, 3),
         ARK_ASYNC_METHOD_METADATA(clipboardSetString, 1),
         ARK_ASYNC_METHOD_METADATA(clipboardGetString, 0),
         ARK_ASYNC_METHOD_METADATA(clipboardHasString, 0),

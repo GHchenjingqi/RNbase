@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AppState,
   BackHandler,
+  DeviceEventEmitter,
   Keyboard,
   Linking,
   NativeModules,
@@ -47,6 +48,13 @@ import { WebViewLoading } from './WebViewLoading';
 import { WebViewErrorPage } from './WebViewErrorPage';
 import { DOMAIN_WHITELIST, REMOTE_H5_LOAD_TIMEOUT_MS } from '../config';
 import type { WebViewErrorInfo, WebViewSource } from './types';
+
+/**
+ * 安卓原生「用户点了通知栏消息」事件名（对端：BaseCapabilitiesModule.kt 的 NOTIFICATION_TAP_EVENT）。
+ * 事件只带「有货」信号，负载留在原生 pending 里等 H5 子应用来取一次即清，
+ * 所以这里不需要考虑事件到达时 WebView 是否已挂载。
+ */
+const NATIVE_NOTIFICATION_TAP_EVENT = 'baseNotificationTap';
 
 /**
  * Dev 模式 CORS 绕过注入：拦截 fetch / XMLHttpRequest，移除后端未放行的自定义 header
@@ -395,6 +403,16 @@ export function WebViewBridge({
           timestamp: Date.now(),
         });
       }
+    });
+    return () => sub.remove();
+  }, [server]);
+
+  // 通知深链：安卓 MainActivity 收到通知 Intent 后经 DeviceEventEmitter 喊一声，
+  // 这里转成标准 bridge 事件推给 H5，H5 收到后调 notification.getPendingNotification 取负载再跳转。
+  // 鸿蒙没有这条原生链路，挂了监听也只是空等，不会有副作用。
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(NATIVE_NOTIFICATION_TAP_EVENT, () => {
+      server.eventBus.emit(BRIDGE_EVENTS.NOTIFICATION_TAP, { ts: Date.now() });
     });
     return () => sub.remove();
   }, [server]);

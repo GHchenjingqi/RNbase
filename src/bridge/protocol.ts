@@ -130,6 +130,14 @@ export const BRIDGE_EVENTS = {
    * 本事件为准；window.RN_SAFE_AREA 也是首载快照，H5 重排请读本事件 payload。
    */
   SAFE_AREA_CHANGE: 'system.safeareachange',
+  /**
+   * 用户点了通知栏的消息：{ ts }。只带「有货」信号，不带负载——
+   * 负载留在安卓侧 pending 里，由 H5 子应用调 notification.getPendingNotification 取一次即清。
+   * 这样冷启动（H5 还没起来，事件必然丢）和「点通知的事件 + app.resume 的 pull」双路
+   * 都不会漏跳或重跳。发射方见 platforms/android BaseCapabilitiesModule.kt，
+   * 转发见 src/webview/WebViewBridge.tsx；鸿蒙暂无这条原生链路。
+   */
+  NOTIFICATION_TAP: 'notification.tap',
 } as const;
 
 export type BridgeEventName = (typeof BRIDGE_EVENTS)[keyof typeof BRIDGE_EVENTS];

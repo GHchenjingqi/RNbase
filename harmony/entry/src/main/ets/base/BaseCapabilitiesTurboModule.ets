@@ -420,8 +420,13 @@ export class BaseCapabilitiesTurboModule extends UITurboModule {
     return result;
   }
 
-  /** 未授权时 `requestEnableNotification` 会拉起系统授权弹窗，用户拒绝则抛 1600004。 */
-  async sendNotification(title: string, content: string): Promise<BaseSendNotificationResult> {
+  /**
+   * 未授权时 `requestEnableNotification` 会拉起系统授权弹窗，用户拒绝则抛 1600004。
+   * @param payload 通知深链负载：仅为与安卓 `BaseCapabilitiesModule.kt` 保持同名同签名而收下，
+   *   本端不解析也不做跳转（点击通知仍只打开 App）。RNOH 按位置实参派发，参数个数两端要对得上，
+   *   所以 RN 侧加参时这里必须跟着加（含 BaseTurboModules.h 的 arity），不能靠 JS 的多余实参自动忽略。
+   */
+  async sendNotification(title: string, content: string, payload: string): Promise<BaseSendNotificationResult> {
     const notificationId: number = Date.now() % 100000;
     try {
       const enabled: boolean = await notificationManager.isNotificationEnabled();

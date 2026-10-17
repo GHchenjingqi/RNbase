@@ -59,6 +59,7 @@
 | `RN.NOTIFICATION.SETBADGE` | notification.setBadge |
 | `RN.NOTIFICATION.PLAYSOUND` | notification.playSound |
 | `RN.NOTIFICATION.SENDNOTIFICATION` | notification.sendNotification |
+| `RN.NOTIFICATION.GETPENDINGNOTIFICATION` | notification.getPendingNotification |
 | `RN.PERMISSION.REQUEST` | permission.request |
 | `RN.PERMISSION.REQUESTALL` | permission.requestAll |
 | `RN.PERMISSION.CHECK` | permission.check |
@@ -68,7 +69,7 @@
 | `RN.LOG.WARN` | log.warn |
 | `RN.LOG.DEBUG` | log.debug |
 
-**合计 59 个方法。**
+**合计 60 个方法。**
 
 ### APPMANAGER 特例（模块名 appManager，非全小写）
 

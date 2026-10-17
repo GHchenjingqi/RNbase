@@ -548,10 +548,23 @@ Android 桌面角标受厂商 Launcher 支持度限制，不支持时 `ok` 为 `
 **`RN.NOTIFICATION.PLAYSOUND()` → `{ ok: boolean }`** — 播放系统默认通知铃声
 （原生 `RingtoneManager`，无播放完成回调，用计时器兜底释放）。
 
-**`RN.NOTIFICATION.SENDNOTIFICATION({ title, content })` → `{ ok: boolean, notificationId?: number }`** —
+**`RN.NOTIFICATION.SENDNOTIFICATION({ title, content, payload? })` → `{ ok: boolean, notificationId?: number }`** —
 发本地通知栏消息（原生通知渠道 `base_notify`，角标渠道 `base_badge`）。前置：Android 13+ 需先申请
 `notification` 权限，未授权时原生报 `NATIVE_ERROR`，H5 应先
 `RN.PERMISSION.REQUESTALL({ permissions: ['notification'] })`。
+同一 `(title, content)` 在 5 秒窗口内重复调用会折叠成同一条通知（复用 `notificationId` 原地更新）。
+
+`payload` 是**通知深链负载**：H5 自己写的不透明字符串（一般是一段 JSON），基座不解析其内容，只随
+`PendingIntent` 的 extra 存进启动 Intent；点通知后由 `MainActivity.onCreate`（冷启动）或
+`onNewIntent`（App 存活，清单 `launchMode=singleTask`）收进原生 pending。上限 512 字符，超长或非字符串
+一律按「不带负载」处理。缺省 / 空串 = 点通知只打开 App。
+
+**`RN.NOTIFICATION.GETPENDINGNOTIFICATION()` → `{ payload: string }`** — 取走待消费的深链负载，**取一次即清**，
+无负载时回空串（不回 null）。让 H5 主动拉而不是原生把页面推进去：冷启动拿到 Intent 那一刻 H5 还没起来，
+推过去必然丢；一次性消费则天然避免「`notification.tap` 事件」与「`app.resume` 补拉」两条路把同一条通知跳两次。
+推荐两条路都订上（`RN.ON('notification.tap', pull)` + `RN.ON('app.resume', pull)`）。
+**目前只有 Android 实现**；鸿蒙收下 `payload` 后忽略、也没有本方法，调用得到 `DEVICE_UNSUPPORTED`，
+H5 侧应静默退回「点通知只打开 App」。
 
 ### 4.16 LOG — H5 事件日志
 
@@ -775,6 +788,7 @@ RN.VERSION  RN.SDK_VERSION  RN.PROTOCOL_VERSION  RN.APP_ID  RN.ENV  RN.PLATFORM 
 | `system.darkmodechange` | `{ mode: 'dark' \| 'light' \| 'system' }` | 系统切换深色/浅色模式时 | 已接通 |
 | `keyboard.change` | `{ height: number（dp）, visible: boolean }` | 软键盘弹出/收起 | 已接通（`modules/keyboard.ts`） |
 | `native.back` | `{ ts }` | 用户按硬件/手势返回键 | 已接通（需 H5 用 `RN.APP.NATIVEBACKRESULT` 回执，见 §4.1） |
+| `notification.tap` | `{ ts }` | 用户点通知栏消息（仅 Android） | 已接通（只当「有货」信号，负载由 H5 调 `NOTIFICATION.GETPENDINGNOTIFICATION` 取，见 §4.15） |
 
 > **`keyboard.change` 为什么要 H5 自己避让**：Android 15+（targetSdk 35+）edge-to-edge 让
 > `adjustResize` 失效，布局视口不再随键盘缩小，键盘只能由 H5 让——把 `height` 写进 CSS 变量，
