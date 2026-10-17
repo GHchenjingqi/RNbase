@@ -129,18 +129,18 @@
   可查 `filesDir/logs/device-*.log` 的 `notification.sendNotification` 调用记录定位调用来源与次数。
 
 ### Changed（ERP→Base 全平台命名去业务化，2026-10-13）
-- 依据 ADR-0003 判定线清理业务语义残留（源自抽离前宿主项目「精易ERP」）：
+- 依据 ADR-0003 判定线清理业务语义残留（源自抽离前的宿主项目，即第一个业务子应用）：
   `ERPCapabilities/ERPNetwork/ERPPermissions/ERPH5/ERPLog/ERPSystem/ERPUpdate` → `Base*`；
   Android 包 `com.qux.erp` → `com.qux.base`；Harmony `ets/erp/` → `ets/base/`；
   占位域名 `mobile-erp.example.com` → `mobile-base.example.com`；`erp://` 示例 → `base://`。
 - JS↔原生模块名字符串三平台同步（src 15 文件 + Kotlin 12 + Swift/.m 7 + ets/cpp 8）；
-  用户可见权限文案「精易ERP」→「本应用」；`ios.js` doctor 正则同步。
+  用户可见权限文案「旧宿主产品名」→「本应用」；`ios.js` doctor 正则同步。
 - 收尾清理（第二轮）：修复 `PackageProvider.ets` 残留 `./erp/BasePackage` 断链导入；
   Android 渠道/文件前缀 `erp_notify`/`erp_badge`/`erp_photo_`/`erp_pick_`/`erp_clipboard`/`erp_*` → `base_*`；
   Harmony 蜂鸣资产 `rawfile/erp_beep.wav` → `base_beep.wav`（git mv）及 `erp_*` 临时文件前缀 → `base_*`；
   iOS Info.plist 定位/相机用途描述去除 ERP 业务措辞；
   DEVICE_CAPABILITIES.md、h5-subapp-setup 文档（SKILL/bridge-upgrade-plan/packaging）中
-  jingyi/ERP 命名与参数说明同步为 `base_*`/`RNbase`/`__H5_APP_ID__`。
+  旧宿主 ERP 命名与参数说明同步为 `base_*`/`RNbase`/`__H5_APP_ID__`。
 - 验证：tsc/eslint/jest 492/492 全绿；Android gradle 在本机存在预存在的
   settings-plugin Kotlin 编译环境问题（未改动 HEAD 同样失败，与本次无关）。
 
