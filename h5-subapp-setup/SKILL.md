@@ -24,6 +24,44 @@ Bridge 接入 → 构建 → 打包发布。
    `RN.SYSTEM.GETDARKMODE()`）；事件订阅 `RN.ON('system.darkmodechange', fn)`。
 6. **动态升级兼容**：可发布为 zip 子包 + `manifest.json`（含 version/entry/packageUrl/
    sha256/size），版本号需大于当前激活版本。
+7. **设计必须遵循 Apple HIG（apple-design skill 强制）**：H5 子应用的所有界面、交互、视觉与
+   可访问性设计必须以 Apple 人机界面指南（HIG）为规范，**不是“可选审查”而是开发硬约束**。
+   设计/编码任一 H5 页面前，**先加载**
+   `.workbuddy/skills/apple-design/SKILL.md`（及其 `references/`）作为设计规范；在写 UI、
+   组件、配色、字体、间距、表单、图标、动效、暗色模式、无障碍代码时，对照其 Lens 1–5 与
+   `references/cross-platform.md`（React / Vue / Web 翻译）落地，使代码“天生”通过 HIG 评审，
+   而非事后补救。触发关键词含：UI、页面、组件、样式、配色、字体、布局、表单、弹窗、导航、
+   暗色、无障碍、review / 审查设计 等。
+
+## 设计规范（apple-design 强制，H5 子应用必读）
+
+本 skill 与 `apple-design` skill 是**配套约束**：`h5-subapp-setup` 管“能否在 RNbase WebView
+里跑起来”，`apple-design` 管“长什么样、好不好用、是否符合平台”。两条都必须满足才算交付。
+
+### 适用边界（H5 跑在移动端 WebView）
+- **基础规范（始终适用）**：accessibility / color / typography / layout / writing / motion /
+  materials 等 Foundations 全部适用，与宿主平台无关。
+- **平台惯例（宿主为 iOS 时适用）**：tab bars、toolbars、sheets、safe areas、手势返回等
+  iOS 约定，在宿主是 iOS 时一并遵守；宿主为 Android WebView 时保留原则、不照搬 iOS 专属控件。
+- **Web 翻译**：H5 是 Web 技术栈，按 `references/cross-platform.md` 把 Apple 术语映射到
+  HTML/CSS/JS（如 `UITabBarController` → 底部 `<nav>` tab、safe area → `env(safe-area-inset-*)`、
+  44pt 触控区 → `min-height:44px` / `min-width:44px`）。
+
+### 开发期落地动作（写代码前/中）
+1. 遇到 UI/视觉/交互/无障碍需求，先 `Read .workbuddy/skills/apple-design/SKILL.md` 的
+   “Always load” 集合（accessibility/layout/typography/color 等），再按“Load by what is on
+   screen”加载对应 `references/hig/*.md`，**先读后写**，引用具体 `file.md › Heading`。
+2. 编码遵循 apple-design 的 Lens 1–5：可访问性（Critical）→ 平台惯例（High）→ 视觉与 craft
+   （High/Medium）→ 交互（Medium）→ 文案（Medium）。
+3. 暗色模式用语义色（`light-dark()` / CSS 变量），不写死系统色值；动效可关、可取消、简短。
+4. 不套模板：避免“暖米色+高对比衬线+陶土色”、“近黑+荧光绿/朱红”、“细线密排零圆角”三套生成式
+   默认风格；产品需有清晰的 design thesis 与一点 point of view。
+5. 交付前用 apple-design 的 Report 模板做一次自查（Summary / Critical / Improvements /
+   Craft notes / What works），无 Critical、High 可控才算达标。
+
+### 未遵守的后果
+不满足 apple-design 规范（尤其 Lens 1 可访问性、Lens 2 平台惯例）的 H5 页面，视为**未达交付
+标准**，需返工至通过 HIG 自查。
 
 ## 工作流程
 
@@ -74,6 +112,10 @@ Bridge 接入 → 构建 → 打包发布。
 - [ ] `js/api.js` 在产物内且相对路径引入
 - [ ] 至少一处真实 Bridge 调用（如 `RN.APP.GETINFO()`）在真机/模拟器 WebView 可用
 - [ ] zip 包可被基座解压加载，manifest 的 sha256/size 与实际一致
+- [ ] **[Apple HIG]** 可访问性达标：文字可随系统缩放、对比度达 4.5:1（≥18pt/粗体 3:1）、触控区
+      ≥44×44pt、无仅靠颜色传达的信息、`prefers-reduced-motion` 有降级
+- [ ] **[Apple HIG]** 视觉/交互/Craft 自查无 Critical、High 可控（按 apple-design 的 Report 模板）
+- [ ] **[Apple HIG]** 暗色模式用语义色，iOS 宿主下遵循 tab/toolbar/sheet/safe-area 等平台惯例
 
 ## Resources
 
@@ -92,3 +134,7 @@ Bridge 接入 → 构建 → 打包发布。
   子应用若自行实现 Bridge 客户端，需同样处理，否则 Android 上所有响应收不到（全部超时）。
 - `assets/vue-template/` — 可直接复制的最小可运行 Vue3 子包工程（`public/js/api.js` 取自 `scripts/api.js`）。
 - `assets/react-template/` — 可直接复制的最小可运行 React 子包工程（`public/js/api.js` 取自 `scripts/api.js`）。
+- `.workbuddy/skills/apple-design/`（项目级 skill）— **H5 子应用设计规范（强制）**。所有 H5 的 UI/
+  交互/视觉/无障碍设计必须以 Apple HIG 为准绳；开发前先 `Read .workbuddy/skills/apple-design/SKILL.md`
+  及其 `references/`（尤其 `references/cross-platform.md` 的 Web 翻译、`references/hig/*.md` 组件页）。
+  详见本文件「设计规范（apple-design 强制，H5 子应用必读）」一节。

@@ -364,7 +364,7 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 | 桌面图标 | 安卓 `brand-default/mipmap-*/ic_launcher{,_round}.png`（由 `brand:gen` 从 1024 主图切五套密度） | 中性默认图 |
 | 启动图标 / 分层图标 | 鸿蒙 `entry/.../media/startIcon.png`（`startWindowIcon`）与 `foreground/background.png`（`layered_image.json`） | 鸿蒙图标走 DevEco 图形化配置，`brand:apply` 不覆盖，换名/换图手工改 |
 | iOS 全尺寸图标 | `platforms/ios/qux/Images.xcassets/AppIcon.appiconset/`（iphone 20–60pt 全 scale + 1024 marketing） | 需 macOS 打包机出包验证 |
-| 闪图 | `src/assets/splash/splash-default.jpg` | 由 RN 侧 `SplashOverlay` 加载，三端同一张图 |
+| 闪图 | `src/assets/splash/splash-default.jpg`（基座默认）；子应用 `app-brand/splash.png`（品牌覆盖，可选） | 由 RN 侧 `SplashOverlay` 加载，三端同一张图；品牌主图由 `brand:apply` 拷为 `splash-brand.png` 并改写引用入口 `active.ts`（均为派生产物，位图不入库），未配置回落默认图 |
 
 **启动闪屏（3 秒倒计时）是 RN 跨端实现**（`src/app/SplashOverlay.tsx`）：全屏闪图 +
 秒级倒计时 + 淡出，点击任意位置可跳过；WebView 在闪屏下方照常装载。
@@ -373,6 +373,12 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 时长走 `version.json` 的 `splashDurationMs`（毫秒，默认 3000，**0 = 关闭**，上限 15000），
 与 `remoteUrl` / `statusBarStyle` / `h5DevUrl` 同属容器级开关——子应用 `app.config.json`
 声明了才覆盖，否则 `brand:apply` 保留现值。
+
+**闪图来源两级**：子应用在 `app-brand/splash.png` 放了闪屏主图（打包向导选图或手工放置，
+建议竖版长方形，`resizeMode="cover"` 全屏裁切）时，`brand:apply` 会把它拷为
+`src/assets/splash/splash-brand.png` 并把 `active.ts` 指向它——这就是 3 秒倒计时真正
+显示的图；没放则 `active.ts` 复位为 `null`，回落基座默认闪图。从带闪屏的 A 切到
+不带闪屏的 B 不残留 A 的图（脚本确定性写入 + 回读校验）。
 
 闪图上**居中叠加应用中文名**（取自 `version.json` 的 `appName`，打包时由子应用下发）；
 倒计时改为右上角的**黑色圆形角标、白字缩小**，不再占用画面中部，与应用名错开。
@@ -517,6 +523,9 @@ node scripts/create-subapp.js --name xingce_app --no-source \
 - 该 exe **不入库**（`.gitignore` 的 `*.exe`），换机器只需重新拷一份。
 - 它的「新建子应用」向导直接 spawn `scripts/create-subapp.js`（见 5.8），不自己复制文件，
   避免两处模板实现漂移。
+- 打包向导支持在界面里直接选图标 / 闪屏 PNG 主图：保存配置时自动把主图拷进应用的
+  `app-brand/`（`icon.png` / `splash.png`）并调 `brand:gen` 切全部密度；非方形闪屏主图
+  按比例适配（完整显示不裁切）。不选则沿用应用现有品牌，CLI 流程保持不变。
 - 构建日志默认落在工作台侧；若落在基座内，日志同样不入库（`.gitignore` 的 `*.log`）。
 
 命令行等价于工作台能力，CI / 无桌面环境下直接用第 5.3 节的 npm 脚本即可。

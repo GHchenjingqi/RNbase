@@ -32,6 +32,7 @@ import { SplashOverlay } from './src/app/SplashOverlay';
 import { setH5BarStyleListener } from './src/bridge/modules/statusbar';
 import type { BarStyle } from './src/bridge/modules/statusbar';
 import splashDefaultImage from './src/assets/splash/splash-default.jpg';
+import { SPLASH_ACTIVE } from './src/assets/splash/active';
 
 // H5 入口两条路（开关是 version.json 的 remoteUrl，见 README「基座 + URL（远程站点模式）」）：
 //  - 远程模式：入口就是那个站点，不读内置 assets，也不给第三方 origin 注入 Bridge
@@ -118,7 +119,7 @@ export default function App() {
       {splashVisible ? (
         <SplashOverlay
           durationMs={SPLASH_DURATION_MS}
-          imageSource={splashDefaultImage}
+          imageSource={SPLASH_ACTIVE ?? splashDefaultImage}
           appName={APP_NAME}
           // 倒计时走完但页面尚未加载完时继续等待（最多 8s），不露出白屏
           holdUntil={!h5Loaded}

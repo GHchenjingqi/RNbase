@@ -62,6 +62,12 @@ const BASE_VERSION = path.join(baseDir, 'version.json');
 const STRINGS_XML = path.join(RES_DIR, 'values', 'strings.xml');
 const COLORS_XML = path.join(RES_DIR, 'values', 'colors.xml');
 const SPLASH_DRAWABLE = path.join(RES_DIR, 'drawable', 'splash_screen.xml');
+// RN 侧 3 秒倒计时闪屏（SplashOverlay）的品牌覆盖资源：
+// active.ts 是打包进 bundle 的引用入口（已入库的固定路径，Metro 静态解析），
+// splash-brand.png 是从子应用主图拷来的位图（派生产物，不入库）。
+const SPLASH_ASSET_DIR = path.join(baseDir, 'src', 'assets', 'splash');
+const SPLASH_ACTIVE_TS = path.join(SPLASH_ASSET_DIR, 'active.ts');
+const SPLASH_BRAND_PNG = path.join(SPLASH_ASSET_DIR, 'splash-brand.png');
 
 /**
  * 中性基座状态（--reset 写回这套值）。这些是基座自身的占位身份，不属于任何具体 App，
@@ -226,6 +232,41 @@ function applyH5Icons(brandDir) {
   fs.cpSync(brandDir, RES_DIR, { recursive: true });
 }
 
+const SPLASH_ACTIVE_DOC = `/**
+ * 当前活动应用的品牌闪屏资源（构建期由 scripts/apply-app-meta.js 自动生成/复位，勿手改）。
+ *
+ * 子应用在 app-brand/splash.png 提供了闪屏主图时，本文件被改写为 require 该图
+ * （splash-brand.png，打包期由脚本从主图拷贝，不入库）；null = 未配置品牌闪屏，
+ * SplashOverlay 回落基座默认闪图 splash-default.jpg。
+ */
+`;
+
+/**
+ * 下发 RN 侧 SplashOverlay 的闪屏图：子应用给了 app-brand/splash.png 主图就覆盖
+ * （它是 3 秒倒计时闪屏真正显示的图，比 res 里的原生窗口 logo 用户可见得多），
+ * 没给则回落基座默认图——入口文件写回 null 版本并删掉残留位图，
+ * 保证「从带闪屏的 A 切到不带闪屏的 B」不会残留 A 的闪图。
+ * 必须整段确定性写入（而不是只在变化时写）：Metro 按文件内容打包，残留即打错包。
+ */
+function applySplashAsset(hasSplashMaster, masterPath) {
+  fs.mkdirSync(SPLASH_ASSET_DIR, { recursive: true });
+  if (hasSplashMaster) {
+    fs.copyFileSync(masterPath, SPLASH_BRAND_PNG);
+    fs.writeFileSync(
+      SPLASH_ACTIVE_TS,
+      `${SPLASH_ACTIVE_DOC}export const SPLASH_ACTIVE: number | null = require('./splash-brand.png');\n`,
+      'utf8',
+    );
+  } else {
+    fs.rmSync(SPLASH_BRAND_PNG, { force: true });
+    fs.writeFileSync(
+      SPLASH_ACTIVE_TS,
+      `${SPLASH_ACTIVE_DOC}export const SPLASH_ACTIVE: number | null = null;\n`,
+      'utf8',
+    );
+  }
+}
+
 /**
  * app.json5 里只改版本两个键的值：该文件带注释、还含签名相关字段，
  * 整体 JSON.parse 再 stringify 会把注释与尾逗号格式弄丢，故用定向替换。
@@ -358,6 +399,9 @@ function main() {
   // --reset 一定走「无品牌图」分支：cleanResBrand + restoreDefaultIcons 会把图标换回 brand-default。
   const brandDir = app ? path.resolve(app.brandDir) : '';
   const hasBrand = Boolean(app) && fs.existsSync(brandDir);
+  // 品牌闪屏主图（<app>/app-brand/splash.png，打包向导/brand:gen 的真源；可选）
+  const splashMaster = hasBrand ? path.join(brandDir, '..', 'splash.png') : '';
+  const hasSplashMaster = Boolean(splashMaster) && fs.existsSync(splashMaster);
 
   // 1. 品牌字段与版本写入基座 version.json（build.gradle 配置期读取）——整体重写，
   //    保证不会残留上一个子应用的字段，也不会因外部脚本改写而丢字段。
@@ -443,11 +487,21 @@ function main() {
     applyH5Icons(brandDir);
   }
   applySplash(hasBrand, cfg.splashBackgroundColor);
+  applySplashAsset(hasSplashMaster, splashMaster);
 
   // 4. harmony/ 工程存在时一并同步品牌名与版本（没有鸿蒙工程就是纯安卓/iOS 基座，跳过）
   const harmonyApplied = applyHarmonyMeta(cfg);
 
   const problems = verifyApplied(cfg, hasBrand, brandDir, harmonyApplied);
+  // RN 侧闪屏覆盖资源回读校验：入口文件指向必须与「有无品牌闪屏主图」一致，
+  // 否则会出现「配了闪屏打的还是默认图」（或反之）的静默错包。
+  const activeTs = fs.existsSync(SPLASH_ACTIVE_TS) ? fs.readFileSync(SPLASH_ACTIVE_TS, 'utf8') : '';
+  if (hasSplashMaster !== activeTs.includes("require('./splash-brand.png')")) {
+    problems.push('src/assets/splash/active.ts 的品牌闪屏指向与预期不符');
+  }
+  if (hasSplashMaster && !fs.existsSync(SPLASH_BRAND_PNG)) {
+    problems.push('splash-brand.png 未从品牌主图拷贝成功');
+  }
   if (problems.length) {
     for (const p of problems) console.error(`[app-meta] 校验失败：${p}`);
     process.exit(1);
@@ -458,6 +512,7 @@ function main() {
     `[app-meta] ${origin} -> 基座：` +
       `"${cfg.appName}" pkg=${cfg.applicationId} v${cfg.versionName}(${cfg.versionCode}) ` +
       `品牌资源=${hasBrand ? '自定义图标/闪屏' : '基座默认'} ` +
+      `倒计时闪屏=${hasSplashMaster ? '品牌闪图' : '默认闪图'} ` +
       `鸿蒙=${harmonyApplied ? '已同步名称/版本' : '无 harmony/ 工程，跳过'}`,
   );
   console.log(`[app-meta] APK 文件名将为：${cfg.apkName}-${cfg.versionName}-<变体>.apk`);

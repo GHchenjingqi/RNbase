@@ -7,6 +7,11 @@
  *   <out>/mipmap-<density>/ic_launcher_round.png  圆形（同尺寸）
  *   <out>/drawable-<density>/splash_logo.png      闪屏居中 logo（launcher 的 2 倍）
  *
+ * 闪屏主图允许非方形（如整幅场景图）：按比例适配输出（最长边=目标尺寸），
+ * 完整显示不裁切、不加圆角遮罩——Android 侧 splash_screen.xml 用
+ * <bitmap android:gravity="center"> 居中叠加在闪屏底色上、各密度各自缩放，
+ * 因此一张主图即可适配所有分辨率。方形闪屏主图行为不变（裁方 + 圆角遮罩）。
+ *
  * 为什么需要它：设计稿通常只有一张大图（且常带白边、水印、假圆角），
  * 手工切五套密度极易出错；这里把「裁掉外边距 → 自绘圆角/圆形遮罩 → 面积平均缩放」
  * 固化成脚本，改图标只需重跑一条命令。
@@ -314,16 +319,36 @@ function main() {
         crop,
       ),
       side: crop,
+      width: crop,
+      height: crop,
     };
+  };
+  /** 闪屏主图装载：保留原始宽高比，只按比例裁掉四周留白（非方形不再强裁正方形）。 */
+  const loadFit = (file, inset) => {
+    const src = decodePng(fs.readFileSync(file), path.basename(file));
+    const w = Math.round(src.width * (1 - inset * 2));
+    const h = Math.round(src.height * (1 - inset * 2));
+    const left = Math.round((src.width - w) / 2);
+    const top = Math.round((src.height - h) / 2);
+    // 逐行拷贝裁切区间（cropSquare 只支持方形，这里宽高独立）
+    const out = Buffer.alloc(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      src.data.copy(out, y * w * 4, ((top + y) * src.width + left) * 4, ((top + y) * src.width + left + w) * 4);
+    }
+    console.log(
+      `[gen-brand] 闪屏 ${path.basename(file)} ${src.width}x${src.height} → 保比例 ${w}x${h}` +
+        `（inset=${inset}）`,
+    );
+    return { data: out, side: Math.min(w, h), width: w, height: h };
   };
   if (args.splash) {
     const splashFile = path.resolve(process.cwd(), args.splash);
     if (!fs.existsSync(splashFile)) fail(`闪屏主图不存在：${splashFile}`);
   }
   const icon = loadSquare(srcFile, args.inset);
-  // 不给 --splash 就沿用图标主图（历史行为）。
+  // 不给 --splash 就沿用图标主图（历史行为）；给了则保留宽高比装载（方形效果与历史一致）
   const splash = args.splash
-    ? loadSquare(path.resolve(process.cwd(), args.splash), args.splashInset)
+    ? loadFit(path.resolve(process.cwd(), args.splash), args.splashInset)
     : icon;
 
   const crops = [];
@@ -351,18 +376,32 @@ function main() {
         from: splash,
       },
     ]) {
-      // 先在裁切尺寸上加遮罩再缩小：小尺寸直接算遮罩会在圆角处出现锯齿
-      const masked = Buffer.from(item.from.data);
-      applyRoundMask(masked, item.from.side, item.radius);
-      const final = resize(masked, item.from.side, item.from.side, item.size, item.size);
-      const png = encodePng(item.size, item.size, final);
-      crops.push({ dir: item.dir, file: item.file, size: item.size, bytes: png.length, png });
+      let w;
+      let h;
+      let png;
+      if (item.file === 'splash_logo.png' && item.from.width !== item.from.height) {
+        // 非方形闪屏主图：按比例适配（最长边=目标尺寸），完整显示、不加圆角遮罩
+        const scale = item.size / Math.max(item.from.width, item.from.height);
+        w = Math.max(1, Math.round(item.from.width * scale));
+        h = Math.max(1, Math.round(item.from.height * scale));
+        const fitted = resize(item.from.data, item.from.width, item.from.height, w, h);
+        png = encodePng(w, h, fitted);
+      } else {
+        // 先在裁切尺寸上加遮罩再缩小：小尺寸直接算遮罩会在圆角处出现锯齿
+        const masked = Buffer.from(item.from.data);
+        applyRoundMask(masked, item.from.side, item.radius);
+        const final = resize(masked, item.from.side, item.from.side, item.size, item.size);
+        w = item.size;
+        h = item.size;
+        png = encodePng(item.size, item.size, final);
+      }
+      crops.push({ dir: item.dir, file: item.file, w, h, bytes: png.length, png });
     }
   }
 
   for (const c of crops) {
     console.log(
-      `[gen-brand] ${c.dir}/${c.file}  ${c.size}x${c.size}  ${(c.bytes / 1024).toFixed(1)} KB`,
+      `[gen-brand] ${c.dir}/${c.file}  ${c.w}x${c.h}  ${(c.bytes / 1024).toFixed(1)} KB`,
     );
   }
   if (args.dryRun) {
