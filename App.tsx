@@ -16,6 +16,7 @@ import {
   CRASH_REPORT_ENDPOINT,
   REMOTE_H5_ORIGIN,
   REMOTE_H5_URL,
+  SPLASH_BG_COLOR,
   SPLASH_DURATION_MS,
   STATUS_BAR_STYLE,
   validateClientIds,
@@ -120,6 +121,7 @@ export default function App() {
         <SplashOverlay
           durationMs={SPLASH_DURATION_MS}
           imageSource={SPLASH_ACTIVE ?? splashDefaultImage}
+          backgroundColor={SPLASH_BG_COLOR}
           appName={APP_NAME}
           // 倒计时走完但页面尚未加载完时继续等待（最多 8s），不露出白屏
           holdUntil={!h5Loaded}

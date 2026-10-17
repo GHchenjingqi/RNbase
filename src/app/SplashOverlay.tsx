@@ -41,6 +41,11 @@ export interface SplashOverlayProps {
    */
   appName?: string;
   /**
+   * 闪屏底色：填充闪图 contain 显示后的留白区域（取 version.json 的
+   * splashBackgroundColor，与闪图背景同系时视觉无缝，任意屏幕比例不裁不变形）。
+   */
+  backgroundColor?: string;
+  /**
    * 倒计时走完后是否继续等待（默认 false）。
    * true = 页面还没加载好就继续盖着闪屏，显示「正在载入」而不是露出白屏；
    * 变为 false（或超过 holdMaxMs 兜底）才淡出。
@@ -57,6 +62,7 @@ export function SplashOverlay({
   appName,
   holdUntil = false,
   holdMaxMs = 8000,
+  backgroundColor = '#EAEFF7',
 }: SplashOverlayProps) {
   const opacity = useRef(new Animated.Value(1)).current;
   const finishedRef = useRef(false);
@@ -113,8 +119,10 @@ export function SplashOverlay({
 
   return (
     <Animated.View style={[styles.root, { opacity }]} testID="splash-overlay">
-      <Pressable style={styles.fill} onPress={finish} accessibilityLabel="跳过启动闪屏">
-        <Image source={imageSource} style={styles.fill} resizeMode="cover" />
+      <Pressable style={[styles.fill, { backgroundColor }]} onPress={finish} accessibilityLabel="跳过启动闪屏">
+        {/* contain 完整显示：cover 在宽屏手机上会按高度撑满、左右裁切，
+            宽幅设计稿的两端（如大字标语）会被切掉；留白由底色补齐，视觉无缝 */}
+        <Image source={imageSource} style={styles.fill} resizeMode="contain" />
         {appName ? (
           <Text style={styles.appName} testID="splash-appname" numberOfLines={1}>
             {appName}

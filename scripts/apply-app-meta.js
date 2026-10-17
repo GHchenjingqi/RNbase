@@ -469,6 +469,9 @@ function main() {
         statusBarStyle: statusBarStyle === undefined ? '' : statusBarStyle,
         h5DevUrl: h5DevUrl === undefined ? '' : h5DevUrl,
         splashDurationMs: splashMsNum,
+        // 闪屏底色同步进 version.json：RN 倒计时闪屏（SplashOverlay）改用 contain
+        // 完整显示后，用它填充闪图留白——与原生 splash_bg 同源，视觉无缝。
+        splashBackgroundColor: cfg.splashBackgroundColor,
       },
       null,
       2,

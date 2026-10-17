@@ -7,5 +7,6 @@
   "remoteUrl": "",
   "statusBarStyle": "",
   "h5DevUrl": "",
-  "splashDurationMs": 3000
+  "splashDurationMs": 3000,
+  "splashBackgroundColor": "#EAEFF7"
 }

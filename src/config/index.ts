@@ -367,6 +367,20 @@ export const SPLASH_DURATION_MS: number = (() => {
 })();
 
 /**
+ * 闪屏底色（version.json 的 `splashBackgroundColor`，apply-app-meta.js 下发）。
+ *
+ * 两个消费方：① 原生 windowBackground（colors.xml 的 splash_bg，遮 RN 装载前空白）；
+ * ② RN 倒计时闪屏 SplashOverlay——闪图用 contain 完整显示（cover 会按屏幕比例裁切，
+ * 宽幅设计稿在大屏手机上两端被切变形），留白区域用它填充；闪图背景与底色同系时
+ * 视觉无缝，任意屏幕比例都不裁不变形。非法/缺失回落 #EAEFF7（与默认闪图同系浅色）。
+ */
+export const SPLASH_BG_COLOR: string = (() => {
+  const raw = (versionInfo as { splashBackgroundColor?: unknown }).splashBackgroundColor;
+  const v = typeof raw === 'string' ? raw.trim() : '';
+  return /^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/.test(v) ? v : '#EAEFF7';
+})();
+
+/**
  * ===================== 调试期直连本地 H5（仅 debug 生效） =====================
  */
 
