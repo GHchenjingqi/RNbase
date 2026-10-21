@@ -12,7 +12,6 @@ import { WebViewBridge } from './src/webview/WebViewBridge';
 import { WebViewErrorPage } from './src/webview/WebViewErrorPage';
 import { getH5EntryUri } from './src/app/resolve-h5-entry';
 import {
-  APP_NAME,
   CRASH_REPORT_ENDPOINT,
   REMOTE_H5_ORIGIN,
   REMOTE_H5_URL,
@@ -58,6 +57,14 @@ export default function App() {
   // 闪屏继续盖着（显示「正在翻开诗卷…」），避免露出 WebView 的白屏。
   const [h5Loaded, setH5Loaded] = useState(false);
   const handleH5Loaded = useCallback(() => setH5Loaded(true), []);
+  // 首次加载进度（0~1，仅远程站点模式用于细化就绪判定）。
+  const [h5Progress, setH5Progress] = useState(0);
+  const handleH5Progress = useCallback((p: number) => setH5Progress(p), []);
+  // 远程站点模式：onLoadEnd 在主资源（HTML）到达即触发，远早于 SPA 的 JS/CSS/图片
+  // 加载完与首屏绘制；若此刻退场会露出尚未绘制的白屏，再等 1~2s 才出现 H5 自身「加载中」。
+  // 故远程模式额外要求进度接近完成（>=0.99）才认为就绪；本地离线包 onLoadEnd≈首屏，
+  // 沿用原判定。holdMaxMs 兜底，进度异常停滞也不会永远卡在闪屏。
+  const h5FullyReady = isRemote ? h5Loaded && h5Progress >= 0.99 : h5Loaded;
   useEffect(() => {
     setH5BarStyleListener((style) => setH5BarStyle(style));
     return () => setH5BarStyleListener(null);
@@ -104,6 +111,7 @@ export default function App() {
               bridgeEnabled={!isRemote}
               trustedOrigins={isRemote && REMOTE_H5_ORIGIN ? [REMOTE_H5_ORIGIN] : undefined}
               onLoadEnd={handleH5Loaded}
+              onLoadProgress={handleH5Progress}
             />
           ) : (
             <WebViewErrorPage
@@ -122,9 +130,9 @@ export default function App() {
           durationMs={SPLASH_DURATION_MS}
           imageSource={SPLASH_ACTIVE ?? splashDefaultImage}
           backgroundColor={SPLASH_BG_COLOR}
-          appName={APP_NAME}
-          // 倒计时走完但页面尚未加载完时继续等待（最多 8s），不露出白屏
-          holdUntil={!h5Loaded}
+          // 倒计时走完但页面尚未加载完时继续等待（最多 8s），不露出白屏。
+          // 远程模式要求进度接近完成才视为就绪，消除「HTML 已到、首屏未绘」的 1~2s 白屏。
+          holdUntil={!h5FullyReady}
           holdMaxMs={8000}
           onFinish={() => setSplashVisible(false)}
         />

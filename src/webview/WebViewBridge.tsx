@@ -176,6 +176,9 @@ type WebViewBridgeProps = {
   canRollback?: boolean;
   onLoadStart?: () => void;
   onLoadEnd?: () => void;
+  /** 加载进度（0~1）。用于远程站点模式下把「首屏就绪」判定从「主资源到达」细化到
+   *  「资源基本加载完」，避免闪屏提前退场露出尚未绘制的白屏。 */
+  onLoadProgress?: (progress: number) => void;
   onError?: (error: unknown) => void;
 };
 
@@ -190,6 +193,7 @@ export function WebViewBridge({
   canRollback = false,
   onLoadStart,
   onLoadEnd,
+  onLoadProgress,
   onError,
 }: WebViewBridgeProps) {
   const controller = useWebViewController(source);
@@ -553,6 +557,9 @@ export function WebViewBridge({
           clearRemoteLoadTimer();
           controller._onLoadEnd(event.nativeEvent.canGoBack);
           onLoadEnd?.();
+        }}
+        onLoadProgress={(event) => {
+          onLoadProgress?.(event.nativeEvent.progress);
         }}
         onError={handleNativeError}
         onHttpError={handleHttpError}

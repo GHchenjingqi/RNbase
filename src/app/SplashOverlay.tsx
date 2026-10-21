@@ -36,11 +36,6 @@ export interface SplashOverlayProps {
   /** 闪屏结束（淡出完成）后回调；点击跳过同样走这里。只回调一次。 */
   onFinish: () => void;
   /**
-   * 应用中文名：居中叠加在闪图上（由基座 config 的 APP_NAME 经 version.json 下发）。
-   * 为空则不显示，避免通用模板图上出现空文字。
-   */
-  appName?: string;
-  /**
    * 闪屏底色：填充闪图 contain 显示后的留白区域（取 version.json 的
    * splashBackgroundColor，与闪图背景同系时视觉无缝，任意屏幕比例不裁不变形）。
    */
@@ -59,7 +54,6 @@ export function SplashOverlay({
   durationMs,
   imageSource,
   onFinish,
-  appName,
   holdUntil = false,
   holdMaxMs = 8000,
   backgroundColor = '#EAEFF7',
@@ -119,27 +113,29 @@ export function SplashOverlay({
 
   return (
     <Animated.View style={[styles.root, { opacity }]} testID="splash-overlay">
-      <Pressable style={[styles.fill, { backgroundColor }]} onPress={finish} accessibilityLabel="跳过启动闪屏">
-        {/* contain 完整显示：cover 在宽屏手机上会按高度撑满、左右裁切，
-            宽幅设计稿的两端（如大字标语）会被切掉；留白由底色补齐，视觉无缝 */}
-        <Image source={imageSource} style={styles.fill} resizeMode="contain" />
-        {appName ? (
-          <Text style={styles.appName} testID="splash-appname" numberOfLines={1}>
-            {appName}
-          </Text>
-        ) : null}
-        {waiting ? (
-          <View style={styles.loadingBox} testID="splash-loading">
-            <ActivityIndicator size="small" color="#6B7280" />
-            <Text style={styles.loadingText}>正在翻开诗卷…</Text>
-          </View>
-        ) : remainingSec > 0 ? (
-          <View style={styles.countdownBadge}>
-            <Text style={styles.countdownText} testID="splash-countdown">
-              {remainingSec}
-            </Text>
-          </View>
-        ) : null}
+      <Pressable style={styles.fill} onPress={finish} accessibilityLabel="跳过启动闪屏">
+        {/* 底色铺满全屏（pointerEvents=none 让点击穿透到 Pressable）：
+            内容缩放后四周露出的区域仍是底色，不会漏出底下 WebView 造成闪白 */}
+        <View style={[styles.fill, { backgroundColor }]} pointerEvents="none" />
+        {/* 内容整体缩小 1/2、保持居中（位置不变）：badge / 图 / 文案按各自原始布局等比缩到一半。
+            pointerEvents=none 保证整屏任意位置仍可点击跳过 */}
+        <View style={styles.scaledContent} pointerEvents="none">
+          {/* contain 完整显示：cover 在宽屏手机上会按高度撑满、左右裁切，
+              宽幅设计稿的两端（如大字标语）会被切掉；留白由底色补齐，视觉无缝 */}
+          <Image source={imageSource} style={styles.fill} resizeMode="contain" />
+          {waiting ? (
+            <View style={styles.loadingBox} testID="splash-loading">
+              <ActivityIndicator size="small" color="#6B7280" />
+              <Text style={styles.loadingText}>正在翻开诗卷…</Text>
+            </View>
+          ) : remainingSec > 0 ? (
+            <View style={styles.countdownBadge} testID="splash-countdown-badge">
+              <Text style={styles.countdownText} testID="splash-countdown">
+                {remainingSec}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -157,22 +153,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  // 应用中文名：居中叠加在闪图上，深色字 + 白色描边阴影，在浅色渐变图上够清楚。
-  appName: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    transform: [{ translateY: '-50%' }],
-    textAlign: 'center',
-    fontSize: 30,
-    fontWeight: '600',
-    color: '#2C2C2A',
-    textShadowColor: 'rgba(255, 255, 255, 0.85)',
-    textShadowRadius: 4,
-    textShadowOffset: { width: 0, height: 1 },
+  // 内容层：整层等比缩到 1/2，transform origin 默认视图中心 -> 缩向中心、位置不变、
+  // 四周留出底色。里面 Image/badge 全部跟随缩放。
+  scaledContent: {
+    ...StyleSheet.absoluteFillObject,
+    transform: [{ scale: 0.5 }],
   },
   // 倒计时：右上角黑色圆形角标，白字、缩小字号，避开中部的应用名。
+  // 整体半透明（0.5）：用户要求「倒计时改成半透明」。
   countdownBadge: {
     position: 'absolute',
     top: 40,
@@ -181,6 +169,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: '#000000',
+    opacity: 0.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
