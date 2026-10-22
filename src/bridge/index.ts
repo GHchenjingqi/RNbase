@@ -37,6 +37,7 @@ import { registerSpeechModule } from './modules/capabilities/speech';
 import { registerAppManagerModule } from './modules/capabilities/app-manager';
 import { registerBackgroundTaskModule } from './modules/capabilities/background-task';
 import { registerInAppReviewModule } from './modules/capabilities/in-app-review';
+import { registerVoiceModule } from './modules/capabilities/voice';
 import { registerToastModule } from './modules/toast';
 import { registerDialogModule } from './modules/dialog';
 import { registerOrientationModule } from './modules/orientation';
@@ -126,6 +127,7 @@ export function createBridgeServer(
   registerAppManagerModule(server, merged);
   registerBackgroundTaskModule(server, merged);
   registerInAppReviewModule(server, merged);
+  registerVoiceModule(server, merged);
 
   // ── 远程全量升级（整包替换，与 src/updater 的 H5 子包增量更新是两条链路） ──
   // 仅安卓有自装通道：iOS 上 resolveNativeUpdateAdapter() 回空适配器，模块报 DEVICE_UNSUPPORTED。

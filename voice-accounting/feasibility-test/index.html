@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>离线语音识别可行性测试 · RNbase</title>
+  <style>
+    :root { --bg:#0f1115; --panel:#1a1d24; --line:#2a2e37; --txt:#e6e8eb; --muted:#8b909a; --accent:#3b82f6; --ok:#22c55e; --err:#ef4444; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--txt); padding:16px; max-width:520px; margin:0 auto; }
+    h1 { font-size:18px; margin:0 0 4px; }
+    .sub { color:var(--muted); font-size:12px; margin-bottom:16px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; border:1px solid var(--line); color:var(--muted); }
+    .badge.real { color:var(--ok); border-color:var(--ok); }
+    .badge.mock { color:#f59e0b; border-color:#f59e0b; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    button { flex:1 1 auto; min-width:120px; padding:12px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--txt); font-size:14px; cursor:pointer; }
+    button:active { transform:translateY(1px); }
+    button.primary { background:var(--accent); border-color:var(--accent); }
+    button.danger { background:#7f1d1d; border-color:#991b1b; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+    .card h2 { font-size:13px; margin:0 0 8px; color:var(--muted); font-weight:600; }
+    .kv { display:flex; justify-content:space-between; font-size:13px; padding:3px 0; }
+    .kv span:last-child { font-family: ui-monospace, Menlo, Consolas, monospace; color:#cbd5e1; }
+    #transcript { font-size:20px; line-height:1.4; min-height:28px; word-break:break-word; }
+    #log { font-size:12px; color:var(--muted); max-height:200px; overflow:auto; white-space:pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    #log .e { color:var(--err); }
+    #log .s { color:var(--ok); }
+    .rec-dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--err); margin-right:6px; vertical-align:middle; }
+    .rec-dot.on { animation:blink 1s infinite; }
+    @keyframes blink { 50% { opacity:.25; } }
+  </style>
+</head>
+<body>
+  <h1>离线语音识别测试</h1>
+  <div class="sub">RNbase + RN_h5 可行性探针 · <span id="envBadge" class="badge">检测中…</span></div>
+
+  <div class="row">
+    <button id="btnStatus">1. 检查模型状态</button>
+    <button id="btnPrepare" class="primary">2. 准备模型</button>
+  </div>
+  <div class="row">
+    <button id="btnStart">3. 开始录音</button>
+    <button id="btnStop" class="danger">4. 完成并识别</button>
+    <button id="btnCancel">取消</button>
+  </div>
+
+  <div class="card">
+    <h2>模型状态</h2>
+    <div class="kv"><span>state</span><span id="mState">—</span></div>
+    <div class="kv"><span>modelId</span><span id="mModel">—</span></div>
+    <div class="kv"><span>version</span><span id="mVersion">—</span></div>
+    <div class="kv"><span>ready</span><span id="mReady">—</span></div>
+  </div>
+
+  <div class="card">
+    <h2><span id="recDot" class="rec-dot"></span>识别结果</h2>
+    <div id="transcript">（点击「开始录音」后说话，再点「完成并识别」）</div>
+  </div>
+
+  <div class="card">
+    <h2>日志</h2>
+    <div id="log"></div>
+  </div>
+
+  <script>
+  (function () {
+    // ── 桥接层：优先用基座注入的 window.RN（生产 / WebView 真机环境）──
+    // 否则自带一个精简 Bridge 客户端 + 浏览器 Mock（仅用于页面布局与流程联调）。
+    var mock = !window.RN;
+
+    // 浏览器 Mock：不依赖真机，返回模拟结果，方便先看 UI 流程。
+    var MockVoice = {
+      getStatus: function () { return Promise.resolve({ state: 'ready', modelId: 'zh-small', version: '1.0.0', ready: true }); },
+      prepareModel: function () { return Promise.resolve({ state: 'ready' }); },
+      startRecording: function () { return Promise.resolve({ started: true }); },
+      stopAndRecognize: function () {
+        var samples = ['午餐花了三十八块五', '买咖啡十二块八微信支付', '今天工资到账八千元', '地铁四块五'];
+        var t = samples[Math.floor(Math.random() * samples.length)];
+        return Promise.resolve({ text: t, durationMs: 2800, modelVersion: '1.0.0' });
+      },
+      cancelRecording: function () { return Promise.resolve({ cancelled: true }); },
+    };
+
+    var Voice = mock ? MockVoice : window.RN.VOICE;
+
+    // ── UI 绑定 ──
+    var $ = function (id) { return document.getElementById(id); };
+    var logEl = $('log');
+    function log(msg, kind) {
+      var line = document.createElement('div');
+      if (kind) line.className = kind;
+      line.textContent = '> ' + msg;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    function setModel(s) {
+      $('mState').textContent = s.state || '—';
+      $('mModel').textContent = s.modelId || '—';
+      $('mVersion').textContent = s.version || '—';
+      $('mReady').textContent = s.ready === true ? 'true' : (s.ready === false ? 'false' : '—');
+    }
+    function setRec(on) { $('recDot').className = on ? 'rec-dot on' : 'rec-dot'; }
+
+    $('envBadge').textContent = mock ? '浏览器 Mock' : '真机 Bridge';
+    $('envBadge').className = mock ? 'badge mock' : 'badge real';
+    if (mock) log('未检测到 window.RN（api.js 未注入），使用浏览器 Mock 模式。', 'e');
+
+    $('btnStatus').onclick = function () {
+      log('voice.getStatus()');
+      Voice.getStatus().then(function (r) { setModel(r); log('状态: ' + JSON.stringify(r), 's'); })
+        .catch(function (e) { log('状态失败: ' + (e && e.message), 'e'); });
+    };
+    $('btnPrepare').onclick = function () {
+      log('voice.prepareModel()');
+      Voice.prepareModel().then(function (r) { log('准备完成: ' + JSON.stringify(r), 's'); })
+        .catch(function (e) { log('准备失败: ' + (e && e.message), 'e'); });
+    };
+    $('btnStart').onclick = function () {
+      log('voice.startRecording()');
+      Voice.startRecording().then(function (r) {
+        if (r && r.started) { setRec(true); log('录音已开始，请说话…', 's'); }
+        else log('开始录音返回异常: ' + JSON.stringify(r), 'e');
+      }).catch(function (e) { log('开始录音失败: ' + (e && e.message), 'e'); });
+    };
+    $('btnStop').onclick = function () {
+      log('voice.stopAndRecognize()');
+      Voice.stopAndRecognize().then(function (r) {
+        setRec(false);
+        $('transcript').textContent = (r && r.text) ? r.text : '（空）';
+        log('识别文本: ' + (r && r.text) + '  |  时长:' + (r && r.durationMs) + 'ms', 's');
+      }).catch(function (e) { setRec(false); log('识别失败: ' + (e && e.message), 'e'); });
+    };
+    $('btnCancel').onclick = function () {
+      log('voice.cancelRecording()');
+      Voice.cancelRecording().then(function (r) { setRec(false); log('已取消: ' + JSON.stringify(r), 's'); })
+        .catch(function (e) { log('取消失败: ' + (e && e.message), 'e'); });
+    };
+
+    log('页面就绪。建议顺序：检查状态 → 准备模型 → 开始录音 → 说话 → 完成并识别。');
+  })();
+  </script>
+</body>
+</html>

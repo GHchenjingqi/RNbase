@@ -83,6 +83,12 @@ android {
 
     namespace "com.qux"
 
+    // onnx 模型需随机访问，不能被 zip 压缩（否则运行时无法 mmap 直接读取）。
+    // 同时避免把模型复制到 filesDir 造成手机存储双份占用。
+    aaptOptions {
+        noCompress "onnx"
+    }
+
     // App 参数（应用名 / 包名 / 英文名 / 版本）统一由 H5 子应用在执行
     // `npm run build:base` 时写入项目根 version.json（见各 H5 工程 scripts/apply-app-meta.js）。
     // 基座保持通用：这里只读取、不内置任何具体 App 值；缺省时给出中性兜底，保证独立可构建。
@@ -171,6 +177,17 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // 离线语音识别（sherpa-onnx）：本地 ASR，不依赖任何云端接口。
+    // 仅 arm64-v8a 生效（与项目 ABI 策略一致，见 rootProject.ext.reactNativeArchitectures）。
+    //
+    // 坐标说明：官方并未把 sherpa-onnx 的 Android AAR 发布到 Maven Central，
+    // `com.k2fsa.sherpa.onnx:sherpa-onnx-android` 在 Central 上不存在（勿再使用）。
+    // 此处用 bihe0832 维护的重打包构件：包名 com.k2fsa.sherpa.onnx.* 与官方一致、
+    // Apache-2.0、arm64-v8a 的 libsherpa-onnx-jni.so 约 4.9 MB（与体积预算吻合）。
+    // 传递依赖 lib-onnx 提供 ONNX Runtime。升级前请先用 javap 核对
+    // SherpaAsrEngine.kt 用到的构造签名（该组构件跟随上游演进，流式 API 挂在 OnlineStream 上）。
+    implementation("com.bihe0832.android:lib-sherpa-onnx:6.25.21")
 }
 
 // version.json 是 JS 侧配置的输入（src/config/index.ts 直接 import 它），但 RN 插件的打包

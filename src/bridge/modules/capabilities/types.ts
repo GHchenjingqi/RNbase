@@ -369,6 +369,29 @@ export interface InAppReviewAdapter {
   requestReview(): Promise<{ ok: boolean }>;
 }
 
+/** 语音识别（离线 ASR，sherpa-onnx）。 */
+export interface VoiceAdapter {
+  /** 查询模型状态：{ state, modelId, version, ready }。 */
+  getStatus(): Promise<{
+    state: string;
+    modelId: string;
+    version: string;
+    ready: boolean;
+  }>;
+  /** 校验内置模型完整性并初始化引擎。 */
+  prepareModel(): Promise<{ state: string; modelId?: string; version?: string }>;
+  /** 开始录音，返回 { started }。 */
+  startRecording(sessionId?: string): Promise<{ started: boolean }>;
+  /** 停止录音并识别，返回 { text, durationMs, modelVersion }。 */
+  stopAndRecognize(sessionId?: string): Promise<{
+    text: string;
+    durationMs: number;
+    modelVersion: string;
+  }>;
+  /** 取消录音，返回 { cancelled }。 */
+  cancelRecording(sessionId?: string): Promise<{ cancelled: boolean }>;
+}
+
 export type CapabilityAdapters = {
   scanner?: ScannerAdapter;
   camera?: CameraAdapter;
@@ -395,6 +418,7 @@ export type CapabilityAdapters = {
   appManager?: AppManagerAdapter;
   backgroundTask?: BackgroundTaskAdapter;
   inAppReview?: InAppReviewAdapter;
+  voice?: VoiceAdapter;
 };
 
 /** 能力未接入时统一抛出 DEVICE_UNSUPPORTED（规则 15/16）。 */

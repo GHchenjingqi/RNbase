@@ -658,6 +658,14 @@
       WARN: 'warn',
       DEBUG: 'debug',
     },
+    // 离线语音识别（ASR，sherpa-onnx）：浏览器环境无 Mock（设备相关），默认分支回 DEVICE_UNSUPPORTED。
+    VOICE: {
+      GETSTATUS: 'getStatus',
+      PREPAREMODEL: 'prepareModel',
+      STARTRECORDING: 'startRecording',
+      STOPANDRECOGNIZE: 'stopAndRecognize',
+      CANCELRECORDING: 'cancelRecording',
+    },
   };
 
   // ===================================================================

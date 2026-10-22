@@ -128,3 +128,8 @@ src/assets/splash/splash-brand.png
 
 # 本地备份目录（不入库）
 h5.backup/
+
+# 离线语音识别模型（zipformer-zh-14M int8，约 25 MB）
+# 体积大且可由 scripts/fetch-model.sh 完整复现，不入库；
+# 打 release 前必须先跑该脚本，否则 APK 里没有模型、真机识别会失败。
+platforms/android/app/src/main/assets/models/

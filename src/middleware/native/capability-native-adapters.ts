@@ -206,6 +206,20 @@ export interface BaseCapabilitiesNative {
   backgroundStop?(taskId: number): Promise<void>;
   backgroundRunning?(taskKey: string): Promise<{ running: boolean }>;
   inAppReview?(): Promise<{ ok: boolean }>;
+
+  // ── 语音识别（离线 ASR，sherpa-onnx） ──
+  voiceGetStatus?(): Promise<{
+    state: string;
+    modelId: string;
+    version: string;
+    ready: boolean;
+  }>;
+  voicePrepareModel?(): Promise<{ state: string }>;
+  voiceStartRecording?(opts?: { sessionId?: string }): Promise<{ started: boolean }>;
+  voiceStopAndRecognize?(opts?: {
+    sessionId?: string;
+  }): Promise<{ text: string; durationMs: number; modelVersion: string }>;
+  voiceCancelRecording?(opts?: { sessionId?: string }): Promise<{ cancelled: boolean }>;
 }
 
 function toPickedFile(f: NativeFile): PickedFile {
@@ -662,6 +676,27 @@ export function resolveNativeCapabilityAdapters(): CapabilityAdapters {
       ? {
           requestReview: () =>
             nativeModule.inAppReview!().catch((e) => wrapNativeError(e, '应用内评价失败')),
+        }
+      : undefined,
+
+    voice: nativeModule.voiceGetStatus
+      ? {
+          getStatus: () =>
+            nativeModule.voiceGetStatus!().catch((e) => wrapNativeError(e, '查询语音状态失败')),
+          prepareModel: () =>
+            nativeModule.voicePrepareModel!().catch((e) => wrapNativeError(e, '初始化语音模型失败')),
+          startRecording: (sessionId) =>
+            nativeModule
+              .voiceStartRecording!(sessionId ? { sessionId } : undefined)
+              .catch((e) => wrapNativeError(e, '开始录音失败')),
+          stopAndRecognize: (sessionId) =>
+            nativeModule
+              .voiceStopAndRecognize!(sessionId ? { sessionId } : undefined)
+              .catch((e) => wrapNativeError(e, '语音识别失败')),
+          cancelRecording: (sessionId) =>
+            nativeModule
+              .voiceCancelRecording!(sessionId ? { sessionId } : undefined)
+              .catch((e) => wrapNativeError(e, '取消录音失败')),
         }
       : undefined,
   };

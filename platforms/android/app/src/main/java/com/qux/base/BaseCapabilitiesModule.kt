@@ -60,6 +60,15 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
     private var pendingPromise: Promise? = null
     private var pendingRequestCode = -1
 
+    /** 语音识别引擎（离线 ASR，sherpa-onnx）。首次使用时创建，不提前加载模型。 */
+    private var asrEngineInstance: SherpaAsrEngine? = null
+    private fun asrEngine(): SherpaAsrEngine {
+        if (asrEngineInstance == null) asrEngineInstance = SherpaAsrEngine(reactContext)
+        return asrEngineInstance!!
+    }
+    /** 麦克风权限请求期间挂起的 Promise。 */
+    private var pendingVoicePromise: Promise? = null
+
     /** 拍照时通过 EXTRA_OUTPUT 指定的全尺寸图片 Uri（onActivityResult 时 data 为 null）。 */
     private var pendingCameraUri: Uri? = null
 
@@ -169,6 +178,8 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
 
     override fun invalidate() {
         notificationArrivedListener = null
+        asrEngineInstance?.release()
+        asrEngineInstance = null
         super.invalidate()
     }
 
@@ -1363,6 +1374,102 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
         }
     }
 
+    // ── 语音识别（离线 ASR，sherpa-onnx） ───────────────────────
+
+    /**
+     * 查询模型状态：{ state, modelId, version, ready }。
+     * state: uninitialized | loading | ready | error
+     */
+    @ReactMethod
+    fun voiceGetStatus(promise: Promise) {
+        try {
+            val s = asrEngine().getStatus()
+            val result = WritableNativeMap().apply {
+                putString("state", s["state"] as String)
+                putString("modelId", s["modelId"] as String)
+                putString("version", s["version"] as String)
+                putBoolean("ready", s["ready"] as Boolean)
+            }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("E_AUDIO_INIT_FAILED", e.localizedMessage ?: "查询语音状态失败")
+        }
+    }
+
+    /** 校验 assets 模型完整性并初始化识别器（幂等；已就绪则直接返回）。 */
+    @ReactMethod
+    fun voicePrepareModel(promise: Promise) {
+        asrEngine().prepare(promise)
+    }
+
+    /**
+     * 开始录音（16kHz / 单声道 / PCM16，模型要求）。先检查 RECORD_AUDIO 权限，缺失则请求。
+     * 返回 { started: true }；永久拒绝返回 E_PERMISSION_PERMANENTLY_DENIED。
+     */
+    @ReactMethod
+    fun voiceStartRecording(params: com.facebook.react.bridge.ReadableMap?, promise: Promise) {
+        val activity = reactContext.currentActivity ?: run {
+            promise.reject("NO_ACTIVITY", "当前无 Activity"); return
+        }
+        val hasPermission = ContextCompat.checkSelfPermission(
+            reactContext,
+            Manifest.permission.RECORD_AUDIO,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            asrEngine().startRecording(promise)
+            return
+        }
+        val permissionAware = activity as? PermissionAwareActivity ?: run {
+            promise.reject("NO_PERMISSION_SUPPORT", "当前 Activity 不支持权限请求"); return
+        }
+        pendingVoicePromise = promise
+        permissionAware.requestPermissions(
+            arrayOf(Manifest.permission.RECORD_AUDIO),
+            REQUEST_VOICE_PERMISSION,
+            object : PermissionListener {
+                override fun onRequestPermissionsResult(
+                    requestCode: Int,
+                    permissions: Array<String>,
+                    grantResults: IntArray,
+                ): Boolean {
+                    if (requestCode != REQUEST_VOICE_PERMISSION) return false
+                    val granted = grantResults.isNotEmpty() &&
+                        grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    val p = pendingVoicePromise
+                    pendingVoicePromise = null
+                    if (granted) {
+                        asrEngine().startRecording(promise)
+                    } else if (!ActivityCompat.shouldShowRequestPermissionRationale(
+                            activity,
+                            Manifest.permission.RECORD_AUDIO,
+                        )
+                    ) {
+                        // 用户勾选了「不再询问」：永久拒绝
+                        p?.reject(
+                            "E_PERMISSION_PERMANENTLY_DENIED",
+                            "麦克风权限被永久拒绝，请在系统设置 → 应用 → 本应用 → 权限中开启麦克风权限",
+                        )
+                    } else {
+                        p?.reject("E_PERMISSION_DENIED", "麦克风权限被拒绝，请在系统设置中开启麦克风权限")
+                    }
+                    return true
+                }
+            },
+        )
+    }
+
+    /** 停止录音并执行本地识别，返回 { text, durationMs, modelVersion }。 */
+    @ReactMethod
+    fun voiceStopAndRecognize(params: com.facebook.react.bridge.ReadableMap?, promise: Promise) {
+        asrEngine().stopAndRecognize(promise)
+    }
+
+    /** 取消录音：丢弃音频，不解析、不入账，返回 { cancelled: true }。 */
+    @ReactMethod
+    fun voiceCancelRecording(params: com.facebook.react.bridge.ReadableMap?, promise: Promise) {
+        asrEngine().cancelRecording(promise)
+    }
+
     companion object {
         private const val REQUEST_CAMERA = 9001
         private const val REQUEST_PICK = 9002
@@ -1373,6 +1480,8 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
         private const val REQUEST_STORAGE_PERMISSION = 9007
         private const val REQUEST_NFC_READ = 9008
         private const val REQUEST_NFC_WRITE = 9009
+        /** 语音识别麦克风权限请求码。 */
+        private const val REQUEST_VOICE_PERMISSION = 9010
         /** 图片压缩最大边长（px）。 */
         private const val MAX_IMAGE_EDGE = 1024
         /** JPEG 压缩质量（0-100）。 */

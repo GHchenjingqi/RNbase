@@ -43,6 +43,8 @@ type Capabilities = {
     openApp: boolean;
     nfc: boolean;
     notification: boolean;
+    /** 离线语音识别（sherpa-onnx）：基座已接入 voice 能力，模型随 APK 内置。 */
+    voice: boolean;
   };
 };
 
@@ -92,6 +94,7 @@ function getCapabilities(): Capabilities {
       openApp: Platform.OS === 'android',
       nfc: nfcAvailableCache,
       notification: true,
+      voice: true,
     },
   };
 }
