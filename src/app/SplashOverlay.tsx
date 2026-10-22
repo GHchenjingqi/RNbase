@@ -117,7 +117,8 @@ export function SplashOverlay({
         {/* 底色铺满全屏（pointerEvents=none 让点击穿透到 Pressable）：
             内容缩放后四周露出的区域仍是底色，不会漏出底下 WebView 造成闪白 */}
         <View style={[styles.fill, { backgroundColor }]} pointerEvents="none" />
-        {/* 内容整体缩小 1/2、保持居中（位置不变）：badge / 图 / 文案按各自原始布局等比缩到一半。
+        {/* 内容层铺满全屏：闪图以 contain 完整显示，不裁切不变形；
+            宽高比与常见手机屏接近（默认闪图 1024×2212 ≈ 0.463），留白由底色补齐，视觉无缝。
             pointerEvents=none 保证整屏任意位置仍可点击跳过 */}
         <View style={styles.scaledContent} pointerEvents="none">
           {/* contain 完整显示：cover 在宽屏手机上会按高度撑满、左右裁切，
@@ -153,11 +154,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  // 内容层：整层等比缩到 1/2，transform origin 默认视图中心 -> 缩向中心、位置不变、
-  // 四周留出底色。里面 Image/badge 全部跟随缩放。
+  // 内容层：铺满全屏，不再整体缩放。原先的 transform: scale(0.5) 会让闪图只占半屏、
+  // 四周露出大片底色（用户反馈「闪屏没有撑满」），现已移除。
   scaledContent: {
     ...StyleSheet.absoluteFillObject,
-    transform: [{ scale: 0.5 }],
   },
   // 倒计时：右上角黑色圆形角标，白字、缩小字号，避开中部的应用名。
   // 整体半透明（0.5）：用户要求「倒计时改成半透明」。
