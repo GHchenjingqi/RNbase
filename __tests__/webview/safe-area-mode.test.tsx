@@ -10,7 +10,7 @@
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 const mockInsets = { current: { top: 24, bottom: 16, left: 8, right: 12 } };
 
@@ -28,8 +28,17 @@ jest.mock('react-native-webview', () => {
 
 import { WebViewBridge } from '../../src/webview/WebViewBridge';
 
-const SITE = 'https://gushici.example.com/';
+const SITE = 'https://tenant.example.com/';
 const ASSET = 'file:///android_asset/index.html';
+
+/**
+ * 取挂载树里的 WebView 节点。
+ * 宿主节点在测试树里的 type 就是字符串标签，但 ReactTestInstance.type 声明成 ElementType
+ * （不含裸字符串），直接和字面量比较会被 TS 判成"永不相等"，所以在这一个地方窄化。
+ */
+function findWebView(root: ReactTestInstance) {
+  return root.findAll((n) => (n.type as unknown as string) === 'mock-webview')[0];
+}
 
 /** 挂载 → 取快照 → 立刻卸载：状态更新都关在 act 里，断言只看纯数据。 */
 function snapshot(bridgeEnabled: boolean) {
@@ -43,10 +52,7 @@ function snapshot(bridgeEnabled: boolean) {
     );
   });
   const root = tree!.root;
-  const webViewProps = root.findAll((n) => n.type === 'mock-webview')[0].props as Record<
-    string,
-    unknown
-  >;
+  const webViewProps = findWebView(root).props as Record<string, unknown>;
   const container = StyleSheet.flatten(root.findAllByType(View)[0].props.style) as
     | Record<string, number>
     | undefined;
@@ -102,16 +108,16 @@ describe('安全区：远程注入 CSS / 本地注入能力值，两条路不叠
     act(() => {
       tree = create(element());
     });
-    const uriBefore = (
-      tree!.root.findAll((n) => n.type === 'mock-webview')[0].props as Record<string, unknown>
-    ).source as { uri: string };
+    const uriBefore = (findWebView(tree!.root).props as Record<string, unknown>).source as {
+      uri: string;
+    };
     act(() => {
       mockInsets.current = { top: 48, bottom: 32, left: 0, right: 0 };
       tree!.update(element());
     });
-    const uriAfter = (
-      tree!.root.findAll((n) => n.type === 'mock-webview')[0].props as Record<string, unknown>
-    ).source as { uri: string };
+    const uriAfter = (findWebView(tree!.root).props as Record<string, unknown>).source as {
+      uri: string;
+    };
     act(() => {
       tree!.unmount();
     });

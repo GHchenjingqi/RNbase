@@ -4,6 +4,10 @@
 import { PerformanceMonitor, DEFAULT_BASELINES } from '../../src/performance/performance-monitor';
 import { Throttler, BatchRequester } from '../../src/performance/optimizers';
 import { MemoryMonitor, TempFileCleaner } from '../../src/performance/memory-and-cleanup';
+import type { BatchOptions } from '../../src/performance/types';
+
+// BatchRequester 的 handler 入参类型从源码契约取，别在测试里手写形状（源改了测试要跟着红）。
+type BatchItems = Parameters<BatchOptions['handler']>[0];
 
 describe('P14.1 性能监控器', () => {
   let monitor: PerformanceMonitor;
@@ -39,7 +43,7 @@ describe('P14.1 性能监控器', () => {
   test('超过基线阈值触发告警', () => {
     const alerts: string[] = [];
     const m = new PerformanceMonitor({
-      onAlert: alert => alerts.push(alert.message),
+      onAlert: (alert) => alerts.push(alert.message),
     });
     m.record('app_cold_start', 'App 冷启动', 5000); // 超过 3000ms 阈值
     expect(alerts.length).toBeGreaterThan(0);
@@ -50,7 +54,7 @@ describe('P14.1 性能监控器', () => {
   test('未超过基线阈值不触发告警', () => {
     const alerts: string[] = [];
     const m = new PerformanceMonitor({
-      onAlert: alert => alerts.push(alert.message),
+      onAlert: (alert) => alerts.push(alert.message),
     });
     m.record('app_cold_start', 'App 冷启动', 1000); // 低于 3000ms 阈值
     expect(alerts).toHaveLength(0);
@@ -91,7 +95,7 @@ describe('P14.1 性能监控器', () => {
       maxDurationMs: 1000,
     });
     const baselines = monitor.getBaselines();
-    const bridge = baselines.find(b => b.type === 'bridge_call' && b.name === 'Bridge 调用');
+    const bridge = baselines.find((b) => b.type === 'bridge_call' && b.name === 'Bridge 调用');
     expect(bridge?.maxDurationMs).toBe(1000);
   });
 
@@ -109,7 +113,7 @@ describe('P14.1 性能监控器', () => {
       monitor.record('bridge_call', 'Bridge 调用', i);
     }
     const report = monitor.generateReport();
-    const bridge = report.metrics.find(m => m.type === 'bridge_call');
+    const bridge = report.metrics.find((m) => m.type === 'bridge_call');
     expect(bridge?.p50DurationMs).toBeDefined();
     expect(bridge?.p95DurationMs).toBeDefined();
     expect(bridge?.p99DurationMs).toBeDefined();
@@ -134,7 +138,7 @@ describe('P14.1 性能监控器', () => {
   test('onMetricComplete 回调', () => {
     const completed: string[] = [];
     const m = new PerformanceMonitor({
-      onMetricComplete: metric => completed.push(metric.name),
+      onMetricComplete: (metric) => completed.push(metric.name),
     });
     m.record('bridge_call', 'test', 50);
     expect(completed).toContain('test');
@@ -145,7 +149,7 @@ describe('P14.1 性能监控器', () => {
 describe('P14.2 高频事件节流器', () => {
   test('节流调用不超过频率限制', async () => {
     const calls: number[] = [];
-    const throttler = new Throttler<number>(n => calls.push(n), {
+    const throttler = new Throttler<number>((n) => calls.push(n), {
       minIntervalMs: 50,
     });
 
@@ -157,14 +161,14 @@ describe('P14.2 高频事件节流器', () => {
     expect(calls.length).toBeLessThanOrEqual(2);
 
     // 等待 trailing 执行
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(calls.length).toBeGreaterThanOrEqual(1);
     throttler.destroy();
   });
 
   test('leading 首次立即执行', () => {
     const calls: number[] = [];
-    const throttler = new Throttler<number>(n => calls.push(n), {
+    const throttler = new Throttler<number>((n) => calls.push(n), {
       leading: true,
       minIntervalMs: 100,
     });
@@ -175,21 +179,21 @@ describe('P14.2 高频事件节流器', () => {
 
   test('trailing 最后一次执行', async () => {
     const calls: number[] = [];
-    const throttler = new Throttler<number>(n => calls.push(n), {
+    const throttler = new Throttler<number>((n) => calls.push(n), {
       trailing: true,
       minIntervalMs: 50,
     });
     throttler.call(1);
     throttler.call(2);
     throttler.call(3);
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(calls).toContain(3);
     throttler.destroy();
   });
 
   test('flush 立即执行', () => {
     const calls: number[] = [];
-    const throttler = new Throttler<number>(n => calls.push(n), {
+    const throttler = new Throttler<number>((n) => calls.push(n), {
       minIntervalMs: 1000,
     });
     throttler.call(1);
@@ -200,12 +204,12 @@ describe('P14.2 高频事件节流器', () => {
 
   test('cancel 取消待执行', async () => {
     const calls: number[] = [];
-    const throttler = new Throttler<number>(n => calls.push(n), {
+    const throttler = new Throttler<number>((n) => calls.push(n), {
       minIntervalMs: 50,
     });
     throttler.call(1);
     throttler.cancel();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     // 只有首次立即执行的（如果没有 leading）
     expect(calls.length).toBe(0);
     throttler.destroy();
@@ -213,13 +217,13 @@ describe('P14.2 高频事件节流器', () => {
 
   test('maxWaitMs 最大等待时间', async () => {
     const calls: number[] = [];
-    const throttler = new Throttler<number>(n => calls.push(n), {
+    const throttler = new Throttler<number>((n) => calls.push(n), {
       minIntervalMs: 100,
       maxWaitMs: 50,
     });
     // 持续调用，maxWaitMs 后应该强制执行
     const interval = setInterval(() => throttler.call(Date.now()), 10);
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     clearInterval(interval);
     expect(calls.length).toBeGreaterThan(0);
     throttler.destroy();
@@ -228,10 +232,10 @@ describe('P14.2 高频事件节流器', () => {
 
 describe('P14.3 批量请求合并器', () => {
   test('多个请求合并为一批', async () => {
-    const handler = jest.fn(async items => {
-      return items.map(item => ({
+    const handler = jest.fn(async (items: BatchItems) => {
+      return items.map((item) => ({
         id: item.id,
-        result: `result_${item.data}`,
+        result: `result_${String(item.data)}`,
       }));
     });
     const batch = new BatchRequester({
@@ -249,8 +253,8 @@ describe('P14.3 批量请求合并器', () => {
   });
 
   test('超过 maxBatchSize 分批', async () => {
-    const handler = jest.fn(async items => {
-      return items.map(item => ({ id: item.id, result: item.data }));
+    const handler = jest.fn(async (items: BatchItems) => {
+      return items.map((item) => ({ id: item.id, result: item.data }));
     });
     const batch = new BatchRequester({
       handler,
@@ -266,8 +270,8 @@ describe('P14.3 批量请求合并器', () => {
   });
 
   test('flush 立即处理', async () => {
-    const handler = jest.fn(async items => {
-      return items.map(item => ({ id: item.id, result: item.data }));
+    const handler = jest.fn(async (items: BatchItems) => {
+      return items.map((item) => ({ id: item.id, result: item.data }));
     });
     const batch = new BatchRequester({ handler, maxWaitMs: 1000 });
 
@@ -292,7 +296,7 @@ describe('P14.3 批量请求合并器', () => {
 
   test('pendingCount 返回待处理数', () => {
     const batch = new BatchRequester({
-      handler: async items => items.map(i => ({ id: i.id, result: i.data })),
+      handler: async (items) => items.map((i) => ({ id: i.id, result: i.data })),
       maxWaitMs: 1000,
     });
     const p1 = batch.request('a');
@@ -306,7 +310,7 @@ describe('P14.3 批量请求合并器', () => {
 
   test('destroy 时所有待处理请求 reject', async () => {
     const batch = new BatchRequester({
-      handler: async items => items.map(i => ({ id: i.id, result: i.data })),
+      handler: async (items) => items.map((i) => ({ id: i.id, result: i.data })),
       maxWaitMs: 1000,
     });
     const promise = batch.request('a');
@@ -332,7 +336,7 @@ describe('P14.4 内存监控器', () => {
       getMemory: async () => ({ timestamp: Date.now(), usedMB: 100 }),
     });
     monitor.start();
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     monitor.stop();
     expect(monitor.getSnapshots().length).toBeGreaterThanOrEqual(2);
     monitor.destroy();
@@ -346,7 +350,7 @@ describe('P14.4 内存监控器', () => {
       onAlert: (_level, _snapshot, message) => alerts.push(message),
     });
     await monitor.sample();
-    expect(alerts.some(a => a.includes('警告阈值'))).toBe(true);
+    expect(alerts.some((a) => a.includes('警告阈值'))).toBe(true);
     monitor.destroy();
   });
 
@@ -355,7 +359,7 @@ describe('P14.4 内存监控器', () => {
     const monitor = new MemoryMonitor({
       thresholds: { warningMB: 150, criticalMB: 250 },
       getMemory: async () => ({ timestamp: Date.now(), usedMB: 300 }),
-      onAlert: level => levels.push(level),
+      onAlert: (level) => levels.push(level),
     });
     await monitor.sample();
     expect(levels).toContain('critical');
@@ -416,7 +420,7 @@ describe('P14.5 临时文件清理器', () => {
     const cleaner = new TempFileCleaner({
       maxAgeMs: 24 * 60 * 60 * 1000,
       listFiles: async () => files,
-      deleteFile: async uri => {
+      deleteFile: async (uri) => {
         deleted.push(uri);
         return true;
       },
@@ -439,7 +443,7 @@ describe('P14.5 临时文件清理器', () => {
     const cleaner = new TempFileCleaner({
       maxSizeMB: 50,
       listFiles: async () => files,
-      deleteFile: async uri => {
+      deleteFile: async (uri) => {
         deleted.push(uri);
         return true;
       },
@@ -461,7 +465,7 @@ describe('P14.5 临时文件清理器', () => {
       },
     });
     cleaner.start();
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     cleaner.stop();
     expect(cleanCount).toBeGreaterThanOrEqual(2);
     cleaner.destroy();
@@ -487,7 +491,7 @@ describe('P14.5 临时文件清理器', () => {
         { uri: 'file:///fail', size: 1000, createdAt: now - 5000 },
         { uri: 'file:///ok', size: 2000, createdAt: now - 5000 },
       ],
-      deleteFile: async uri => uri !== 'file:///fail',
+      deleteFile: async (uri) => uri !== 'file:///fail',
     });
     const result = await cleaner.clean();
     expect(result.deletedCount).toBe(1);

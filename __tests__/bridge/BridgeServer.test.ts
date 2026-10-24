@@ -37,9 +37,12 @@ describe('BridgeServer', () => {
   });
 
   test('registerModule 批量注册', async () => {
+    // BridgeHandler 的入参是 unknown：测试里自己收一次窄化，别把参数写成具体类型（那是假安全，
+    // 真实 handler 收到的都是 unknown）。
+    const ab = (params: unknown) => params as { a: number; b: number };
     server.registerModule('test', {
-      add: (params: { a: number; b: number }) => params.a + params.b,
-      sub: (params: { a: number; b: number }) => params.a - params.b,
+      add: (params: unknown) => ab(params).a + ab(params).b,
+      sub: (params: unknown) => ab(params).a - ab(params).b,
     });
     const res1 = await server.handle(
       makeRequest({ module: 'test', action: 'add', params: { a: 1, b: 2 } })
@@ -103,21 +106,31 @@ describe('BridgeServer', () => {
     expect(res.error?.code).toBe('BRIDGE_VERSION_NOT_SUPPORTED');
   });
 
-  test('origin 校验：受信 origin 通过', async () => {
+  test('origin 校验：谓词放行的 origin 通过', async () => {
     const s = new BridgeServer({
-      trustedOrigins: ['https://mobile-base.example.com'],
+      isTrustedOrigin: (origin) => origin === 'https://mobile-base.example.com',
     });
     s.register('test', 'echo', () => 'ok');
-    const res = await s.handle(makeRequest(), 'https://mobile-base.example.com/page');
+    const res = await s.handle(makeRequest(), 'https://mobile-base.example.com');
     expect(res.success).toBe(true);
   });
 
   test('origin 校验：非受信 origin 拒绝', async () => {
     const s = new BridgeServer({
-      trustedOrigins: ['https://mobile-base.example.com'],
+      isTrustedOrigin: (origin) => origin === 'https://mobile-base.example.com',
     });
     s.register('test', 'echo', () => 'ok');
     const res = await s.handle(makeRequest(), 'https://evil.com');
+    expect(res.success).toBe(false);
+    expect(res.error?.code).toBe('SECURITY_BLOCKED');
+  });
+
+  test('origin 校验：配了谓词就拿不到 origin 也拒绝（失败关闭，不再放行）', async () => {
+    const s = new BridgeServer({
+      isTrustedOrigin: () => true,
+    });
+    s.register('test', 'echo', () => 'ok');
+    const res = await s.handle(makeRequest());
     expect(res.success).toBe(false);
     expect(res.error?.code).toBe('SECURITY_BLOCKED');
   });

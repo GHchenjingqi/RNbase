@@ -98,6 +98,17 @@ function doctor() {
   lines.push(`workspace：${ws || '缺失（pod install 之后才有）'}`);
   lines.push(`自研原生模块：${nativeSources().join(', ') || '未发现 Base*.{swift,m}'}`);
 
+  // 磁盘上有源文件 ≠ 工程会编译它：漏加 pbxproj 时 xcodebuild 一声不响，
+  // 打出的是「没有 Bridge 能力」的包，所以这里直接复述引用检查结果。
+  const drift = require('./check-ios-project.js').collectIosProjectDrift(iosDir);
+  lines.push(
+    drift.length === 0
+      ? '工程引用完整性：pbxproj 已引用全部原生源文件'
+      : `工程引用完整性：${drift.length} 个源文件没进工程（构建会静默跳过）：\n      ${drift.join(
+          '\n      '
+        )}`
+  );
+
   // clientId 占位校验：直接扫 config 源文件，避免引入 TS 解析依赖。
   const configPath = path.join(root, 'src', 'config', 'index.ts');
   const cfg = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';

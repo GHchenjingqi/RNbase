@@ -59,6 +59,8 @@ describe('update 桥接模块', () => {
     const cases = [
       { url: '', version: '1.0.2' },
       { url: 'ftp://host/app.apk', version: '1.0.2' },
+      // 明文 http 一律拒：整包升级被中间人换掉包没有任何补救机会
+      { url: 'http://host/app.apk', version: '1.0.2' },
       { url: 'http://host/app.apk', version: '' },
       { url: 'http://host/app.apk', version: 2 },
     ];
@@ -97,8 +99,10 @@ describe('update 桥接模块', () => {
       version: '1.0.2',
       size: -1,
     });
-    expect((startDownload.mock.calls[0][0] as { size: number }).size).toBe(0);
-    expect((startDownload.mock.calls[1][0] as { size: number }).size).toBe(0);
+    // jest.fn(async () => ...) 推出来的 calls 是空元组，按适配器真实入参窄一次再取值
+    const sent = startDownload.mock.calls as unknown as [{ size: number }][];
+    expect(sent[0][0].size).toBe(0);
+    expect(sent[1][0].size).toBe(0);
   });
 
   test('适配器抛出的 BridgeException 原样透出', async () => {
@@ -132,10 +136,10 @@ describe('resolveNativeUpdateAdapter', () => {
     };
     const adapters = resolveNativeUpdateAdapter();
     // BridgeException 的错误码挂在 error.code 上（不是实例的 code 字段）
-    const installErr = await adapters.install!().catch((e) => e as BridgeException);
+    const installErr = (await adapters.install!().catch((e: unknown) => e)) as BridgeException;
     expect(installErr).toBeInstanceOf(BridgeException);
     expect(installErr.error.code).toBe('PERMISSION_DENIED');
-    const cleanupErr = await adapters.cleanup!().catch((e) => e as BridgeException);
+    const cleanupErr = (await adapters.cleanup!().catch((e: unknown) => e)) as BridgeException;
     expect(cleanupErr.error.code).toBe('NATIVE_ERROR');
   });
 

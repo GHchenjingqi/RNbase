@@ -58,4 +58,27 @@ describe('createWebViewMessageHandler', () => {
     expect(await handler('not-json')).toBeNull();
     expect(await handler(JSON.stringify({ type: 'event', event: 'ping' }))).toBeNull();
   });
+
+  it('把事件里的来源交给 BridgeServer 判定：站外来源直接吃 SECURITY_BLOCKED', async () => {
+    const server = createBridgeServer(undefined, undefined, undefined, undefined, {
+      // 与 WebViewBridge 的接线一致：谓词由 webview/message-origin 组，这里只验透传
+      isTrustedOrigin: (origin) => origin === 'file://',
+    });
+    const handler = createWebViewMessageHandler(server);
+    const req = JSON.stringify({
+      type: 'request',
+      id: 'wv3',
+      version: '1.0.0',
+      module: 'app',
+      action: 'getCapabilities',
+    });
+
+    const blocked = JSON.parse((await handler(req, 'https://evil.com')) as string);
+    expect(blocked.success).toBe(false);
+    expect(blocked.error.code).toBe('SECURITY_BLOCKED');
+
+    // 同源来源照旧放行，且响应必须回填同一个 id，否则 H5 侧的 Promise 会挂到超时
+    const allowed = JSON.parse((await handler(req, 'file://')) as string);
+    expect(allowed).toMatchObject({ id: 'wv3', success: true });
+  });
 });

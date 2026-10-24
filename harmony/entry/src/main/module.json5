@@ -25,12 +25,12 @@
         "name": "ohos.permission.VIBRATE"
       },
       {
-        // ERPNetwork.getStatus 读网络类型（wifi/cellular）；normal 级、system_grant，
+        // BaseNetwork.getStatus 读网络类型（wifi/cellular）；normal 级、system_grant，
         // 装包即授予，不需要运行时弹窗。
         "name": "ohos.permission.GET_NETWORK_INFO"
       },
       {
-        // ERPCapabilities.getCurrentPosition（H5 打卡/巡检定位）。user_grant，
+        // BaseCapabilities.getCurrentPosition（H5 打卡/巡检定位）。user_grant，
         // 运行时由原生弹窗申请；只申请精确定位会被系统直接拒绝，粗定位必须一起声明。
         "name": "ohos.permission.APPROXIMATELY_LOCATION",
         "reason": "$string:permission_location_reason",

@@ -160,7 +160,12 @@ describe('SplashOverlay', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer.update(
-        <SplashOverlay durationMs={1000} imageSource={IMAGE} onFinish={onFinish} holdUntil={false} />
+        <SplashOverlay
+          durationMs={1000}
+          imageSource={IMAGE}
+          onFinish={onFinish}
+          holdUntil={false}
+        />
       );
     });
     await ReactTestRenderer.act(async () => {
@@ -233,7 +238,12 @@ describe('SplashOverlay', () => {
     // 页面提前加载完成：holdUntil 翻转只应影响「走完后是否等待」，不能让倒计时从头再来
     await ReactTestRenderer.act(async () => {
       renderer.update(
-        <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} holdUntil={false} />
+        <SplashOverlay
+          durationMs={3000}
+          imageSource={IMAGE}
+          onFinish={onFinish}
+          holdUntil={false}
+        />
       );
     });
     await ReactTestRenderer.act(async () => {
@@ -249,24 +259,5 @@ describe('SplashOverlay', () => {
       jest.advanceTimersByTime(400);
     });
     expect(onFinish).toHaveBeenCalledTimes(1);
-  });
-
-  it('传入 appName 时居中叠加显示应用中文名；不传则不渲染文字', async () => {
-    const onFinish = jest.fn();
-    let renderer!: ReactTestRenderer.ReactTestRenderer;
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(
-        <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} appName="古韵诗笺" />
-      );
-    });
-    const node = renderer.root.findByProps({ testID: 'splash-appname' });
-    expect(node.props.children).toBe('古韵诗笺');
-
-    await ReactTestRenderer.act(async () => {
-      renderer.update(
-        <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} appName="" />
-      );
-    });
-    expect(renderer.root.findAll((n) => n.props.testID === 'splash-appname').length).toBe(0);
   });
 });

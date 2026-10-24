@@ -63,7 +63,7 @@ export type StartDownloadOptions = {
 export type UpdateAdapters = {
   getInfo?: () => Promise<UpdateInfo>;
   startDownload?: (
-    options: StartDownloadOptions,
+    options: StartDownloadOptions
   ) => Promise<{ started: boolean; taskState: string }>;
   getProgress?: () => Promise<DownloadProgress>;
   cancelDownload?: () => Promise<{ ok: boolean }>;
@@ -76,7 +76,7 @@ export type UpdateAdapters = {
 
 function pick<T extends keyof UpdateAdapters>(
   adapters: UpdateAdapters,
-  key: T,
+  key: T
 ): NonNullable<UpdateAdapters[T]> {
   const fn = adapters[key];
   if (!fn) {
@@ -95,8 +95,10 @@ export function registerUpdateModule(server: BridgeServer, adapters: UpdateAdapt
       const p = params as StartDownloadOptions | undefined;
       const url = typeof p?.url === 'string' ? p.url.trim() : '';
       const version = typeof p?.version === 'string' ? p.version.trim() : '';
-      if (!(url.startsWith('https://') || url.startsWith('http://'))) {
-        throw new BridgeException('INVALID_PARAMS', 'url 必须是 http(s) 下载地址');
+      if (!url.startsWith('https://')) {
+        // 整包替换的下载源只认 https：明文 http 链路上任何人做一次中间人就能把包换成别的 apk，
+        // 而用户看到的是「升级到新版本」的系统安装弹窗，没有任何补救机会。
+        throw new BridgeException('INVALID_PARAMS', 'url 必须是 https 下载地址');
       }
       // version 决定落盘文件名（qux-<version>.apk），也是「同一目标版本不重复起任务」的依据
       if (!version) {

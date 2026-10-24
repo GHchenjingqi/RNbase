@@ -221,6 +221,12 @@ export const MEDIA_IMAGE_MAX_COUNT = 9;
 export const MEDIA_IMAGE_MAX_SIZE = 10 * 1024 * 1024;
 
 /**
+ * Bridge 单次文件读取（file.readAsBase64）允许的最大字节数，默认 20MB。
+ * Base64 字符串体积约为源文件的 4/3，再大就会挤爆 WebView 的 postMessage 通道（超时/OOM）。
+ */
+export const BRIDGE_FILE_READ_MAX_BYTES = 20 * 1024 * 1024;
+
+/**
  * ===================== 性能监控配置（performance） =====================
  */
 

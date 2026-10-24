@@ -46,10 +46,7 @@ const baseDir = path.resolve(process.env.BASE_DIR || ROOT);
  * 这样同一份品牌下发脚本能服务两种布局——某些基座仍是重构前的顶层 android/ 目录。
  */
 function resolveAndroidMain() {
-  for (const rel of [
-    ['platforms', 'android'],
-    ['android'],
-  ]) {
+  for (const rel of [['platforms', 'android'], ['android']]) {
     const p = path.join(baseDir, ...rel, 'app', 'src', 'main');
     if (fs.existsSync(p)) return p;
   }
@@ -96,7 +93,7 @@ const HARMONY_APP_STRINGS = path.join(
   'resources',
   'base',
   'element',
-  'string.json',
+  'string.json'
 );
 const HARMONY_ENTRY_STRINGS = path.join(
   baseDir,
@@ -107,15 +104,15 @@ const HARMONY_ENTRY_STRINGS = path.join(
   'resources',
   'base',
   'element',
-  'string.json',
+  'string.json'
 );
 
 function fail(msg) {
   console.error(`[app-meta] ${msg}`);
   process.exit(1);
 }
-const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8'));
-const xmlEscape = s =>
+const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
+const xmlEscape = (s) =>
   s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -181,7 +178,7 @@ function applyColor(name, hex) {
   fs.writeFileSync(COLORS_XML, xml, 'utf8');
 }
 
-const splashDrawableXml = withLogo =>
+const splashDrawableXml = (withLogo) =>
   `<?xml version="1.0" encoding="utf-8"?>\n` +
   `<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n` +
   `    <item android:drawable="@color/splash_bg" />\n` +
@@ -255,14 +252,14 @@ function applySplashAsset(hasSplashMaster, masterPath) {
     fs.writeFileSync(
       SPLASH_ACTIVE_TS,
       `${SPLASH_ACTIVE_DOC}export const SPLASH_ACTIVE: number | null = require('./splash-brand.png');\n`,
-      'utf8',
+      'utf8'
     );
   } else {
     fs.rmSync(SPLASH_BRAND_PNG, { force: true });
     fs.writeFileSync(
       SPLASH_ACTIVE_TS,
       `${SPLASH_ACTIVE_DOC}export const SPLASH_ACTIVE: number | null = null;\n`,
-      'utf8',
+      'utf8'
     );
   }
 }
@@ -289,7 +286,7 @@ function applyHarmonyStringLabel(file, name, value) {
   if (!fs.existsSync(file)) return;
   const data = JSON.parse(fs.readFileSync(file, 'utf8'));
   const items = Array.isArray(data.string) ? data.string : [];
-  const hit = items.find(i => i && i.name === name);
+  const hit = items.find((i) => i && i.name === name);
   if (!hit) return;
   hit.value = value;
   fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8');
@@ -370,7 +367,7 @@ function verifyApplied(cfg, hasBrand, brandDir, harmonyApplied) {
     ]) {
       if (!fs.existsSync(file)) continue;
       const items = JSON.parse(fs.readFileSync(file, 'utf8')).string;
-      const hit = Array.isArray(items) ? items.find(i => i && i.name === name) : undefined;
+      const hit = Array.isArray(items) ? items.find((i) => i && i.name === name) : undefined;
       if (!hit || hit.value !== cfg.appName) {
         problems.push(`${path.relative(baseDir, file)} 的 ${name} 未同步为 ${cfg.appName}`);
       }
@@ -420,14 +417,15 @@ function main() {
   const prevSplashDurationMs = prev.splashDurationMs;
   // --reset 连这几个开关一起清掉：中性基座就是本地模式 + 跟随系统 + 默认 dev 入口 + 默认闪屏时长。
   const remoteUrl = reset ? '' : rawCfg.remoteUrl !== undefined ? rawCfg.remoteUrl : '';
-  const statusBarStyle =
-    reset ? '' : rawCfg.statusBarStyle !== undefined ? rawCfg.statusBarStyle : prevStatusBarStyle;
+  const statusBarStyle = reset
+    ? ''
+    : rawCfg.statusBarStyle !== undefined
+    ? rawCfg.statusBarStyle
+    : prevStatusBarStyle;
   const h5DevUrl = reset ? '' : rawCfg.h5DevUrl !== undefined ? rawCfg.h5DevUrl : prevH5DevUrl;
   const DEFAULT_SPLASH_MS = 3000;
   let splashDurationMs =
-    reset || rawCfg.splashDurationMs !== undefined
-      ? rawCfg.splashDurationMs
-      : prevSplashDurationMs;
+    reset || rawCfg.splashDurationMs !== undefined ? rawCfg.splashDurationMs : prevSplashDurationMs;
   if (splashDurationMs === undefined || splashDurationMs === null || splashDurationMs === '') {
     splashDurationMs = DEFAULT_SPLASH_MS;
   }
@@ -437,7 +435,7 @@ function main() {
     !['default', 'light-content', 'dark-content'].includes(String(statusBarStyle))
   ) {
     fail(
-      `statusBarStyle 非法：${statusBarStyle}（应为 default / light-content / dark-content，留空表示跟随系统深浅色）`,
+      `statusBarStyle 非法：${statusBarStyle}（应为 default / light-content / dark-content，留空表示跟随系统深浅色）`
     );
   }
   // 留空 = 用平台默认 dev 入口；off = 显式关闭直连；其余必须是 http(s) 地址。
@@ -446,14 +444,10 @@ function main() {
     String(h5DevUrl).toLowerCase() !== 'off' &&
     !/^https?:\/\/\S+/i.test(String(h5DevUrl))
   ) {
-    fail(
-      `h5DevUrl 非法：${h5DevUrl}（应为 http(s) 地址、'off'，或留空用平台默认 dev 入口）`,
-    );
+    fail(`h5DevUrl 非法：${h5DevUrl}（应为 http(s) 地址、'off'，或留空用平台默认 dev 入口）`);
   }
   if (!Number.isInteger(splashMsNum) || splashMsNum < 0 || splashMsNum > 15000) {
-    fail(
-      `splashDurationMs 非法：${splashDurationMs}（应为 0–15000 的整数毫秒，0 表示关闭闪屏）`,
-    );
+    fail(`splashDurationMs 非法：${splashDurationMs}（应为 0–15000 的整数毫秒，0 表示关闭闪屏）`);
   }
   fs.mkdirSync(baseDir, { recursive: true });
   fs.writeFileSync(
@@ -474,9 +468,9 @@ function main() {
         splashBackgroundColor: cfg.splashBackgroundColor,
       },
       null,
-      2,
+      2
     ) + '\n',
-    'utf8',
+    'utf8'
   );
 
   // 2. 应用显示名
@@ -516,13 +510,18 @@ function main() {
       `"${cfg.appName}" pkg=${cfg.applicationId} v${cfg.versionName}(${cfg.versionCode}) ` +
       `品牌资源=${hasBrand ? '自定义图标/闪屏' : '基座默认'} ` +
       `倒计时闪屏=${hasSplashMaster ? '品牌闪图' : '默认闪图'} ` +
-      `鸿蒙=${harmonyApplied ? '已同步名称/版本' : '无 harmony/ 工程，跳过'}`,
+      `鸿蒙=${harmonyApplied ? '已同步名称/版本' : '无 harmony/ 工程，跳过'}`
   );
   console.log(`[app-meta] APK 文件名将为：${cfg.apkName}-${cfg.versionName}-<变体>.apk`);
 }
 
-try {
-  main();
-} catch (e) {
-  fail(e && e.message ? e.message : String(e));
+// 直接执行才下发品牌；被 require（如 check-brand-neutral 借 NEUTRAL 当唯一真源）时不动盘。
+if (require.main === module) {
+  try {
+    main();
+  } catch (e) {
+    fail(e && e.message ? e.message : String(e));
+  }
 }
+
+module.exports = { NEUTRAL };

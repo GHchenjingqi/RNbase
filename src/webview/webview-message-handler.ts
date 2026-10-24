@@ -9,7 +9,7 @@ import type { BridgeServer } from '../bridge/bridge-server';
 import type { BridgeRequest, BridgeResponse } from '../bridge/protocol';
 
 export function createWebViewMessageHandler(server: BridgeServer) {
-  return async (raw: string): Promise<string | null> => {
+  return async (raw: string, origin?: string): Promise<string | null> => {
     let req: BridgeRequest;
     try {
       req = JSON.parse(raw) as BridgeRequest;
@@ -19,7 +19,8 @@ export function createWebViewMessageHandler(server: BridgeServer) {
     if (!req || req.type !== 'request') {
       return null;
     }
-    const res: BridgeResponse = await server.handle(req);
+    // origin 来自 onMessage 事件（不是页面自己写在 payload 里的字段），交 BridgeServer 判定。
+    const res: BridgeResponse = await server.handle(req, origin);
     return JSON.stringify(res);
   };
 }

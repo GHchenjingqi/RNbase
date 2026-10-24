@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "//": "tsconfig.json 把 __tests__ 排除掉了（为了让 npm run typecheck 不被测试噪声挡住），代价是测试里的类型错误长期没人管：改签名、改 Bridge 契约时测试会静默失配，只在运行时才炸。这份配置专门把测试纳回来做类型检查，npm run typecheck:test / CI 跑它，npm run typecheck 仍然只看 src。",
+  "compilerOptions": {
+    // 基座 presets 只给 types:[jest]，但 scripts/ 相关单测按 Node 环境写（process/require/Buffer），
+    // 补 node 类型是这份配置独有的偏差，不回写 tsconfig.json，免得 src 里误用 Node API 没人拦。
+    "types": ["jest", "node"]
+  },
+  "include": ["src/**/*", "__tests__/**/*", "*.ts", "*.tsx"],
+  "exclude": ["h5", "harmony", "dist", "log", "node_modules", "coverage"]
+}

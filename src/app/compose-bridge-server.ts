@@ -14,15 +14,18 @@ import type { NetworkAdapter } from '../middleware/network/types';
 export type BridgeServerOptions = {
   /** 每次 Bridge 调用后的观测钩子（设备调用日志）。 */
   onCall?: BridgeCallHandler;
+  /** Bridge 消息来源谓词（规范 §25）；由 WebViewBridge 用当前页与入口 URL 组出来。 */
+  isTrustedOrigin?: (origin?: string) => boolean;
 };
 
 export function createAppBridgeServer(
   capabilities: CapabilityAdapters = {},
   lifecycle: LifecycleHandlers = {},
   network?: NetworkAdapter,
-  options: BridgeServerOptions = {},
+  options: BridgeServerOptions = {}
 ): ReturnType<typeof createBridgeServer> {
   return createBridgeServer(new PermissionManager(), capabilities, lifecycle, network, {
     onCall: options.onCall,
+    isTrustedOrigin: options.isTrustedOrigin,
   });
 }

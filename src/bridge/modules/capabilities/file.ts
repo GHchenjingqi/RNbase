@@ -3,6 +3,8 @@
  */
 import type { BridgeServer } from '../../bridge-server';
 import { BridgeException } from '../../bridge-error';
+import { assertReadableSize, decideFileReadUri } from '../../file-read-policy';
+import { BRIDGE_FILE_READ_MAX_BYTES } from '../../../config';
 import { CapabilityAdapters, requireAdapter } from './types';
 
 export function registerFileModule(server: BridgeServer, adapters: CapabilityAdapters): void {
@@ -15,6 +17,9 @@ export function registerFileModule(server: BridgeServer, adapters: CapabilityAda
     /**
      * 读取文件内容为 Base64（H5 调用 FILE.READASBASE64）。
      * 供 H5 侧转 Blob 后上传到后端（如头像上传 /system/user/profile/avatar）。
+     *
+     * uri 由 H5 直接给出，原生会照读，所以这里先过两道：路径闸门（凭据目录、穿越、
+     * 非文件 scheme）与结果体积上限。
      */
     async readAsBase64(params) {
       const adapter = requireAdapter(adapters.file, 'file');
@@ -22,7 +27,19 @@ export function registerFileModule(server: BridgeServer, adapters: CapabilityAda
       if (!p?.uri) {
         throw new BridgeException('INVALID_PARAMS', 'uri 不能为空');
       }
-      return adapter.readAsBase64(p.uri);
+      const decision = decideFileReadUri(p.uri);
+      if (!decision.allow) {
+        throw new BridgeException('SECURITY_BLOCKED', `uri 被文件读取策略拒绝：${decision.reason}`);
+      }
+      const result = await adapter.readAsBase64(p.uri);
+      const size = assertReadableSize(result, BRIDGE_FILE_READ_MAX_BYTES);
+      if (!size.allow) {
+        throw new BridgeException(
+          'FILE_TOO_LARGE',
+          `文件 ${size.bytes} 字节，超过 Bridge 读取上限 ${BRIDGE_FILE_READ_MAX_BYTES} 字节`
+        );
+      }
+      return result;
     },
     /**
      * 从相册选图（H5 调用 FILE.PICKIMAGE）。

@@ -27,7 +27,7 @@ function parseH5Registry(source) {
     let m;
     while ((m = blockRegex.exec(modulesMatch[1])) !== null) {
       const actions = {};
-      const actionRegex = /([A-Z_]+): '([a-zA-Z]+)'/g;
+      const actionRegex = /([A-Z0-9_]+): '([a-zA-Z][a-zA-Z0-9]*)'/g;
       let a;
       while ((a = actionRegex.exec(m[2])) !== null) {
         actions[a[1]] = a[2];
@@ -43,7 +43,7 @@ function parseH5Registry(source) {
   const amActions = source.match(/var APP_MANAGER_ACTIONS = \{([\s\S]*?)\n  \};/);
   if (amModule && amActions) {
     let a;
-    const actionRegex = /([A-Z_]+): '([a-zA-Z]+)'/g;
+    const actionRegex = /([A-Z0-9_]+): '([a-zA-Z][a-zA-Z0-9]*)'/g;
     while ((a = actionRegex.exec(amActions[1])) !== null) {
       appManager[a[1]] = { module: amModule[1], action: a[2] };
     }

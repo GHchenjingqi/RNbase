@@ -7,6 +7,22 @@ import { UploadQueue, createMockUploader } from '../../src/media/upload-queue';
 import { createMockPlatformAdapter } from '../../src/media/mock-adapter';
 import type { ImageAsset, FileAsset } from '../../src/media/types';
 
+/**
+ * 轮询等到条件成立再断言。
+ *
+ * 为什么不用固定 `setTimeout`：这些用例等的是 mock uploader 的 100~200ms 真实定时器，
+ * 全量并发跑（尤其带 --coverage）时事件循环被抢占，150ms 的 sleep 到点了任务却还没落
+ * 到 'success'，于是断言假失败——同一条用例在 CI 上抖过两次。轮询把"等够时间"换成
+ * "等到状态"，快机器上反而更快，慢机器上不再误报。
+ */
+async function waitUntil(condition: () => boolean, timeoutMs = 3000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() > deadline) throw new Error(`等待条件成立超时（${timeoutMs}ms）`);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
 describe('P11.1 图片服务', () => {
   let adapter: ReturnType<typeof createMockPlatformAdapter>;
   let imageService: ImageService;
@@ -159,7 +175,7 @@ describe('P11.2 文件服务', () => {
     const result = await fileService.download({
       url: 'https://example.com/file.pdf',
       fileName: 'test.pdf',
-      onProgress: progress => progressEvents.push(progress.percent),
+      onProgress: (progress) => progressEvents.push(progress.percent),
     });
     expect(result.uri).toMatch(/^file:\/\//);
     expect(result.name).toBe('test.pdf');
@@ -269,7 +285,7 @@ describe('P11.3 上传队列', () => {
       uploadUrl: 'https://example.com/upload',
       onComplete,
     });
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await waitUntil(() => onComplete.mock.calls.length > 0);
     expect(onComplete).toHaveBeenCalled();
     const result = onComplete.mock.calls[0][0];
     expect(result.fileUrl).toContain('https://mock-cdn.example.com');
@@ -284,9 +300,9 @@ describe('P11.3 上传队列', () => {
       size: 1024 * 1024,
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
-      onProgress: progress => progressEvents.push(progress.percent),
+      onProgress: (progress) => progressEvents.push(progress.percent),
     });
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await waitUntil(() => progressEvents[progressEvents.length - 1] === 100);
     expect(progressEvents.length).toBeGreaterThan(0);
     expect(progressEvents[progressEvents.length - 1]).toBe(100);
   });
@@ -329,7 +345,7 @@ describe('P11.3 上传队列', () => {
       onError,
     });
     uploadQueue.cancelTask(task.id);
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await waitUntil(() => uploadQueue.getTask(task.id)?.status === 'cancelled');
     const updatedTask = uploadQueue.getTask(task.id);
     expect(updatedTask?.status).toBe('cancelled');
   });
@@ -350,7 +366,7 @@ describe('P11.3 上传队列', () => {
       uploadUrl: 'https://example.com/upload',
     });
     uploadQueue.cancelAll();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await waitUntil(() => uploadQueue.getStats().pending === 0);
     const stats = uploadQueue.getStats();
     expect(stats.pending).toBe(0);
   });
@@ -370,11 +386,11 @@ describe('P11.3 上传队列', () => {
       uploadUrl: 'https://example.com/upload',
       onError,
     });
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await waitUntil(() => onError.mock.calls.length > 0);
     expect(onError).toHaveBeenCalled();
     const retryResult = queue.retryTask(task.id);
     expect(retryResult).toBe(true);
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await waitUntil(() => queue.getTask(task.id)?.status === 'success');
     const updatedTask = queue.getTask(task.id);
     expect(updatedTask?.status).toBe('success');
   });
@@ -394,9 +410,11 @@ describe('P11.3 上传队列', () => {
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
     });
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await waitUntil(() => queue.getTask(task.id)?.status === 'failed');
     queue.retryTask(task.id); // 第 1 次重试
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await waitUntil(
+      () => queue.getTask(task.id)?.status === 'failed' && queue.getTask(task.id)?.retryCount === 1
+    );
     const retryResult = queue.retryTask(task.id); // 第 2 次重试（超过限制）
     expect(retryResult).toBe(false);
   });
@@ -421,7 +439,7 @@ describe('P11.3 上传队列', () => {
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
     });
-    await new Promise(resolve => setTimeout(resolve, 250));
+    await waitUntil(() => uploadQueue.getStats().completed === 1);
     const stats = uploadQueue.getStats();
     expect(stats.total).toBe(1);
     expect(stats.completed).toBe(1);
@@ -471,11 +489,11 @@ describe('P11.3 上传队列', () => {
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
     });
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(uploadQueue.getTask(task.id)?.status).toBe('pending');
 
     uploadQueue.resume();
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await waitUntil(() => uploadQueue.getTask(task.id)?.status === 'success');
     expect(uploadQueue.getTask(task.id)?.status).toBe('success');
   });
 
@@ -487,7 +505,7 @@ describe('P11.3 上传队列', () => {
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
     });
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     uploadQueue.clear();
     const stats = uploadQueue.getStats();
     expect(stats.total).toBe(0);
@@ -517,7 +535,12 @@ describe('P11.3 上传队列', () => {
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
     });
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // 等"两个在跑、一个排队"这个稳态出现再断言：50ms 固定 sleep 在负载高时
+    // 可能还没轮到调度，读出 active=0/pending=3 的假失败。
+    await waitUntil(() => {
+      const s = queue.getStats();
+      return s.active === 2 && s.pending === 1;
+    });
     const stats = queue.getStats();
     expect(stats.active).toBeLessThanOrEqual(2);
     expect(stats.pending).toBe(1);

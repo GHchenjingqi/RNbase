@@ -19,9 +19,13 @@ type BaseH5Mock = {
 
 const native = NativeModules as Record<string, unknown>;
 
-function mockErph5(): BaseH5Mock {
+function mockBaseH5(): BaseH5Mock {
   const mock: BaseH5Mock = {
-    verifyPackageSignature: jest.fn(async () => ({ valid: true })),
+    // 桩只关心返回值、不读参数，所以按声明的三元签名收一次类型（jest.fn 推出来的空参数
+    // 签名和 BaseH5Mock 不重叠，直接赋值会被 TS 拒）。
+    verifyPackageSignature: jest.fn(async () => ({
+      valid: true,
+    })) as unknown as BaseH5Mock['verifyPackageSignature'],
   };
   native.BaseH5 = mock;
   return mock;
@@ -42,7 +46,7 @@ describe('createNativeSignatureVerifier', () => {
   });
 
   test('探测成功：数据转 base64 过桥并透传 valid=true', async () => {
-    const mock = mockErph5();
+    const mock = mockBaseH5();
     const verifier = createNativeSignatureVerifier();
     expect(verifier).not.toBeNull();
 
@@ -52,14 +56,14 @@ describe('createNativeSignatureVerifier', () => {
   });
 
   test('原生返回 valid=false 时透传 false（校验失败语义）', async () => {
-    const mock = mockErph5();
+    const mock = mockBaseH5();
     mock.verifyPackageSignature.mockResolvedValueOnce({ valid: false, error: 'mismatch' });
     const verifier = createNativeSignatureVerifier();
     await expect(verifier!(new Uint8Array(1), 'bad-sig', 'PEM')).resolves.toBe(false);
   });
 
   test('原生 reject 时向上抛出（调用方按校验器不可用处理）', async () => {
-    const mock = mockErph5();
+    const mock = mockBaseH5();
     mock.verifyPackageSignature.mockRejectedValueOnce(new Error('INVALID_PUBLIC_KEY'));
     const verifier = createNativeSignatureVerifier();
     await expect(verifier!(new Uint8Array(1), 'sig', 'bad-pem')).rejects.toThrow(
@@ -68,7 +72,7 @@ describe('createNativeSignatureVerifier', () => {
   });
 
   test('超过桥接防护阈值时抛明确错误，不调用原生', async () => {
-    const mock = mockErph5();
+    const mock = mockBaseH5();
     const verifier = createNativeSignatureVerifier();
     const big = new Uint8Array(MAX_BRIDGE_BYTES + 1);
     await expect(verifier!(big, 'sig', 'PEM')).rejects.toThrow('exceeds bridge limit');

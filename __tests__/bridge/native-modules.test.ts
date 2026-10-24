@@ -292,55 +292,68 @@ describe('notification 模块', () => {
 });
 
 describe('10 模块完整性', () => {
-  test('createBridgeServer 注册了全部 41 个模块', () => {
+  /**
+   * 基座应注册的桥接模块清单。
+   * 用名单做集合相等断言，而不是 `modules.size` 字面量：加一个模块就改一个数字，
+   * 红了只知道「差一个」，不知道差在哪个名字上。
+   */
+  const EXPECTED_MODULES = [
+    // 基础模块
+    'app',
+    'permission',
+    'auth',
+    'system',
+    'notification',
+    'network',
+    'log',
+    // 设备能力模块
+    'camera',
+    'scanner',
+    'media',
+    'file',
+    'location',
+    'clipboard',
+    'brightness',
+    'flashlight',
+    'sensor',
+    'biometric',
+    'contacts',
+    'calendar',
+    'nfc',
+    'bluetooth',
+    'audio',
+    'storage',
+    'networkInfo',
+    'qr',
+    'image',
+    'haptics',
+    'speech',
+    'appManager',
+    'backgroundTask',
+    'inAppReview',
+    // 离线语音识别（ASR，目前仅安卓落地）
+    'voice',
+    // 远程全量升级（仅安卓落地，iOS 由模块层报 DEVICE_UNSUPPORTED）
+    'update',
+    // 纯 RN 模块
+    'toast',
+    'dialog',
+    'orientation',
+    'statusBar',
+    'keyboard',
+    'navigation',
+    'webView',
+    'device',
+    'battery',
+  ];
+
+  test('createBridgeServer 注册的模块与清单完全一致', () => {
     const server = createBridgeServer();
     const methods = server.listMethods();
-    const modules = new Set(methods.map(m => m.split('.')[0]));
-    // 基础模块
-    expect(modules.has('app')).toBe(true);
-    expect(modules.has('permission')).toBe(true);
-    expect(modules.has('auth')).toBe(true);
-    expect(modules.has('system')).toBe(true);
-    expect(modules.has('notification')).toBe(true);
-    expect(modules.has('network')).toBe(true);
-    expect(modules.has('log')).toBe(true);
-    // 设备能力模块
-    expect(modules.has('camera')).toBe(true);
-    expect(modules.has('scanner')).toBe(true);
-    expect(modules.has('media')).toBe(true);
-    expect(modules.has('file')).toBe(true);
-    expect(modules.has('location')).toBe(true);
-    expect(modules.has('clipboard')).toBe(true);
-    expect(modules.has('brightness')).toBe(true);
-    expect(modules.has('flashlight')).toBe(true);
-    expect(modules.has('sensor')).toBe(true);
-    expect(modules.has('biometric')).toBe(true);
-    expect(modules.has('contacts')).toBe(true);
-    expect(modules.has('calendar')).toBe(true);
-    expect(modules.has('nfc')).toBe(true);
-    expect(modules.has('bluetooth')).toBe(true);
-    expect(modules.has('audio')).toBe(true);
-    expect(modules.has('storage')).toBe(true);
-    expect(modules.has('networkInfo')).toBe(true);
-    expect(modules.has('qr')).toBe(true);
-    expect(modules.has('image')).toBe(true);
-    expect(modules.has('haptics')).toBe(true);
-    expect(modules.has('speech')).toBe(true);
-    expect(modules.has('appManager')).toBe(true);
-    expect(modules.has('backgroundTask')).toBe(true);
-    expect(modules.has('inAppReview')).toBe(true);
-    // 远程全量升级（仅安卓落地，iOS 由模块层报 DEVICE_UNSUPPORTED）
-    expect(modules.has('update')).toBe(true);
-    // 纯 RN 模块
-    expect(modules.has('toast')).toBe(true);
-    expect(modules.has('dialog')).toBe(true);
-    expect(modules.has('orientation')).toBe(true);
-    expect(modules.has('statusBar')).toBe(true);
-    expect(modules.has('keyboard')).toBe(true);
-    expect(modules.has('navigation')).toBe(true);
-    expect(modules.has('webView')).toBe(true);
-    expect(modules.has('device')).toBe(true);
-    expect(modules.has('battery')).toBe(true);
-    expect(modules.size).toBe(41);
+    const modules = new Set(methods.map((m) => m.split('.')[0]));
+    expect({
+      missing: EXPECTED_MODULES.filter((n) => !modules.has(n)),
+      unexpected: [...modules].filter((n) => !EXPECTED_MODULES.includes(n)),
+    }).toEqual({ missing: [], unexpected: [] });
   });
 });

@@ -20,6 +20,7 @@ import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.util.Log
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.WritableNativeMap
 import com.k2fsa.sherpa.onnx.FeatureConfig
@@ -66,6 +67,12 @@ class SherpaAsrEngine(private val context: Context) {
         private const val JOINER = "$MODEL_DIR/joiner-epoch-99-avg-1.int8.onnx"
         private const val TOKENS = "$MODEL_DIR/tokens.txt"
         private const val SAMPLE_RATE = 16000
+        /** 采样峰值低于该值视为静音（约 -46dBFS），说明麦克风压根没采到声音。 */
+        private const val SILENCE_PEAK = 0.005f
+        /** 语音最短时长（秒）：片段太短，识别器出不了字。 */
+        private const val MIN_SPEECH_SECONDS = 0.3
+        /** 日志 tag，方便 adb logcat -s SherpaAsrEngine 抓取排查。 */
+        private const val TAG = "SherpaAsrEngine"
     }
 
     val modelId: String = "zh-small"
@@ -128,14 +135,31 @@ class SherpaAsrEngine(private val context: Context) {
                 promise.reject("E_AUDIO_INIT_FAILED", "无法初始化音频缓冲区（设备不支持该采样配置）")
                 return
             }
+            // 用 VOICE_RECOGNITION 而非 MIC：该 source 专为语音识别设计，框架更可靠地把
+            // 麦克风音频送进来，并默认开启 AGC（自动增益）。这既能规避部分机型用 MIC 时
+            // 被静音/输入路由异常导致「采到全 0 静音」的问题，也能把轻声说话的电平抬到
+            // 静音阈值之上，避免误判成 E_AUDIO_EMPTY。
             val record = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT,
                 minBuf * 2,
             )
+            // AudioRecord 构造不一定会抛异常，必须显式校验初始化状态。
+            if (record.state != AudioRecord.STATE_INITIALIZED) {
+                record.release()
+                promise.reject("E_AUDIO_INIT_FAILED", "AudioRecord 初始化失败（设备不支持该音频配置）")
+                return
+            }
             record.startRecording()
+            // startRecording() 同样不保证真正进入录音态，未进入则说明拿不到麦克风，
+            // 这类情况用 MIC 时容易表现为「采到全 0」却无任何报错，这里提前暴露。
+            if (record.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                record.release()
+                promise.reject("E_AUDIO_INIT_FAILED", "AudioRecord 启动录音失败（无法获取麦克风）")
+                return
+            }
             val bos = ByteArrayOutputStream()
             pcmRef.set(bos)
             recordingRef.set(record)
@@ -143,9 +167,20 @@ class SherpaAsrEngine(private val context: Context) {
             recordStartMs.set(System.currentTimeMillis())
             val t = thread(start = true, name = "asr-capture") {
                 val chunk = ByteArray(minBuf)
+                var errCount = 0
                 while (isRecording.get()) {
                     val read = record.read(chunk, 0, chunk.size)
-                    if (read > 0) bos.write(chunk, 0, read)
+                    when {
+                        read > 0 -> { bos.write(chunk, 0, read); errCount = 0 }
+                        read == AudioRecord.ERROR_INVALID_OPERATION ||
+                            read == AudioRecord.ERROR_BAD_VALUE -> {
+                            // 偶发内部错误可重试；持续失败说明录音器异常，及时退出避免空转卡死。
+                            Log.w(TAG, "AudioRecord.read 返回错误码 $read")
+                            if (++errCount > 50) break
+                            try { Thread.sleep(10) } catch (_: InterruptedException) { }
+                        }
+                        // read == 0：暂无数据，继续轮询
+                    }
                 }
             }
             recordThread = t
@@ -176,7 +211,28 @@ class SherpaAsrEngine(private val context: Context) {
             pcmRef.set(null)
             val durationMs = System.currentTimeMillis() - recordStartMs.get()
             if (pcm.size < 2) {
-                promise.reject("E_AUDIO_EMPTY", "录音内容为空或过短")
+                promise.reject("E_AUDIO_EMPTY", "未采集到音频：录音内容为空，请确认已授权麦克风后重试")
+                return
+            }
+            val samples = pcmToFloat(pcm)
+            val peak = peakAmplitude(samples)
+            Log.i(TAG, "ASR 停止录音 pcmBytes=${pcm.size} samples=${samples.size} peak=${formatPeak(peak)} durationMs=$durationMs")
+            // 静音判定：峰值过低说明麦克风根本没采到声音（权限未授予、被其他应用占用、
+            // 选错输入源），与「识别不出文字」是两类完全不同的故障，必须分开报，
+            // 否则用户只会看到一句「没识别到文字」，无从下手。
+            if (peak < SILENCE_PEAK) {
+                promise.reject(
+                    "E_AUDIO_EMPTY",
+                    "未采集到声音（音量峰值 ${formatPeak(peak)}，低于 ${formatPeak(SILENCE_PEAK)}）。" +
+                        "请检查麦克风权限、是否被其他应用占用，并贴近麦克风后重试",
+                )
+                return
+            }
+            if (samples.size < SAMPLE_RATE * MIN_SPEECH_SECONDS) {
+                promise.reject(
+                    "E_AUDIO_TOO_SHORT",
+                    "录音仅 ${samples.size * 1000 / SAMPLE_RATE}ms，短于 ${MIN_SPEECH_SECONDS * 1000}ms，请至少说满一句话",
+                )
                 return
             }
             executor.submit {
@@ -185,29 +241,41 @@ class SherpaAsrEngine(private val context: Context) {
                         promise.reject("E_MODEL_NOT_READY", "语音模型未就绪")
                         return@submit
                     }
-                    val samples = pcmToFloat(pcm)
                     // 该版本 sherpa-onnx 的流式 API 挂在 OnlineStream 上：
                     // acceptWaveform/inputFinished 是 stream 的方法，getResult 需要传入 stream。
                     val stream = recognizer.createStream()
-                    var offset = 0
-                    val chunkSize = SAMPLE_RATE // 每次喂 1 秒，贴合流式处理节奏
-                    while (offset < samples.size) {
-                        val end = minOf(offset + chunkSize, samples.size)
-                        val chunk = samples.copyOfRange(offset, end)
-                        stream.acceptWaveform(chunk, chunk.size)
-                        offset = end
-                    }
-                    stream.inputFinished()
                     val text = try {
+                        var offset = 0
+                        val chunkSize = SAMPLE_RATE // 每次喂 1 秒，贴合流式处理节奏
+                        while (offset < samples.size) {
+                            val end = minOf(offset + chunkSize, samples.size)
+                            val chunk = samples.copyOfRange(offset, end)
+                            stream.acceptWaveform(chunk, chunk.size)
+                            // 必须显式驱动解码：acceptWaveform 只把音频塞进流的缓冲区，
+                            // 真正的 encoder/decoder/joiner 推理发生在 decode() 里。
+                            // 漏掉这步，getResult 永远返回空文本。
+                            while (recognizer.isReady(stream)) {
+                                recognizer.decode(stream)
+                            }
+                            offset = end
+                        }
+                        stream.inputFinished()
+                        // 收尾：把最后几帧解完（上游示例在 inputFinished 后还会再 decode 一次）
+                        recognizer.decode(stream)
+                        while (recognizer.isReady(stream)) {
+                            recognizer.decode(stream)
+                        }
                         recognizer.getResult(stream).text ?: ""
                     } finally {
                         stream.release()
                     }
+                    Log.i(TAG, "ASR 识别完成 text=\"$text\" peak=${formatPeak(peak)}")
                     promise.resolve(
                         voiceMap(
                             "text" to text,
                             "durationMs" to durationMs,
                             "modelVersion" to modelVersion,
+                            "peak" to peak,
                         ),
                     )
                 } catch (e: Exception) {
@@ -278,6 +346,20 @@ class SherpaAsrEngine(private val context: Context) {
         }
         return out
     }
+
+    /** 采样峰值（0~1）：用于判断麦克风是否真的采到了声音。 */
+    private fun peakAmplitude(samples: FloatArray): Float {
+        var peak = 0f
+        for (s in samples) {
+            val a = if (s < 0) -s else s
+            if (a > peak) peak = a
+        }
+        return peak
+    }
+
+    /** 峰值格式化：保留 4 位小数，用户能从报错里直接判断录音电平高低。 */
+    private fun formatPeak(peak: Float): String =
+        String.format(java.util.Locale.US, "%.4f", peak)
 
     /** asMap 已由文件顶部的 voiceMap 取代（RN 无法转换 java.util.LinkedHashMap）。 */
 }

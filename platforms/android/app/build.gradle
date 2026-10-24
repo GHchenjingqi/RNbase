@@ -119,6 +119,13 @@ android {
                 storePassword QUX_UPLOAD_STORE_PASSWORD
                 keyAlias QUX_UPLOAD_KEY_ALIAS
                 keyPassword QUX_UPLOAD_KEY_PASSWORD
+            } else {
+                // 未配置正式签名（本地/探针阶段）：退回用 debug.keystore 签 release，
+                // 便于真机直接安装验证（用户既定方案：debug 签名出 release）。
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
             }
         }
     }

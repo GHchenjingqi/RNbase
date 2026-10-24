@@ -91,7 +91,8 @@ describe('P2-2 崩溃上报闭环', () => {
       fetch?: (url: string, init: { method?: string; body?: string }) => Promise<{ ok: boolean }>;
     };
     const orig = g.fetch;
-    let captured: { url: string; init: { method?: string; body?: string } } | null = null;
+    type Sent = { url: string; init: { method?: string; body?: string } };
+    let captured: Sent | null = null;
     g.fetch = async (url, init) => {
       captured = { url, init };
       return { ok: true };
@@ -100,9 +101,11 @@ describe('P2-2 崩溃上报闭环', () => {
       const up = createHttpCrashUploader('https://gw.example.com/crashes');
       const res = await up.upload([sampleRecord({ message: 'net' })]);
       expect(res.ok).toBe(true);
-      expect(captured?.url).toBe('https://gw.example.com/crashes');
-      expect(captured?.init.method).toBe('POST');
-      expect(captured?.init.body).toContain('"crashes"');
+      // 赋值发生在 fetch 的闭包里，TS 的控制流分析看不到，取一次显式类型再断言
+      const sent = captured as Sent | null;
+      expect(sent?.url).toBe('https://gw.example.com/crashes');
+      expect(sent?.init.method).toBe('POST');
+      expect(sent?.init.body).toContain('"crashes"');
     } finally {
       g.fetch = orig;
     }

@@ -10,6 +10,13 @@
 		0C80B921A6F3F58F76C31292 /* libPods-qux.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-qux.a */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
+		761782112CA45674006654EE /* BaseCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782012CA45674006654EE /* BaseCapabilities.swift */; };
+		761782122CA45674006654EE /* BaseCapabilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 761782022CA45674006654EE /* BaseCapabilities.m */; };
+		761782132CA45674006654EE /* BaseH5.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782032CA45674006654EE /* BaseH5.swift */; };
+		761782142CA45674006654EE /* BaseH5.m in Sources */ = {isa = PBXBuildFile; fileRef = 761782042CA45674006654EE /* BaseH5.m */; };
+		761782152CA45674006654EE /* BaseNetwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782052CA45674006654EE /* BaseNetwork.swift */; };
+		761782162CA45674006654EE /* BaseNetwork.m in Sources */ = {isa = PBXBuildFile; fileRef = 761782062CA45674006654EE /* BaseNetwork.m */; };
+		761782172CA45674006654EE /* BasePermissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782072CA45674006654EE /* BasePermissions.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
@@ -22,6 +29,13 @@
 		5709B34CF0A7D63546082F79 /* Pods-qux.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-qux.release.xcconfig"; path = "Target Support Files/Pods-qux/Pods-qux.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-qux.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-qux.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = qux/AppDelegate.swift; sourceTree = "<group>"; };
+		761782012CA45674006654EE /* BaseCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseCapabilities.swift; path = qux/BaseCapabilities.swift; sourceTree = "<group>"; };
+		761782022CA45674006654EE /* BaseCapabilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BaseCapabilities.m; path = qux/BaseCapabilities.m; sourceTree = "<group>"; };
+		761782032CA45674006654EE /* BaseH5.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseH5.swift; path = qux/BaseH5.swift; sourceTree = "<group>"; };
+		761782042CA45674006654EE /* BaseH5.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BaseH5.m; path = qux/BaseH5.m; sourceTree = "<group>"; };
+		761782052CA45674006654EE /* BaseNetwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseNetwork.swift; path = qux/BaseNetwork.swift; sourceTree = "<group>"; };
+		761782062CA45674006654EE /* BaseNetwork.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BaseNetwork.m; path = qux/BaseNetwork.m; sourceTree = "<group>"; };
+		761782072CA45674006654EE /* BasePermissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BasePermissions.swift; path = qux/BasePermissions.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = qux/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -43,6 +57,13 @@
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				761782012CA45674006654EE /* BaseCapabilities.swift */,
+				761782022CA45674006654EE /* BaseCapabilities.m */,
+				761782032CA45674006654EE /* BaseH5.swift */,
+				761782042CA45674006654EE /* BaseH5.m */,
+				761782052CA45674006654EE /* BaseNetwork.swift */,
+				761782062CA45674006654EE /* BaseNetwork.m */,
+				761782072CA45674006654EE /* BasePermissions.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -245,6 +266,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				761782112CA45674006654EE /* BaseCapabilities.swift in Sources */,
+				761782122CA45674006654EE /* BaseCapabilities.m in Sources */,
+				761782132CA45674006654EE /* BaseH5.swift in Sources */,
+				761782142CA45674006654EE /* BaseH5.m in Sources */,
+				761782152CA45674006654EE /* BaseNetwork.swift in Sources */,
+				761782162CA45674006654EE /* BaseNetwork.m in Sources */,
+				761782172CA45674006654EE /* BasePermissions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

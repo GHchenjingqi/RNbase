@@ -6,6 +6,7 @@
 import type { BridgeServer } from '../bridge-server';
 import { BridgeException } from '../bridge-error';
 import type { WebViewHandle } from '../../webview/web-view-controller';
+import { decideNavigation } from '../../webview/navigation';
 
 let webViewHandle: WebViewHandle | null = null;
 
@@ -49,11 +50,15 @@ export function registerWebViewControlModule(server: BridgeServer): void {
       return { ok: true };
     },
 
-    /** 加载指定 URL。 */
+    /** 加载指定 URL（必须先过导航白名单，否则等于绕开 onShouldStartLoadWithRequest 把容器开出去）。 */
     loadUrl(params) {
       const p = params as { url?: string } | undefined;
       if (!p?.url) {
         throw new BridgeException('INVALID_PARAMS', 'url 不能为空');
+      }
+      const decision = decideNavigation(p.url);
+      if (decision.action !== 'allow') {
+        throw new BridgeException('SECURITY_BLOCKED', `loadUrl 被导航策略拒绝：${decision.reason}`);
       }
       const wv = requireWebView();
       if (typeof wv.loadUrl !== 'function') {

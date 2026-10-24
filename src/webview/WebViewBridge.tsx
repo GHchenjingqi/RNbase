@@ -39,6 +39,7 @@ import { BRIDGE_EVENTS } from '../bridge/protocol';
 import type { CapabilityAdapters } from '../bridge/modules/capabilities/types';
 import type { LifecycleHandlers } from '../bridge/modules/app';
 import { createWebViewMessageHandler } from './webview-message-handler';
+import { isTrustedMessageOrigin } from './message-origin';
 import { useWebViewController } from './web-view-controller';
 import { EXIT_CONFIRM_WINDOW_MS, createBackCoordinator } from './back-policy';
 import type { BackCoordinator } from './back-policy';
@@ -275,15 +276,30 @@ export function WebViewBridge({
     return () => setWebViewHandle(null);
   }, [controller]);
 
+  // 容器侧跟踪的「当前是哪一页」：入口 URL 兜底，之后由加载事件更新。
+  // Bridge 来源判定只认这份，页面自己在 payload 里写什么不算数。
+  const pageUrlRef = useRef<string>('uri' in source ? source.uri : '');
+  useEffect(() => {
+    pageUrlRef.current = 'uri' in source ? source.uri : '';
+  }, [source]);
+
   const server = useMemo(() => {
     const s = createAppBridgeServer(capabilities, lifecycle, undefined, {
       onCall: logDeviceCall,
+      // 规范 §25 落地：消息来源必须与当前页同源，且当前页本身可信。
+      isTrustedOrigin: (origin) =>
+        isTrustedMessageOrigin({
+          messageOrigin: origin,
+          pageUrl: pageUrlRef.current,
+          entryUrl: 'uri' in source ? source.uri : '',
+          whitelist: trustedOrigins,
+        }),
     });
     // 启动即写一条 boot 日志，用于验证日志链路与按日期分包
     const entry = 'uri' in source ? source.uri : 'inline';
     deviceLogger.info(`bridge.ready entry=${entry} bridgeVersion=1.0.0`);
     return s;
-  }, [capabilities, lifecycle, source]);
+  }, [capabilities, lifecycle, source, trustedOrigins]);
   const handleMessage = useMemo(() => createWebViewMessageHandler(server), [server]);
 
   // 返回键逻辑只挂一次（见下方 BackHandler effect），用 ref 读取最新的 server/controller，
@@ -536,6 +552,9 @@ export function WebViewBridge({
         ref={controller._webViewRef}
         source={webViewSource}
         onLoadStart={(event) => {
+          if (event.nativeEvent.url) {
+            pageUrlRef.current = event.nativeEvent.url;
+          }
           controller._onLoadStart(event.nativeEvent.canGoBack);
           onLoadStart?.();
           // 远程模式：主资源未在时限内到达即判超时（见 REMOTE_H5_LOAD_TIMEOUT_MS）
@@ -555,6 +574,9 @@ export function WebViewBridge({
         }}
         onLoadEnd={(event) => {
           clearRemoteLoadTimer();
+          if (event.nativeEvent.url) {
+            pageUrlRef.current = event.nativeEvent.url;
+          }
           controller._onLoadEnd(event.nativeEvent.canGoBack);
           onLoadEnd?.();
         }}
@@ -564,16 +586,18 @@ export function WebViewBridge({
         onError={handleNativeError}
         onHttpError={handleHttpError}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
-        onMessage={async (event: { nativeEvent: { data: string } }) => {
+        onMessage={async (event: { nativeEvent: { data: string; url?: string } }) => {
           if (!bridgeEnabled) {
             // 远程模式：容器不受理任何来自页面的消息（原生能力面为零）。
             return;
           }
           const raw = event.nativeEvent.data;
+          // 来源由平台给：安卓=消息源 origin，鸿蒙=当前整页 URL；拿不到时 BridgeServer 拒。
+          const origin = event.nativeEvent.url;
           if (__DEV__) {
             console.log(`[bridge] H5->RN msg=${raw.slice(0, 300)}`);
           }
-          const responseRaw = await handleMessage(raw);
+          const responseRaw = await handleMessage(raw, origin);
           if (responseRaw && controller._webViewRef.current) {
             if (__DEV__) {
               console.log(`[bridge] RN->H5 resp=${responseRaw.slice(0, 300)}`);

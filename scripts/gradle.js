@@ -18,9 +18,13 @@ const { gradleHomeArgs, aapt2OverrideArgs } = require('./gradle-home');
 const { setupAdbReverse } = require('./adb-forward');
 const { check: checkHermesc } = require('./check-hermesc');
 const { writeApkHash } = require('./apk-hash');
+const { appendBuild, checkReleaseVersionCode } = require('./build-ledger');
 const { createTee } = require('./log-tee');
 
-const args = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+// --allow-same-version 是本地闸门开关，留给本脚本消费：透传给 gradlew 会变成未知参数。
+const allowSameVersionCode = rawArgs.includes('--allow-same-version');
+const args = rawArgs.filter((a) => a !== '--allow-same-version');
 if (args.length === 0) {
   console.error('用法: node scripts/gradle.js <gradle-task> [args...]');
   process.exit(1);
@@ -62,7 +66,7 @@ function collectApk(variant, versionInfo) {
     console.error(`[APK] 未找到输出目录: ${outDir}`);
     return 1;
   }
-  const apks = fs.readdirSync(outDir).filter(f => f.endsWith('.apk'));
+  const apks = fs.readdirSync(outDir).filter((f) => f.endsWith('.apk'));
   if (apks.length === 0) {
     console.error(`[APK] ${outDir} 下没有 APK 产物`);
     return 1;
@@ -80,12 +84,12 @@ function collectApk(variant, versionInfo) {
     if (versionInfo) {
       if (element && String(element.versionName) !== String(versionInfo.versionName)) {
         problems.push(
-          `versionName 不一致：APK=${element.versionName} / version.json=${versionInfo.versionName}`,
+          `versionName 不一致：APK=${element.versionName} / version.json=${versionInfo.versionName}`
         );
       }
       if (element && Number(element.versionCode) !== Number(versionInfo.versionCode)) {
         problems.push(
-          `versionCode 不一致：APK=${element.versionCode} / version.json=${versionInfo.versionCode}`,
+          `versionCode 不一致：APK=${element.versionCode} / version.json=${versionInfo.versionCode}`
         );
       }
       if (
@@ -95,14 +99,14 @@ function collectApk(variant, versionInfo) {
       ) {
         problems.push(
           `applicationId 不一致：APK=${meta.applicationId} / version.json=${versionInfo.applicationId}` +
-            `（活动子应用切换后需重新打包）`,
+            `（活动子应用切换后需重新打包）`
         );
       }
     }
     if (problems.length) {
       for (const p of problems) console.error(`[APK] 校验失败：${p}`);
       console.error(
-        '[APK] 拒绝投递该产物。请确认已执行品牌下发（npm run app:use <name>），再重新打包。',
+        '[APK] 拒绝投递该产物。请确认已执行品牌下发（npm run app:use <name>），再重新打包。'
       );
       return 1;
     }
@@ -127,11 +131,23 @@ function collectApk(variant, versionInfo) {
   const { dest: hashPath, sha256 } = writeApkHash(dest);
   console.log(`[sha256] ${sha256}\n[sha256] 已写入: ${hashPath}`);
 
-  const stale = apks.filter(f => f !== expected);
+  // 记入出包台账：下一次 release 出包前用它判版本码是否倒退（见 scripts/build-ledger.js）。
+  if (versionInfo) {
+    appendBuild(rootDir, {
+      artifact: expected,
+      mode: variant,
+      applicationId: versionInfo.applicationId,
+      versionName: versionInfo.versionName,
+      versionCode: versionInfo.versionCode,
+      sha256,
+    });
+  }
+
+  const stale = apks.filter((f) => f !== expected);
   if (stale.length) {
     console.log(
       `[APK] 注意：构建目录另有 ${stale.length} 个历史产物（未被本次构建刷新，勿用于交付）：\n` +
-        stale.map(f => `        ${path.join(outDir, f)}`).join('\n'),
+        stale.map((f) => `        ${path.join(outDir, f)}`).join('\n')
     );
   }
   return 0;
@@ -144,10 +160,47 @@ console.log(`[gradle] 工作目录: ${androidDir}`);
 console.log(`[gradle] 任务: ${args.join(' ')}`);
 console.log(`[gradle] 日志: ${path.join(logDir, 'build.log')}`);
 
+// release 出包前的两道本地闸门：版本码单调性 + 签名材料是否就位。
+// 判据都来自本机（gitignore 的出包台账 + 本地 gradle.properties），不影响 CI 的行为。
+const wantsRelease = args.some((a) => /^(assemble|bundle)Release$/.test(a));
+if (wantsRelease) {
+  const vi = readVersionInfo();
+  if (vi && !allowSameVersionCode) {
+    const verdict = checkReleaseVersionCode(rootDir, {
+      applicationId: vi.applicationId,
+      versionCode: vi.versionCode,
+    });
+    if (!verdict.allow) {
+      console.error(`[gradle] 拒绝出 release 包：${verdict.problem}`);
+      process.exit(1);
+    }
+    if (verdict.last !== null) {
+      console.log(`[gradle] 版本码检查通过：本次 ${vi.versionCode} > 上次 release ${verdict.last}`);
+    }
+  }
+  const propsFile = path.join(androidDir, 'gradle.properties');
+  // 正式签名的约定是环境变量注入（见 gradle.properties 第 63 行的说明），
+  // 所以两处都要看；只读文件还会把「# export ORG_GRADLE_PROJECT_QUX_UPLOAD_STORE_FILE=…」
+  // 这类注释样例误判成已配置，警告就永远不会响。
+  const propsHasKey =
+    fs.existsSync(propsFile) &&
+    /^\s*QUX_UPLOAD_STORE_FILE\s*=\s*\S/m.test(fs.readFileSync(propsFile, 'utf8'));
+  const envHasKey = Boolean(
+    process.env.ORG_GRADLE_PROJECT_QUX_UPLOAD_STORE_FILE || process.env.QUX_UPLOAD_STORE_FILE
+  );
+  if (!propsHasKey && !envHasKey) {
+    console.warn(
+      '[gradle] 警告: 本次 release 未配置正式签名（gradle.properties 与环境变量都没有 QUX_UPLOAD_STORE_FILE），' +
+        'build.gradle 会退回 debug.keystore 签 release。\n' +
+        '         这种包只能自测/侧装验证：上市场会被驳回，发给已装正式版的用户也会因签名不一致装不上。'
+    );
+  }
+}
+
 // 打包 APK 前，确保 H5 安全区修复已注入 h5/index.html。
 // H5 每次构建会用模板覆盖 index.html，此处幂等补回，保证打进 APK 的是修复版。
 // 触发范围：assemble*/install*（installDebug 内部也走 assembleDebug，同样需要注入）。
-if (args.some(a => /^(assemble|install|bundle|package)/.test(a))) {
+if (args.some((a) => /^(assemble|install|bundle|package)/.test(a))) {
   // 坏 hermesc 会打出「构建成功」但没有字节码的包，先验再打。
   checkHermesc(rootDir);
 
@@ -162,7 +215,7 @@ if (args.some(a => /^(assemble|install|bundle|package)/.test(a))) {
     app = resolveActiveApp();
   } catch (e) {
     console.warn(
-      `[gradle] 无活动子应用（${e.message}）——按「直接用 h5/ 打包」处理：只注入基座 h5/，品牌取自 version.json`,
+      `[gradle] 无活动子应用（${e.message}）——按「直接用 h5/ 打包」处理：只注入基座 h5/，品牌取自 version.json`
     );
   }
   const injectTargets = ['h5'];
@@ -170,7 +223,7 @@ if (args.some(a => /^(assemble|install|bundle|package)/.test(a))) {
     console.log(`[gradle] 活动子应用: ${app.name}（产物 ${app.distDir}）`);
     injectTargets.push(app.distDir);
   }
-  injectTargets.forEach(target => {
+  injectTargets.forEach((target) => {
     const r = spawnSync(process.execPath, [path.join(__dirname, 'inject-h5-api.js'), target], {
       stdio: 'inherit',
     });
@@ -186,22 +239,22 @@ const child = spawn(gradlew, [...args, ...extraArgs], {
   stdio: ['ignore', 'pipe', 'pipe'],
   shell: isWin,
 });
-child.stdout.on('data', c => buildLog.write(c));
-child.stderr.on('data', c => buildLog.write(c));
-child.on('exit', code => {
+child.stdout.on('data', (c) => buildLog.write(c));
+child.stderr.on('data', (c) => buildLog.write(c));
+child.on('exit', (code) => {
   buildLog.end();
   if (code !== 0) {
     process.exit(code);
   }
   // 装机成功就补 adb reverse：adb reverse 不持久，单独跑 build:android:install
   // （不经 dev.js）时也要配上，否则和 npm run dev 的行为不一致。
-  if (args.some(a => /^install.*Debug$/i.test(a))) {
+  if (args.some((a) => /^install.*Debug$/i.test(a))) {
     setupAdbReverse(METRO_PORT, 'gradle');
   }
   // assemble 任务成功后，把真实产物投递到 dist/<applicationId>/。
   const variants = { assembleDebug: 'debug', assembleRelease: 'release' };
   let exitCode = 0;
-  args.forEach(task => {
+  args.forEach((task) => {
     const variant = variants[task];
     if (!variant) return;
     exitCode = collectApk(variant, readVersionInfo()) || exitCode;

@@ -84,9 +84,9 @@ describe('resolveNativeCapabilityAdapters', () => {
         throw new Error('PASTE_FAILED: no focus');
       }),
     });
-    const err = await resolveNativeCapabilityAdapters()
+    const err = (await resolveNativeCapabilityAdapters()
       .clipboard!.getString()
-      .catch((e) => e as BridgeException);
+      .catch((e: unknown) => e)) as BridgeException;
     expect(err).toBeInstanceOf(BridgeException);
     expect(err.error.code).toBe('NATIVE_ERROR');
     expect(err.error.message).toContain('no focus');

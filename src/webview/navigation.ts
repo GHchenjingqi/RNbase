@@ -15,7 +15,8 @@
 import { DOMAIN_WHITELIST } from '../config';
 import type { NavigationDecision } from './types';
 
-function normalizeOrigin(url: string): string | null {
+/** 取 URL 的 origin（`scheme://host`）；解析失败返回 null。Bridge 来源判定共用。 */
+export function normalizeOrigin(url: string): string | null {
   try {
     const u = new URL(url);
     return `${u.protocol}//${u.host}`;

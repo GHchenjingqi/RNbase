@@ -4,7 +4,7 @@
 > 漂移校验：`node scripts/gen-api-doc.js --check`。
 > 详细使用说明见根目录 `DEVICE_CAPABILITIES.md`（手写文档）。
 
-## H5 SDK 暴露的能力（15 模块）
+## H5 SDK 暴露的能力（16 模块）
 
 | 调用 | Bridge module.action |
 | --- | --- |
@@ -25,6 +25,7 @@
 | `RN.MEDIA.SAVEIMAGE` | media.saveImage |
 | `RN.FILE.PICK` | file.pick |
 | `RN.FILE.PICKIMAGE` | file.pickImage |
+| `RN.FILE.READASBASE64` | file.readAsBase64 |
 | `RN.FILE.DOWNLOAD` | file.download |
 | `RN.FILE.OPEN` | file.open |
 | `RN.LOCATION.GETCURRENTPOSITION` | location.getCurrentPosition |
@@ -68,8 +69,13 @@
 | `RN.LOG.ERROR` | log.error |
 | `RN.LOG.WARN` | log.warn |
 | `RN.LOG.DEBUG` | log.debug |
+| `RN.VOICE.GETSTATUS` | voice.getStatus |
+| `RN.VOICE.PREPAREMODEL` | voice.prepareModel |
+| `RN.VOICE.STARTRECORDING` | voice.startRecording |
+| `RN.VOICE.STOPANDRECOGNIZE` | voice.stopAndRecognize |
+| `RN.VOICE.CANCELRECORDING` | voice.cancelRecording |
 
-**合计 60 个方法。**
+**合计 66 个方法。**
 
 ### APPMANAGER 特例（模块名 appManager，非全小写）
 

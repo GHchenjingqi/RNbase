@@ -63,7 +63,7 @@ export function createBridgeServer(
   capabilities: CapabilityAdapters = {},
   lifecycle: LifecycleHandlers = {},
   networkAdapter?: NetworkAdapter | undefined,
-  options?: { onCall?: BridgeCallHandler },
+  options?: { onCall?: BridgeCallHandler; isTrustedOrigin?: (origin?: string) => boolean }
 ): BridgeServer {
   // 原生适配器为默认能力来源，传入的 capabilities 可覆盖（规则 13：适配现有工程）。
   const merged: CapabilityAdapters = {
@@ -71,7 +71,7 @@ export function createBridgeServer(
     ...capabilities,
   };
   const server = new BridgeServer({
-    onEvent: e => {
+    onEvent: (e) => {
       if (!e.success) {
         logger.log({
           event: 'bridge_error',
@@ -84,6 +84,7 @@ export function createBridgeServer(
       }
     },
     onCall: options?.onCall,
+    isTrustedOrigin: options?.isTrustedOrigin,
   });
 
   // ── 基础模块 ──

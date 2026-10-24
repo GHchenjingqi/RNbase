@@ -50,15 +50,31 @@ jobs:
       - name: Typecheck (tsc --noEmit)
         run: npm run typecheck
 
+      # 测试代码也纳入类型检查：tsconfig.json 长期 exclude __tests__，改 Bridge 契约时
+      # 测试里的类型失配只有跑到运行时才暴露（本次第一次跑就抓出 22 处）。
+      - name: Typecheck tests (tsconfig.test.json)
+        run: npm run typecheck:test
+
       - name: Lint (eslint)
         run: npm run lint
 
-      - name: Unit tests (jest)
-        run: npm test
+      # 带 --coverage 才有门禁：jest.config.js 的 coverageThreshold 只在收集覆盖率时生效。
+      - name: Unit tests (jest + coverage gate)
+        run: npm run test:coverage
 
       # Bridge 能力清单漂移守卫：api.js 注册表变更必须同步重新生成文档。
       - name: Bridge API doc drift check
         run: npm run gen:api-doc:check
+
+      # 基座品牌中性守卫：checkout 出来的仓库可见路径（桌面名/闪屏底色/图标/鸿蒙桌面名）
+      # 必须等于中性默认值，防止某个子应用的品牌跟着功能提交进基座历史。
+      - name: Base brand neutrality check
+        run: npm run brand:check
+
+      # iOS 工程引用守卫：pbxproj 没引用的源文件不会让 xcodebuild 报错，
+      # 只会打出一个「少了整块 Bridge 能力」的绿包，所以在 linux runner 上先查一遍。
+      - name: iOS project reference check
+        run: npm run ios:check-project
 
       # 说明：prettier 格式校验不在 CI 硬门禁内。仓库存在预存在的格式偏差
       # （缺 .prettierrc 导致长期以默认 80 列检查），格式统一由提交钩子

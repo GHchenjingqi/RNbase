@@ -27,7 +27,7 @@ import { BRIDGE_TIMEOUT_MS } from '../config';
 
 export type BridgeHandler<P = unknown, D = unknown> = (
   params: P,
-  request: BridgeRequest<P>,
+  request: BridgeRequest<P>
 ) => Promise<D> | D;
 
 export type BridgeEvent = {
@@ -44,8 +44,11 @@ export type BridgeServerOptions = {
   onEvent?: (event: BridgeEvent) => void;
   /** 每次 Bridge 调用后的观测钩子（含参数/结果/耗时/错误，供设备调用日志）。 */
   onCall?: BridgeCallHandler;
-  /** 受信 origin 列表（规范 §25），为空则不校验 origin。 */
-  trustedOrigins?: string[];
+  /**
+   * 来源校验谓词（规范 §25）。给入即生效且**失败关闭**：谓词不认的 origin（含 origin 缺失）
+   * 一律 SECURITY_BLOCKED。不给则不校验——单测与无 WebView 的宿主场景才这么用。
+   */
+  isTrustedOrigin?: (origin?: string) => boolean;
   /** 请求超时时间（毫秒），默认使用配置。 */
   timeoutMs?: number;
   /** 自定义事件总线，默认使用全局单例。 */
@@ -76,7 +79,7 @@ export class BridgeServer {
   private readonly handlers = new Map<string, HandlerEntry>();
   private readonly onEvent?: (event: BridgeEvent) => void;
   private readonly onCall?: BridgeCallHandler;
-  private readonly trustedOrigins: string[];
+  private readonly isTrustedOrigin?: (origin?: string) => boolean;
   private readonly timeoutMs: number;
   private readonly idTracker = new RequestIdTracker();
   private readonly pending = new Map<string, PendingRequest>();
@@ -85,7 +88,7 @@ export class BridgeServer {
   constructor(options?: BridgeServerOptions) {
     this.onEvent = options?.onEvent;
     this.onCall = options?.onCall;
-    this.trustedOrigins = options?.trustedOrigins ?? [];
+    this.isTrustedOrigin = options?.isTrustedOrigin;
     this.timeoutMs = options?.timeoutMs ?? BRIDGE_TIMEOUT_MS;
     this.eventBus = options?.eventBus ?? bridgeEventBus;
   }
@@ -128,22 +131,20 @@ export class BridgeServer {
       return errorResponse(req.id ?? 'unknown', validation.error);
     }
 
-    // 2. origin 校验（规范 §25）
-    if (this.trustedOrigins.length > 0 && origin) {
-      const isTrusted = this.trustedOrigins.some(t => origin.startsWith(t));
-      if (!isTrusted) {
-        return errorResponse(
-          req.id,
-          createBridgeError('SECURITY_BLOCKED', `untrusted origin: ${origin}`),
-        );
-      }
+    // 2. origin 校验（规范 §25）：给了谓词就失败关闭。origin 缺失同样拒——否则「忘了传 url」
+    //    这类接线问题会让整道校验静默失效（本次修的就是这个洞）。
+    if (this.isTrustedOrigin && (!origin || !this.isTrustedOrigin(origin))) {
+      return errorResponse(
+        req.id,
+        createBridgeError('SECURITY_BLOCKED', `untrusted origin: ${origin ?? 'unknown'}`)
+      );
     }
 
     // 3. version 兼容性检查（规范 §17）
     if (req.version && !isCompatible(req.version)) {
       return errorResponse(
         req.id,
-        createBridgeError('BRIDGE_VERSION_NOT_SUPPORTED', `required: ${req.version}`),
+        createBridgeError('BRIDGE_VERSION_NOT_SUPPORTED', `required: ${req.version}`)
       );
     }
 
@@ -151,7 +152,7 @@ export class BridgeServer {
     if (!this.idTracker.register(req.id)) {
       return errorResponse(
         req.id,
-        createBridgeError('INVALID_PARAMS', `duplicate requestId: ${req.id}`),
+        createBridgeError('INVALID_PARAMS', `duplicate requestId: ${req.id}`)
       );
     }
 
@@ -163,20 +164,20 @@ export class BridgeServer {
       this.idTracker.complete(req.id);
       const res = errorResponse(
         req.id,
-        createBridgeError('METHOD_NOT_FOUND', `${req.module}.${req.action}`),
+        createBridgeError('METHOD_NOT_FOUND', `${req.module}.${req.action}`)
       );
       this.emit(req, res, start, { params: req.params });
       return res;
     }
 
     // 6. 执行 handler（带 timeout）
-    return new Promise<BridgeResponse>(resolve => {
+    return new Promise<BridgeResponse>((resolve) => {
       const timer = setTimeout(() => {
         this.pending.delete(req.id);
         this.idTracker.complete(req.id);
         const res = errorResponse(
           req.id,
-          createBridgeError('TIMEOUT', `${req.module}.${req.action}`),
+          createBridgeError('TIMEOUT', `${req.module}.${req.action}`)
         );
         this.emit(req, res, start, { params: req.params });
         resolve(res);
@@ -186,7 +187,7 @@ export class BridgeServer {
 
       Promise.resolve()
         .then(() => entry.handler(req.params, req))
-        .then(data => {
+        .then((data) => {
           clearTimeout(timer);
           this.pending.delete(req.id);
           this.idTracker.complete(req.id);
@@ -240,7 +241,7 @@ export class BridgeServer {
     req: BridgeRequest,
     res: BridgeResponse,
     start: number,
-    call?: { params?: unknown; result?: unknown },
+    call?: { params?: unknown; result?: unknown }
   ): void {
     this.onEvent?.({
       requestId: req.id,

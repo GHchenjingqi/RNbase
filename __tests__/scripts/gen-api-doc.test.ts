@@ -34,6 +34,10 @@ const API_SAMPLE = `(function (global) {
     LOG: {
       INFO: 'info',
     },
+    // 动作名含数字（readAsBase64）：曾因正则只认字母而被静默漏渲，此处钉住
+    FILE: {
+      READASBASE64: 'readAsBase64',
+    },
     // 注释里混入的假键不应被解析：FAKE: 'fake'
     EMPTY: {},
   };
@@ -56,6 +60,7 @@ describe('gen-api-doc 纯函数', () => {
     const { modules, appManager } = typed.parseH5Registry(API_SAMPLE);
     expect(modules.APP).toEqual({ GETINFO: 'getInfo', NATIVEBACKRESULT: 'nativeBackResult' });
     expect(modules.LOG).toEqual({ INFO: 'info' });
+    expect(modules.FILE).toEqual({ READASBASE64: 'readAsBase64' });
     expect(modules.EMPTY).toBeUndefined();
     expect(appManager.ISINSTALLED).toEqual({ module: 'appManager', action: 'isInstalled' });
     expect(appManager.OPENAPP).toEqual({ module: 'appManager', action: 'openApp' });

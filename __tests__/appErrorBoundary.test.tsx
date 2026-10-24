@@ -61,7 +61,7 @@ test('retry resets error state and re-renders recovered child', () => {
   // 首次渲染失败：降级 UI
   expect(JSON.stringify(tree!.toJSON())).toContain('应用出现异常');
 
-  const retry = tree!.root.findByProps({ testID: 'error-boundary-retry' }) as {
+  const retry = tree!.root.findByProps({ testID: 'error-boundary-retry' }) as unknown as {
     props: { onPress: () => void };
   };
   act(() => {

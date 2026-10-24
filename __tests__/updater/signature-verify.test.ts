@@ -33,7 +33,11 @@ function toPem(derB64: string, label: string): string {
   return `-----BEGIN ${label}-----\n${derB64}\n-----END ${label}-----`;
 }
 
-async function makeKeyAndSignature(data: Uint8Array): Promise<{ pubPem: string; sigB64: string }> {
+// 形参写 Uint8Array<ArrayBuffer>：@types/node 的 BufferSource 只认 ArrayBuffer 支撑的视图，
+// 裸 Uint8Array（ArrayBufferLike）在 WebCrypto 调用点上不兼容。
+async function makeKeyAndSignature(
+  data: Uint8Array<ArrayBuffer>
+): Promise<{ pubPem: string; sigB64: string }> {
   const kp = await subtle.generateKey(
     {
       name: 'RSASSA-PKCS1-v1_5',

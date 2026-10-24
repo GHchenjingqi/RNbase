@@ -360,7 +360,7 @@ export class BaseCapabilitiesTurboModule extends UITurboModule {
     // 扩展名要跟着 URL 走：落成 .dat 会让图库拒绝保存（saveImage 报 14000011），
     // fileOpen 也按文件名猜 MIME，最后只会「暂无可用打开方式」。
     const ext: string = suffixOf(baseNameOf(url)) || 'dat';
-    const filePath: string = `${dir}/erp_${Date.now()}.${ext}`;
+    const filePath: string = `${dir}/dl_${Date.now()}.${ext}`;
     try {
       if (!fs.accessSync(dir)) {
         fs.mkdirSync(dir, true);
