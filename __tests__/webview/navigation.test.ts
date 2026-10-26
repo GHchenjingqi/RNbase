@@ -1,7 +1,12 @@
 /**
  * Phase 2：导航白名单决策单元测试（规范 §24）。
+ *
+ * 离线包路径里的包名一律从 config 取（APP_PACKAGE），不写死：decideNavigation 的
+ * h5-versions 前缀本身就是按 version.json 的 applicationId 拼的，CI 用中性
+ * version.json（com.qux.base），写死某个具体包名的用例只在他本机绿。
  */
 import { decideNavigation, normalizeOrigin, shouldStartLoad } from '../../src/webview/navigation';
+import { APP_PACKAGE } from '../../src/config';
 
 /**
  * origin 归一化的契约（真机踩过的坑）：
@@ -61,7 +66,7 @@ describe('decideNavigation', () => {
 
   test('动态 H5 子包 file:// (h5-versions) -> allow', () => {
     const result = decideNavigation(
-      'file:///data/user/0/com.qux/files/h5-versions/1.0.1/index.html',
+      `file:///data/user/0/${APP_PACKAGE}/files/h5-versions/1.0.1/index.html`,
       WHITELIST,
     );
     expect(result.action).toBe('allow');
@@ -70,7 +75,7 @@ describe('decideNavigation', () => {
 
   test('h5-versions 目录外的 file:// 仍 block', () => {
     const result = decideNavigation(
-      'file:///data/user/0/com.qux/files/other/secret.html',
+      `file:///data/user/0/${APP_PACKAGE}/files/other/secret.html`,
       WHITELIST,
     );
     expect(result.action).toBe('block');

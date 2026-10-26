@@ -52,4 +52,26 @@ jobs:
 
       - name: Xcode build (simulator, Debug)
         working-directory: platforms/ios
-        run: xcodebuild -workspace qux.xcworkspace -scheme qux -configuration Debug -sdk iphonesimulator build
+        # tee 到文件是为了下一步能把 error 行提成 annotation：xcodebuild 的报错只进日志正文，
+        # 而日志正文要鉴权才能读（Actions 的 annotations 是公开 API 可读的）。
+        # 没有这一步时，远端只知道「exit 65」，改 iOS 原生只能靠猜。
+        run: |
+          set -o pipefail
+          xcodebuild -workspace qux.xcworkspace -scheme qux -configuration Debug \
+            -sdk iphonesimulator build 2>&1 | tee /tmp/xcodebuild.log
+
+      - name: Publish build errors as annotations
+        if: failure()
+        run: |
+          if [ ! -f /tmp/xcodebuild.log ]; then
+            echo '::error::xcodebuild 未产生日志（失败发生在构建之前）'
+            exit 0
+          fi
+          hits=$(grep -E "error:" /tmp/xcodebuild.log | sort -u | head -40)
+          if [ -z "$hits" ]; then
+            echo '::error::xcodebuild 失败但日志里没有 error: 行，请查原始日志'
+            exit 0
+          fi
+          printf '%s\n' "$hits" | while IFS= read -r line; do
+            printf '::error::%s\n' "$line"
+          done

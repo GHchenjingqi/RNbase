@@ -3,8 +3,13 @@
  *
  * 钉住三件事：跨域 iframe 拦得住、前缀伪装拦得住（曾经的 startsWith 漏洞）、
  * 本地/内联入口不会被自己拦死。
+ *
+ * 离线包路径的包名从 config 取（APP_PACKAGE）：其中一条用例要走 decideNavigation 的
+ * h5-versions 前缀，而那条前缀按 version.json 的 applicationId 拼；CI 用的是中性
+ * version.json（com.qux.base），写死具体包名就只有本机绿。
  */
 import { isTrustedMessageOrigin } from '../../src/webview/message-origin';
+import { APP_PACKAGE } from '../../src/config';
 
 const WHITELIST = ['https://mobile-base.example.com'];
 
@@ -77,7 +82,7 @@ describe('isTrustedMessageOrigin', () => {
     expect(
       check({
         messageOrigin: 'null',
-        pageUrl: 'file:///data/user/0/com.qux/files/h5-versions/2/index.html',
+        pageUrl: `file:///data/user/0/${APP_PACKAGE}/files/h5-versions/2/index.html`,
         entryUrl: 'file:///android_asset/index.html',
       }),
     ).toBe(true);
@@ -111,7 +116,7 @@ describe('isTrustedMessageOrigin', () => {
     expect(
       check({
         messageOrigin: 'file://',
-        pageUrl: 'file:///data/user/0/com.qux/files/h5-versions/2/index.html',
+        pageUrl: `file:///data/user/0/${APP_PACKAGE}/files/h5-versions/2/index.html`,
         entryUrl: '',
       }),
     ).toBe(true);

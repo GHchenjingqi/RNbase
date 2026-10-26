@@ -40,6 +40,14 @@
   | `BaseH5.swift` / `BaseH5.m` | 新模块：`verifyPackageSignature(base64Data, signature, publicKey)`（SecKey RSASSA-PKCS1v15-SHA256，PEM/SPKI 公钥） | 编译通过；用 Node 测试向量（见 `__tests__/updater/signature-verify.test.ts` 同源密钥）验证 valid=true；篡改数据后 valid=false |
 - 注意：`BaseH5` 若与现有类名冲突（全仓 grep `class BaseH5`），改名并在 JS 侧
   `src/updater/native-signature-verifier.ts` 的 `NATIVE_MODULE_NAME` 常量同步。
+- 进展（2026-10-26）：这批文件已进 `project.pbxproj` 的 App Target，因此**首次真的参与编译**，
+  CI 的 `build-ios` 随即红（exit 65）。本机无 Mac，只能静态审查，已改掉四处必错项：
+  `constantsToExport` 多余的 `override`、`objc_setAssociatedObject` 拿 String 当
+  `UnsafeRawPointer` 键、`UIDocumentPickerViewController` 上不存在的 `completionHandler`
+  与 `[String]` 形参（改走 delegate）、`URL.mimeType`（改 `UTType.preferredMIMEType`）、
+  `BasePermissions.swift` 用了 `CLLocationManager` 却没 `import CoreLocation`。
+  **仍待 Xcode 验证**；若再次失败，直接看 Actions 该 job 的 annotations（已把 `error:` 行
+  提成公开 annotation，无需登录即可用 API 读到）。
 
 ### 4. 签名与出 ipa ⬜
 
@@ -59,6 +67,9 @@
 
 - `.github/workflows/ci-ios.yml` 已就绪（macOS runner + pod install + 模拟器 Debug 构建），
   push 到仓库即自动验证；若 runner 报 Pod/签名问题，按日志修 `Podfile` / project 配置。
+- 日志可读性：`npm ci` / `pod install` 在该 job 都能过，失败点只在 `xcodebuild`；而 Actions 的
+  日志正文需要登录才读得到，无 Mac 的人此前只能看到「exit code 65」。现在构建步骤 `tee` 出
+  `/tmp/xcodebuild.log`，失败时把其中的 `error:` 行逐条提成 **annotation**（公开 API 可读）。
 - 验收：GitHub Actions 上 `ci-ios` workflow 首次绿。
 
 ### 6. 本地 H5 模式真机回归 ⬜

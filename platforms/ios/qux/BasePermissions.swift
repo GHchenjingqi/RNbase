@@ -11,6 +11,7 @@
  *   authorized | limited | notDetermined | restricted | denied | unavailable
  */
 import AVFoundation
+import CoreLocation
 import Foundation
 import Photos
 import React

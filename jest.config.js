@@ -9,7 +9,10 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
   // harmony/ 是 DevEco 工程：hvigorfile.ts 与 oh_modules 里的 JS 不是 RN 单测，
   // 且 ArkTS 写法 babel 预设解析不了；不排除会让 jest 直接报解析错。
-  testPathIgnorePatterns: ['/node_modules/', '/harmony/'],
+  // 必须锚到 <rootDir>：裸 '/harmony/' 是「路径里任何一段叫 harmony 就排除」，
+  // 仓库一旦检出在 ~/harmony 这类目录下，58 个套件会被整体静默排除（jest 报
+  // No tests found 而不是 skipped，CI 上看起来只是没跑到）。
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/harmony/'],
   transform: {
     ...preset.transform,
     '^.+\\.html$': require.resolve('@react-native/jest-preset/jest/assetFileTransformer.js'),

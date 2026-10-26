@@ -5,6 +5,34 @@
 
 ## [Unreleased]
 
+### Fixed（首次真红 CI 的三处收口：单测跟随本机品牌、iOS 原生首次进编译、jest 忽略规则锚定，2026-10-26）
+
+`c6dc069` 推上去后 CI 两条检查同时红。逐条按 CI 的文件状态复现（`git worktree` 检出该提交 +
+CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就下结论：
+
+- **quality（44s 失败）**：分步结论显示 `npm ci`/typecheck/lint/format 全绿，只有第 10 步
+  jest 红。根因是 `__tests__/webview/navigation.test.ts` 与 `message-origin.test.ts` 把离线包
+  路径写成 `file:///data/user/0/com.qux/files/h5-versions/…`，而 `decideNavigation` 的
+  `h5-versions` 前缀本就按 version.json 的 `applicationId` 拼（`APP_PACKAGE`）。CI 检出的是
+  中性 `version.json`（`com.qux.base`），`com.qux` 于是只是个别人的包名 → 判 `block`，
+  **本机永远绿**。两处改为从 config 取 `APP_PACKAGE`。
+- **build-ios（3m 失败，exit 65）**：该 workflow 在 `a647c45` 是绿的，两次之间 iOS 侧唯一的
+  变化是 `project.pbxproj` 把 7 个原生文件加进 App Target——也就是上一轮「pbxproj 没引用就
+  只会打出缺能力的绿包」那次收口。它们因此**第一次真正参与编译**，把无 Mac 预写的 Swift 里
+  几处必错项暴露出来：`constantsToExport` 多写了 `override`（协议可选方法，无父实现可覆盖）、
+  `objc_setAssociatedObject/GetAssociatedObject` 拿字符串字面量当 `UnsafeRawPointer` 键、
+  `UIDocumentPickerViewController` 上不存在的 `completionHandler` 与 `[String]` 形参
+  （该 API 只收 `[UTType]` 且必须走 delegate）、`URL.mimeType`（系统无此属性）、
+  `BasePermissions.swift` 用了 `CLLocationManager` 却没 `import CoreLocation`。
+  已按 Swift 语义逐条改掉，但**本机没有 Xcode，编译结论仍待一轮 CI 验证**。
+- **CI 可观测性**：`ci-ios.yml` 的 xcodebuild 改为 `tee` 出日志、失败时把 `error:` 行逐条提成
+  annotation。Actions 日志正文要登录才读得到，此前无 Mac 的一侧只能看到「Process completed
+  with exit code 65」，等同于盲改。
+- **jest 忽略规则**：`testPathIgnorePatterns` 里的裸 `'/harmony/'` 是「路径中任何一段叫
+  harmony 就排除」，不是「本仓库的 harmony/」。仓库一旦检出在 `~/harmony` 这类目录下，
+  58 个套件被整体静默排除，jest 报的是 `No tests found`（exit 1）而不是 skipped。
+  改为 `'<rootDir>/harmony/'`，A/B 实测同一路径下 1 → 58。
+
 ### Fixed（启动链路收口：死代码删除 + OTA 真正落地 + clientId 噪声，2026-10-26）
 
 - 删除 `src/app/AppRoot.tsx`、`src/app/fallback-h5.ts`、`src/app/boot-state-machine.ts`、

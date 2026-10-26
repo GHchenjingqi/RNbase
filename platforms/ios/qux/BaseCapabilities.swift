@@ -15,6 +15,7 @@ import Foundation
 import Photos
 import React
 import UIKit
+import UniformTypeIdentifiers
 
 @objc(BaseCapabilities)
 class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
@@ -24,7 +25,7 @@ class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
   // MARK: - 常量导出（JS 同步读取，避免异步等待）
 
   @objc(constantsToExport)
-  override func constantsToExport() -> [AnyHashable: Any] {
+  func constantsToExport() -> [AnyHashable: Any] {
     // H5 本地入口基座路径：iOS 没有 android_asset，WebView 需加载 App bundle 内的 h5/ 资源
     // （开发者需把 h5/ 作为 folder reference 加进 App target，见 scripts/ios.js 的 sync-h5）。
     ["H5BundleBasePath": Bundle.main.bundlePath]
@@ -32,6 +33,9 @@ class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
 
   private let locationManager = CLLocationManager()
   private var locationResolver: RCTPromiseResolveBlock?
+  /// 选择器（相册/相机/文件）回调：RN 每个 bridge 只持有一个本模块实例，同一时刻
+  /// 只有一个选择器在屏，所以挂在实例上即可，不需要 objc 关联对象。
+  private var pendingResolve: RCTPromiseResolveBlock?
 
   // MARK: - 设备完整性（jailbreak 探针，对应 src/security/device-integrity.ts）
 
@@ -94,7 +98,7 @@ class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
       let picker = UIImagePickerController()
       picker.sourceType = .camera
       picker.mediaTypes = [UTType.image.identifier]
-      self.present(picker, resolve: resolve, reject: reject)
+      self.present(picker, resolve: resolve)
     }
   }
 
@@ -110,7 +114,7 @@ class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
       let picker = UIImagePickerController()
       picker.sourceType = .photoLibrary
       picker.mediaTypes = [UTType.image.identifier]
-      self.present(picker, resolve: resolve, reject: reject)
+      self.present(picker, resolve: resolve)
     }
   }
 
@@ -146,21 +150,10 @@ class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) {
     DispatchQueue.main.async {
-      let types = [UTType.item.identifier, UTType.content.identifier]
-      let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
+      let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item, .content])
       picker.allowsMultipleSelection = (options["multiple"] as? Bool) ?? false
-      picker.completionHandler = { urls in
-        let files = urls.map { url -> [String: Any] in
-          let ns = url as NSURL
-          return [
-            "name": ns.lastPathComponent ?? "file",
-            "size": (try? Data(contentsOf: url))?.count ?? 0,
-            "mimeType": url.mimeType ?? "application/octet-stream",
-            "uri": url.absoluteString,
-          ]
-        }
-        resolve(["files": files])
-      }
+      picker.delegate = self
+      self.pendingResolve = resolve
       self.topViewController()?.present(picker, animated: true)
     }
   }
@@ -278,12 +271,10 @@ class BaseCapabilities: NSObject, RCTBridgeModule, CLLocationManagerDelegate {
 
   private func present(
     _ picker: UIImagePickerController,
-    resolve: @escaping RCTPromiseResolveBlock,
-    reject: @escaping RCTPromiseRejectBlock
+    resolve: @escaping RCTPromiseResolveBlock
   ) {
     picker.delegate = self
-    objc_setAssociatedObject(picker, "resolve", resolve, .OBJC_ASSOCIATION_RETAIN)
-    objc_setAssociatedObject(picker, "reject", reject, .OBJC_ASSOCIATION_RETAIN)
+    pendingResolve = resolve
     topViewController()?.present(picker, animated: true)
   }
 
@@ -303,9 +294,10 @@ extension BaseCapabilities: UIImagePickerControllerDelegate, UINavigationControl
     didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
   ) {
     picker.dismiss(animated: true)
-    guard let resolve = objc_getAssociatedObject(picker, "resolve") as? RCTPromiseResolveBlock else {
+    guard let resolve = pendingResolve else {
       return
     }
+    pendingResolve = nil
     if let url = info[.imageURL] as? URL {
       resolve(["uri": url.absoluteString])
     } else if let image = info[.originalImage] as? UIImage,
@@ -319,6 +311,7 @@ extension BaseCapabilities: UIImagePickerControllerDelegate, UINavigationControl
 
   func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
     picker.dismiss(animated: true)
+    pendingResolve = nil
   }
 
   private func writeTemp(_ data: Data) throws -> String {
@@ -328,3 +321,29 @@ extension BaseCapabilities: UIImagePickerControllerDelegate, UINavigationControl
     return url.absoluteString
   }
 }
+
+// MARK: - 文件选择回调（UIDocumentPickerViewController 没有 completionHandler，只能走 delegate）
+
+extension BaseCapabilities: UIDocumentPickerDelegate {
+  func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+    controller.dismiss(animated: true)
+    guard let resolve = pendingResolve else { return }
+    pendingResolve = nil
+    let files = urls.map { url -> [String: Any] in
+      [
+        "name": url.lastPathComponent,
+        "size": (try? Data(contentsOf: url))?.count ?? 0,
+        "mimeType": UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
+          ?? "application/octet-stream",
+        "uri": url.absoluteString,
+      ]
+    }
+    resolve(["files": files])
+  }
+
+  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+    controller.dismiss(animated: true)
+    pendingResolve = nil
+  }
+}
+
