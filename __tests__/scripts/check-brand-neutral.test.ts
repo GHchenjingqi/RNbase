@@ -187,6 +187,16 @@ describe('collectBrandDrift', () => {
     ]);
   });
 
+  test('整目录 mipmap-hdpi 不存在（干净检出/CI）：不算品牌残留', () => {
+    // res/mipmap-*/ 在 .gitignore 里（品牌下发时整目录被子应用图标覆盖），所以 actions 上
+    // 检出的仓库根本没有这些目录。把它们当「默认图标被清掉」会让 brand:check 在 CI 恒红，
+    // 而这条守卫真正的对象是本机上装过又没复位的品牌图标。
+    const f = fixture(neutralFixture());
+    fs.rmSync(path.join(f.main, 'res', 'mipmap-hdpi'), { recursive: true });
+    fs.rmSync(path.join(f.main, 'res', 'mipmap-xhdpi'), { recursive: true });
+    expect(typed.collectBrandDrift(f.baseDir)).toEqual([]);
+  });
+
   test('PNG 按字节比：内容相同的二进制文件不得因 utf8 解码而误报', () => {
     // 0xFF/0xFE 是非法 UTF-8 字节；早前版本 readFileSync(...,'utf8') 后再比较，
     // 完全相同的图标也会被判成漂移，等于门禁自己制造噪音。

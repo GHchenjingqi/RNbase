@@ -5,7 +5,7 @@
 
 ## [Unreleased]
 
-### Fixed（首次真红 CI 的三处收口：单测跟随本机品牌、iOS 原生首次进编译、jest 忽略规则锚定，2026-10-26）
+### Fixed（首次真红 CI 的四处收口：单测跟随本机品牌、iOS 原生首次进编译、jest 忽略规则锚定、brand 守卫在干净检出恒红，2026-10-26）
 
 `c6dc069` 推上去后 CI 两条检查同时红。逐条按 CI 的文件状态复现（`git worktree` 检出该提交 +
 CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就下结论：
@@ -24,7 +24,7 @@ CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就�
   `UIDocumentPickerViewController` 上不存在的 `completionHandler` 与 `[String]` 形参
   （该 API 只收 `[UTType]` 且必须走 delegate）、`URL.mimeType`（系统无此属性）、
   `BasePermissions.swift` 用了 `CLLocationManager` 却没 `import CoreLocation`。
-  已按 Swift 语义逐条改掉，但**本机没有 Xcode，编译结论仍待一轮 CI 验证**。
+  已按 Swift 语义逐条改掉。**本机没有 Xcode**，编译结论靠新增的 annotation 通道逐轮取。
 - **CI 可观测性**：`ci-ios.yml` 的 xcodebuild 改为 `tee` 出日志、失败时把 `error:` 行逐条提成
   annotation。Actions 日志正文要登录才读得到，此前无 Mac 的一侧只能看到「Process completed
   with exit code 65」，等同于盲改。
@@ -32,6 +32,33 @@ CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就�
   harmony 就排除」，不是「本仓库的 harmony/」。仓库一旦检出在 `~/harmony` 这类目录下，
   58 个套件被整体静默排除，jest 报的是 `No tests found`（exit 1）而不是 skipped。
   改为 `'<rootDir>/harmony/'`，A/B 实测同一路径下 1 → 58。
+
+- **brand 图标守卫**：`brand:check` 进 CI 后第一次真正跑到（此前那条检查一直被前面的
+  jest 失败挡着，从没验证过自己在干净检出上的行为）就恒红：它拿 `res/mipmap-*/` 与入库的
+  `brand-default/mipmap-*/` 逐字节比，而 `res/mipmap-*/` 本就 .gitignore（品牌下发时整目录被
+  子应用图标覆盖），actions 检出的仓库里没有这些目录 → 10 条「基座默认图标被清掉未复原」。
+  改为**目录不存在就跳过**：目录不在 = 这份检出没装过品牌；目录在而文件缺/字节不一致才是真残留。
+  本机语义不变（仍照旧报出「H5调试台」的图标漂移），新增用例钉住两种形态。
+- **iOS Swift 拿不到 RN 的 ObjC 符号（第二轮 CI 的 2 条 error）**：annotation 把日志正文里
+  读不到的报错送回来了——`BasePermissions.swift:21 cannot find type 'RCTBridgeModule' in
+  scope` 与 `:46 call to method 'statusFor' in closure requires explicit use of 'self'`。
+  前者不是笔误而是配置缺口：Podfile 没调用 `use_frameworks!`（默认静态库 `libPods-qux.a`），
+  RN 那些 ObjC pod 就没有 Swift 可直接 `import` 的 clang module，`import React` 带不进
+  `RCTBridgeModule`；同目录的 `Base*.m` 走 header search path（`#import <React/RCTBridgeModule.h>`）
+  一直编译正常，只有 Swift 侧缺一份桥接头。新增 `qux/qux-Bridging-Header.h`，并在 App Target
+  的 Debug/Release 设 `SWIFT_OBJC_BRIDGING_HEADER = qux/qux-Bridging-Header.h`（工程已有
+  `CLANG_ENABLE_MODULES = YES`，deployment target 15.1 高于桥接头最低 10.14 要求）。
+  后者是硬错误不是风格问题：逃逸闭包内隐式 `self` 在 Swift 5 直接报 error，改为显式 `self.`，
+  并弃用未参与的 `granted` 形参（申请后统一回读系统授权状态）。
+- **iOS 侧 H5 包签名校验的公钥解析必失败**（`BaseH5.swift:rsaPublicKeyBytes`，与上面同批
+  进编译、但编译器不会报的逻辑错）：DER 走查在 tag 字节上就调用了 `readLength`，把 `0x30`
+  当成长度字段读，且读完 AlgorithmIdentifier 的 L 后没跳过它的本体。用 Node 现场生成
+  RSA-1024/2048/4096 的 SPKI 对照同一算法的 JS 同构实现实测：原走查对三种长度一律返回
+  `null`（即任何合法公钥都 reject `INVALID_PUBLIC_KEY`），改后与 `publicKey.export({type:
+  'pkcs1'})` 逐字节相等（140B/270B/526B），畸形输入仍拒收。SecKey 那条
+  `rsaSignatureMessagePKCS1v15SHA256` 与 JS 侧 WebCrypto 语义等价的结论也随之从「推定」
+  变成有「用 PKCS#1 直接验签通过」作证。**Android/鸿蒙不受影响**（走 JS 侧 verifier），
+  iOS 侧真机端到端仍待 Apple 账号就绪后验证。
 
 ### Fixed（启动链路收口：死代码删除 + OTA 真正落地 + clientId 噪声，2026-10-26）
 

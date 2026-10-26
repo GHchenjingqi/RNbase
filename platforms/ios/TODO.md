@@ -48,6 +48,13 @@
   `BasePermissions.swift` 用了 `CLLocationManager` 却没 `import CoreLocation`。
   **仍待 Xcode 验证**；若再次失败，直接看 Actions 该 job 的 annotations（已把 `error:` 行
   提成公开 annotation，无需登录即可用 API 读到）。
+- 进展（第二轮，annotation 回读）：`cannot find type 'RCTBridgeModule' in scope` → Podfile 未
+  `use_frameworks!`，静态库下 ObjC pod 没有 Swift 可 import 的 clang module，新增
+  `qux/qux-Bridging-Header.h` 并在 App Target Debug/Release 设 `SWIFT_OBJC_BRIDGING_HEADER`；
+  `call to method 'statusFor' in closure requires explicit use of 'self'` → 逃逸闭包显式 `self.`。
+  另用 Node 生成的 RSA SPKI 对照实测，修掉 `BaseH5.rsaPublicKeyBytes` 的 DER 走查错位
+  （原实现对任何合法 SPKI 都返回 nil，签名校验必失败）；桥接头能否让四个 Swift 模块全过，
+  仍需下一轮 CI/真机确认。
 
 ### 4. 签名与出 ipa ⬜
 

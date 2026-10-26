@@ -42,8 +42,10 @@ class BasePermissions: NSObject, RCTBridgeModule {
     resolver resolve: @escaping RCTPromiseResolveBlock,
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) {
-    requestPermission(permission) { granted in
-      resolve(statusFor(permission))
+    // 逃逸闭包里必须显式 self——CI 上这条是 error 不是 warning。
+    // granted 不参与返回值：申请完统一回读系统授权状态，避免两套口径。
+    requestPermission(permission) { _ in
+      resolve(self.statusFor(permission))
     }
   }
 

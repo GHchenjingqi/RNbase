@@ -80,28 +80,36 @@ class BaseH5: NSObject, RCTBridgeModule {
   ///                                     subjectPublicKey BIT STRING }
   /// BIT STRING 内容即 RSAPublicKey ::= SEQUENCE { modulus, publicExponent }。
   static func rsaPublicKeyBytes(fromSpki der: Data) -> Data? {
-    var bytes = [UInt8](der)
+    let bytes = [UInt8](der)
     var idx = 0
 
-    // 读 DER 长度（短格式 / 长格式 ≤ 4 字节），成功后 idx 指向内容首字节。
-    func readLength() -> Bool {
-      guard idx < bytes.count else { return false }
+    /// 读一个 TLV 头：校验 tag、消费 L 字段，返回内容长度；
+    /// 成功后 idx 指向内容首字节（要跳过内容本体由调用方 idx += len）。
+    /// 注意 L 必须在 tag 之后读——早先把 tag 当长度读，任何合法 SPKI 都会解析失败。
+    func readHeader(_ tag: UInt8) -> Int? {
+      guard idx < bytes.count, bytes[idx] == tag else { return nil }
+      idx += 1
+      guard idx < bytes.count else { return nil }
       let first = bytes[idx]
       idx += 1
-      guard first & 0x80 != 0 else { return true }  // 短格式，长度即首字节，内容随后
+      if first & 0x80 == 0 { return Int(first) }
       let count = Int(first & 0x7F)
-      guard count >= 1, count <= 4, idx + count <= bytes.count else { return false }
+      guard count >= 1, count <= 4, idx + count <= bytes.count else { return nil }
+      var length = 0
+      for offset in 0..<count {
+        length = (length << 8) | Int(bytes[idx + offset])
+      }
       idx += count
-      return true
+      return length
     }
 
-    // 外层 SEQUENCE
-    guard !bytes.isEmpty, bytes[0] == 0x30, readLength() else { return nil }
-    // AlgorithmIdentifier SEQUENCE
-    guard idx < bytes.count, bytes[idx] == 0x30, readLength() else { return nil }
-    // subjectPublicKey BIT STRING
-    guard idx < bytes.count, bytes[idx] == 0x03, readLength() else { return nil }
-    // 跳过「未使用位数」字节（恒为 0x00）
+    // 外层 SEQUENCE（长度不消费内容，AlgorithmIdentifier 的头紧随其后）
+    guard readHeader(0x30) != nil else { return nil }
+    // AlgorithmIdentifier：拿到本体长度后整段跳过，否则停在 OID 上找 BIT STRING 必然落空
+    guard let algorithmLength = readHeader(0x30), idx + algorithmLength <= bytes.count else { return nil }
+    idx += algorithmLength
+    // subjectPublicKey BIT STRING：内容首字节是「未使用位数」（公钥恒为 0x00）
+    guard readHeader(0x03) != nil else { return nil }
     idx += 1
     // RSAPublicKey SEQUENCE 头
     guard idx < bytes.count, bytes[idx] == 0x30 else { return nil }

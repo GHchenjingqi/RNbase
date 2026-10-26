@@ -115,10 +115,15 @@ function collectBrandDrift(baseDir) {
   if (fs.existsSync(resDir) && fs.existsSync(defaultDir)) {
     for (const e of fs.readdirSync(defaultDir, { withFileTypes: true })) {
       if (!e.isDirectory() || !e.name.startsWith('mipmap-')) continue;
+      // res/mipmap-*/ 不入库（.gitignore 第 72 行，品牌下发时整目录被子应用图标覆盖），
+      // 所以干净检出（CI）里根本没有这些目录。目录不在 = 这份检出没装过任何品牌，
+      // 不是品牌残留；目录在而文件缺 = 默认图标被清掉没复原，那才是要报的（见下方 gotPath）。
+      const gotDir = path.join(resDir, e.name);
+      if (!fs.existsSync(gotDir)) continue;
       const srcDir = path.join(defaultDir, e.name);
       for (const f of fs.readdirSync(srcDir)) {
         const want = fs.readFileSync(path.join(srcDir, f));
-        const gotPath = path.join(resDir, e.name, f);
+        const gotPath = path.join(gotDir, f);
         if (!fs.existsSync(gotPath)) {
           problems.push(`${rel(gotPath)} 缺失（基座默认图标被清掉未复原）`);
           continue;
