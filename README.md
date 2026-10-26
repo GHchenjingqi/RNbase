@@ -13,13 +13,13 @@
 
 ## 0. 30 秒了解：它解决什么问题
 
-| 你现在的痛点 | RNbase 的做法 |
-|---|---|
-| 改一个按钮也要重新打包上架，发版被应用商店卡住 | **H5 子包独立 OTA**：检查 → 下载 → 校验 → 原子切换 → 失败自动回滚，业务迭代不走商店 |
-| H5 和原生各写一套调用，改了这边忘了那边 | Bridge 能力清单**唯一真源** `scripts/api.js`，两侧 `md5` 必须一致（`npm run sync:api`），漂移直接报错 |
-| 每个 App 都要复制一遍壳、改包名图标闪屏 | **基座是纯模板**：应用名 / 包名 / 图标 / 闪屏 / 版本全部由子应用声明，换品牌不动壳 |
-| 前端出身，搞不定 Gradle / hvigor 出包 | 桌面工作台 [RNBuildStudio](https://github.com/GHchenjingqi/RNBuildStudio) 点几下出 Android / 鸿蒙包 |
-| 三端各写一套原生能力 | 一套 Bridge 协议，Android 与鸿蒙已落地，iOS 预留 |
+| 你现在的痛点                                   | RNbase 的做法                                                                                         |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 改一个按钮也要重新打包上架，发版被应用商店卡住 | **H5 子包独立 OTA**：检查 → 下载 → 校验 → 原子切换 → 失败自动回滚，业务迭代不走商店                   |
+| H5 和原生各写一套调用，改了这边忘了那边        | Bridge 能力清单**唯一真源** `scripts/api.js`，两侧 `md5` 必须一致（`npm run sync:api`），漂移直接报错 |
+| 每个 App 都要复制一遍壳、改包名图标闪屏        | **基座是纯模板**：应用名 / 包名 / 图标 / 闪屏 / 版本全部由子应用声明，换品牌不动壳                    |
+| 前端出身，搞不定 Gradle / hvigor 出包          | 桌面工作台 [RNBuildStudio](https://github.com/GHchenjingqi/RNBuildStudio) 点几下出 Android / 鸿蒙包   |
+| 三端各写一套原生能力                           | 一套 Bridge 协议，Android 与鸿蒙已落地，iOS 预留                                                      |
 
 React Native + WebView + H5 混合架构。RN 作为稳定的 App Runtime / Native Container，WebView 承载 H5 子应用，Native Bridge 是两者之间唯一受控的能力边界。本基座不承载业务功能，只提供容器、通信协议与设备能力，业务全部在 H5 子应用中实现。
 
@@ -27,12 +27,12 @@ React Native + WebView + H5 混合架构。RN 作为稳定的 App Runtime / Nati
 
 一个基座 + 多个 H5 子应用的混合开发方案，解决的核心问题是：**用 Web 技术栈做业务迭代，用原生壳提供设备能力与发版能力，两者通过受控协议通信**。
 
-| 概念 | 说明 |
-|---|---|
-| 基座（本仓库） | RN 壳，提供 WebView 容器、Bridge 服务端、原生能力、H5 包管理与更新、可观测性 |
-| H5 子应用 | 独立仓库（如 [RN_h5](https://github.com/GHchenjingqi/RN_h5)），Vue/React 均可，构建产物同步进基座 `h5/` 随包发布 |
-| Bridge | H5 ↔ RN 唯一通道。H5 侧只通过 `window.RN` 中间件调原生，能力清单唯一真源是 `scripts/api.js` |
-| 动态更新 | H5 子包独立于 APK 发版，支持远程检查、下载校验、原子切换、失败自动回滚 |
+| 概念           | 说明                                                                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 基座（本仓库） | RN 壳，提供 WebView 容器、Bridge 服务端、原生能力、H5 包管理与更新、可观测性                                     |
+| H5 子应用      | 独立仓库（如 [RN_h5](https://github.com/GHchenjingqi/RN_h5)），Vue/React 均可，构建产物同步进基座 `h5/` 随包发布 |
+| Bridge         | H5 ↔ RN 唯一通道。H5 侧只通过 `window.RN` 中间件调原生，能力清单唯一真源是 `scripts/api.js`                      |
+| 动态更新       | H5 子包独立于 APK 发版，支持远程检查、下载校验、原子切换、失败自动回滚                                           |
 
 两仓配合的约束：
 
@@ -127,12 +127,12 @@ flowchart LR
 
 ### 3.1 Bridge 能力模块（41 个，`src/bridge/index.ts` 注册）
 
-| 分类 | 模块 |
-|---|---|
-| 业务 | `app`（生命周期/返回键回执）· `auth` · `permission`（check/request/requestAll 批量）· `system`（vibrate/copy/share/darkmode/language/screen/accessibility/deviceInfo/battery）· `notification`（getToken/setBadge/playSound/sendNotification）· `log` |
+| 分类     | 模块                                                                                                                                                                                                                                                                                                                                                             |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 业务     | `app`（生命周期/返回键回执）· `auth` · `permission`（check/request/requestAll 批量）· `system`（vibrate/copy/share/darkmode/language/screen/accessibility/deviceInfo/battery）· `notification`（getToken/setBadge/playSound/sendNotification）· `log`                                                                                                            |
 | 设备能力 | `camera` · `scanner`（ML Kit）· `media` · `file` · `location` · `clipboard` · `brightness` · `flashlight` · `sensor` · `biometric` · `contacts` · `calendar` · `nfc` · `bluetooth` · `audio` · `storage` · `network-info` · `qr` · `image` · `haptics` · `speech` · `appManager`（检测安装/拉起外部 App/应用市场/系统设置）· `background-task` · `in-app-review` |
-| 容器 | `toast` · `dialog` · `orientation` · `statusBar` · `keyboard` · `navigation` · `webView` · `device` · `battery` |
-| 其他 | `network`（网络状态）· `update`（整包 APK 远程升级，仅 Android） |
+| 容器     | `toast` · `dialog` · `orientation` · `statusBar` · `keyboard` · `navigation` · `webView` · `device` · `battery`                                                                                                                                                                                                                                                  |
+| 其他     | `network`（网络状态）· `update`（整包 APK 远程升级，仅 Android）                                                                                                                                                                                                                                                                                                 |
 
 能力模块通过 adapters 注入原生实现，**某平台未接入时逐项降级**，H5 侧收到 `DEVICE_UNSUPPORTED` 据此隐藏入口。全部方法的参数、返回值、错误码见 `DEVICE_CAPABILITIES.md` 与 `docs/BRIDGE_API.generated.md`。
 
@@ -174,11 +174,11 @@ flowchart LR
 
 ### 3.8 多平台支持状态
 
-| 平台 | 命令前缀 | 产物 | 状态 |
-|------|----------|------|------|
-| Android | `:android`（短名 `dev` / `emulator`） | APK | ✅ 完整链路，已验证到装机 |
-| HarmonyOS | `:harmony` | HAP | ✅ 已打通：整仓 RN 0.84.1 + RNOH 0.84.4，可出 unsigned HAP（模拟器）；真机需 DevEco 配签名 |
-| iOS | `:ios` / `ios:` | — | 🔒 预留位：命令面已齐，H5 入口路径与 `CLIENT_ID.ios` 未接，`npm run ios:doctor` 逐条列出缺口 |
+| 平台      | 命令前缀                              | 产物 | 状态                                                                                         |
+| --------- | ------------------------------------- | ---- | -------------------------------------------------------------------------------------------- |
+| Android   | `:android`（短名 `dev` / `emulator`） | APK  | ✅ 完整链路，已验证到装机                                                                    |
+| HarmonyOS | `:harmony`                            | HAP  | ✅ 已打通：整仓 RN 0.84.1 + RNOH 0.84.4，可出 unsigned HAP（模拟器）；真机需 DevEco 配签名   |
+| iOS       | `:ios` / `ios:`                       | —    | 🔒 预留位：命令面已齐，H5 入口路径与 `CLIENT_ID.ios` 未接，`npm run ios:doctor` 逐条列出缺口 |
 
 鸿蒙侧能力不是安卓的子集：Bridge 契约不变但落地方式有别（未注册方法报 `DEVICE_UNSUPPORTED`、剪贴板走自研 TurboModule、安全区纯 JS 替身），逐条清单见 `DEVICE_CAPABILITIES.md`「鸿蒙（RNOH）差异」。
 
@@ -198,7 +198,7 @@ RNbase/
 ├── h5/                         # H5 子应用产物（由活动子应用构建产物同步而来）
 ├── h5-subapp-setup/            # H5 子应用 AI Skill（必备条件/搭建/打包 + Vue/React 模板）
 ├── src/                        # RN 侧源码（App Runtime）
-│   ├── app/                    #   应用装配：组合根、启动状态机、Bridge 组装、H5 入口解析
+│   ├── app/                    #   应用装配：闪屏、Bridge 组装、H5 入口解析与运行时选择
 │   ├── webview/                #   WebView 容器：加载、消息桥接、错误页、导航控制
 │   ├── bridge/                 #   Bridge 协议：server / client / eventBus / schema / version
 │   │   ├── client/             #     H5 SDK：BridgeClient / Native 门面 / mockTransport
@@ -221,8 +221,11 @@ RNbase/
 ├── docs/                       # ADR 决策记录、BRIDGE_API.generated.md（npm run gen:api-doc 生成）
 ├── App.tsx                     # RN 入口：WebView 加载 H5 入口资源
 ├── app-registry.json           # 活动子应用注册表（activeApp + 各子应用目录；模板见 *.example.json）
+├── ports.json                  # 开发期端口/地址唯一真源（Metro 8082↔8081、vite、鸿蒙 bundle、模拟器回环）
+│                               #   Node 侧经 scripts/ports.js 读，RN 侧由 src/config import 同一份 JSON
 ├── version.json                # 构建期派生产物（不入库：由 npm install 从 version.example.json 生成，
-│                               #   之后由品牌下发脚本按子应用 app.config.json 重写，勿手改）
+│                               #   之后由品牌下发脚本按子应用 app.config.json 重写，勿手改；
+│                               #   容器信任面 remoteUrl / trustedDomains / manifestUrl / trustedAppIds 也在这里面）
 ├── DEVICE_CAPABILITIES.md      # 设备能力 API 文档
 └── __tests__/                  # 全部单测集中于此（src 下不存放测试文件）
 ```
@@ -289,9 +292,9 @@ cd ../RNbase && npm run app:use -- demo_h5 --sync
 **仅配置应用**（远程站点打包用，无源码）：
 
 ```sh
-npm run subapp:create -- --name xingce_app --no-source \
-  --app-name "行测" --application-id com.qux.xingce --remote-url https://xxx.host/
-npm run app:use -- xingce_app          # 注意：不带 --sync（它没有产物可同步）
+npm run subapp:create -- --name remote_site_demo --no-source \
+  --app-name "示例站点" --application-id com.qux.demo --remote-url https://xxx.host/
+npm run app:use -- remote_site_demo    # 注意：不带 --sync（它没有产物可同步）
 ```
 
 `--no-source` 只生成 `app.config.json`（含 `remoteUrl`）+ `app-brand/`，不复制模板、不补
@@ -319,17 +322,46 @@ APK，留空则为本地 H5 模式，行为不变。该模式下：
   站点不写浏览器历史（纯组件切换的 SPA）时也是这个行为，不会一次误触就杀掉 App；
 - 站点离线即白屏，无本地兜底。
 
-### 4.4 Debug 期直连本地 H5（三端统一端口 5173）
+**容器信任面怎么配**（本地模式同样适用，不止远程模式）。这些值全部由子应用
+`app.config.json` 持有、经 `npm run app:use <name>` 下发进基座 `version.json`，
+基座源码里一个都不写死——`src/config/index.ts` 只负责读取与校验：
+
+| `app.config.json` 字段 | 落到                                 | 作用                                                             | 未声明时                                         |
+| ---------------------- | ------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------ |
+| `remoteUrl`            | `REMOTE_H5_URL` / `REMOTE_H5_ORIGIN` | 远程站点模式开关；站点 origin 自动进信任集                       | 空 = 本地模式                                    |
+| `trustedDomains`       | `DOMAIN_WHITELIST`                   | 允许留在容器内的 https origin **列表**（数组，站内多域名都用它） | 空 = 只信内置资产前缀 + dev 地址                 |
+| `manifestUrl`          | `H5_MANIFEST_URL`                    | H5 子包增量更新的清单地址                                        | 空 = **更新链路关闭**，不发请求也不报错          |
+| `trustedAppIds`        | `TRUSTED_APP_IDS`                    | 允许握手接管容器的子应用 appId                                   | 空 = 观察期，放行全部并给非默认 appId 打设备日志 |
+
+三条硬约束：
+
+- `trustedDomains` 每项只接受 `scheme://host[:port]`，**带 path / query / 尾斜杠当场拒**
+  （下发时就 `exit 1`，不是运行期静默放行失败）；非 `http(s)` 的值（`javascript:`、`data:`、
+  `file:`、`intent:`）在 `remoteUrl` 与 `trustedDomains` 两处都当「未配置」处理，
+  容器不可能被喂进任意脚本。
+- `DOMAIN_WHITELIST` 整份传给 WebView 容器（`App.tsx` 的 `trustedOrigins`）。以前它只传
+  白名单首项，而出厂首项是一个不存在的占位域——等于「只信一个不存在的域」，
+  真要接入自己的站点必须改基座源码。
+- 换子应用不会继承上一个的信任域：这四项与 `remoteUrl` 同一策略，**未声明即清空**。
+  继承的结局是「切到 B 子应用仍然信 A 的域」，那是权限问题，不是显示问题。
+
+### 4.4 Debug 期直连本地 H5（端口真源：根目录 `ports.json`）
 
 debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子应用 dev server，改一行保存即生效，
 不必再走 `build → sync:base → 重装 APK/HAP`。开关是 `src/config/index.ts` 的
 `H5_DEV_SERVER_URL`（release 恒为 `null`，正式包不可能指向宿主机地址）。
 
-| 平台 | 默认入口 | 设备侧到宿主机的可达路径 |
-|---|---|---|
+下表的 5173 / 8081 / 8082 / `10.0.2.2` 都**不是散在各脚本里的常数**：唯一真源是根目录
+`ports.json`，Node 侧经 `scripts/ports.js` 读、RN 侧由 `src/config/index.ts` import 同一份 JSON。
+改端口只动那一个文件（漏键或端口越界会让 `scripts/ports.js` 直接抛——`tcp:undefined`
+是合法字符串，`adb reverse` / `hdc rport` 照样退 0，设备侧静默拿到错映射）。
+守卫：`__tests__/scripts/ports.test.ts` 禁止 `scripts/` 与 `src/` 的代码里再出现裸端口字面量。
+
+| 平台    | 默认入口                 | 设备侧到宿主机的可达路径                                                                   |
+| ------- | ------------------------ | ------------------------------------------------------------------------------------------ |
 | Android | `http://127.0.0.1:5173/` | `adb reverse tcp:5173`（`scripts/adb-forward.js`，`npm run dev` / `build:android` 自动配） |
-| 鸿蒙 | `http://127.0.0.1:5173/` | `hdc rport tcp:5173 tcp:5173`（`scripts/hvigor.js`，装机时自动配） |
-| iOS | `http://localhost:5173/` | 模拟器与宿主机共享网络栈，免转发；ATS 已开 `NSAllowsLocalNetworking` |
+| 鸿蒙    | `http://127.0.0.1:5173/` | `hdc rport tcp:5173 tcp:5173`（`scripts/hvigor.js`，装机时自动配）                         |
+| iOS     | `http://localhost:5173/` | 模拟器与宿主机共享网络栈，免转发；ATS 已开 `NSAllowsLocalNetworking`                       |
 
 前提只有一个：**子应用自己的 dev server 得起在 5173**（`npm run dev`，vite 默认端口）。
 它**不是** Metro dev-server —— Metro 只 serve 被 require 的资源，H5 外部引用的
@@ -337,20 +369,19 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 
 三种取值（`version.json` 的 `h5DevUrl`，`brand:apply` 会保留现值不会被清）：
 
-| 值 | 行为 |
-|---|---|
-| 留空 / 缺失 | 用上表的平台默认 |
+| 值            | 行为                                                                       |
+| ------------- | -------------------------------------------------------------------------- |
+| 留空 / 缺失   | 用上表的平台默认                                                           |
 | `http(s)://…` | 用它（**iOS 真机**联调填宿主机局域网地址，如 `http://192.168.1.20:5173/`） |
-| `off` | 显式关闭，退回包内 H5（只改 RN 代码、不想起 dev server 时用） |
+| `off`         | 显式关闭，退回包内 H5（只改 RN 代码、不想起 dev server 时用）              |
 
 两条连带结论：
 
 - **debug 期不需要 H5 子包热更新**：入口就是宿主机源码，更新链路此时不启动
-  （`AppRoot` 的 `IS_REMOTE_H5 || H5_DEV_SERVER_URL` 分支）。所以「debug 下隐藏热更新入口」
+  （`App.tsx` 的 `IS_REMOTE_H5 || H5_DEV_SERVER_URL || !H5_MANIFEST_URL` 闸门）。所以「debug 下隐藏热更新入口」
   这件事在基座侧是自动成立的，H5 侧要跟着隐藏可用已有的 `DEVICE.GETPLATFORM().isTesting`
   （就是 `__DEV__`），无需新增开关。
-- dev server 没起的表现是 WebView 加载失败页（可点重新加载），不是静默白屏；
-  端口转发漏配的表现是 H5 永远等不到 `app.ready`，停在握手超时。
+- dev server 没起、或端口转发漏配的表现是 WebView 加载失败页（可点重新加载），不是静默白屏。
 - **远程站点模式优先级最高**：`version.json` 的 `remoteUrl` 非空时入口就是那个站点，
   debug 直连不生效（见 4.3）。想直连本地 H5 就先把 `remoteUrl` 清空。
 
@@ -359,12 +390,12 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 基座内置一套**中性默认视觉**（AI 生成的流动曲线 + 浅色渐变，不代表任何具体 App），
 子应用不提供品牌资源时直接使用，提供后由 `brand:apply` 整体覆盖：
 
-| 资产 | 位置 | 说明 |
-|---|---|---|
-| 桌面图标 | 安卓 `brand-default/mipmap-*/ic_launcher{,_round}.png`（由 `brand:gen` 从 1024 主图切五套密度） | 中性默认图 |
-| 启动图标 / 分层图标 | 鸿蒙 `entry/.../media/startIcon.png`（`startWindowIcon`）与 `foreground/background.png`（`layered_image.json`） | 鸿蒙图标走 DevEco 图形化配置，`brand:apply` 不覆盖，换名/换图手工改 |
-| iOS 全尺寸图标 | `platforms/ios/qux/Images.xcassets/AppIcon.appiconset/`（iphone 20–60pt 全 scale + 1024 marketing） | 需 macOS 打包机出包验证 |
-| 闪图 | `src/assets/splash/splash-default.jpg`（基座默认）；子应用 `app-brand/splash.png`（品牌覆盖，可选） | 由 RN 侧 `SplashOverlay` 加载，三端同一张图；品牌主图由 `brand:apply` 拷为 `splash-brand.png` 并改写引用入口 `active.ts`（均为派生产物，位图不入库），未配置回落默认图 |
+| 资产                | 位置                                                                                                            | 说明                                                                                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 桌面图标            | 安卓 `brand-default/mipmap-*/ic_launcher{,_round}.png`（由 `brand:gen` 从 1024 主图切五套密度）                 | 中性默认图                                                                                                                                                             |
+| 启动图标 / 分层图标 | 鸿蒙 `entry/.../media/startIcon.png`（`startWindowIcon`）与 `foreground/background.png`（`layered_image.json`） | 鸿蒙图标走 DevEco 图形化配置，`brand:apply` 不覆盖，换名/换图手工改                                                                                                    |
+| iOS 全尺寸图标      | `platforms/ios/qux/Images.xcassets/AppIcon.appiconset/`（iphone 20–60pt 全 scale + 1024 marketing）             | 需 macOS 打包机出包验证                                                                                                                                                |
+| 闪图                | `src/assets/splash/splash-default.jpg`（基座默认）；子应用 `app-brand/splash.png`（品牌覆盖，可选）             | 由 RN 侧 `SplashOverlay` 加载，三端同一张图；品牌主图由 `brand:apply` 拷为 `splash-brand.png` 并改写引用入口 `active.ts`（均为派生产物，位图不入库），未配置回落默认图 |
 
 **启动闪屏（3 秒倒计时）是 RN 跨端实现**（`src/app/SplashOverlay.tsx`）：全屏闪图 +
 秒级倒计时 + 淡出，点击任意位置可跳过；WebView 在闪屏下方照常装载。
@@ -389,13 +420,13 @@ debug 包默认**不读包内 H5**，而是直接加载宿主机上跑着的子�
 
 ### 4.6 项目边界（职责划分）
 
-| 层 | 负责 | 不负责 |
-|---|---|---|
-| **RN 基座（src/）** | 启动与生命周期、WebView 容器、Bridge 协议与服务端、原生能力、权限、H5 包管理/更新/回滚、网络状态、文件图片、日志可观测性、性能、安全 | 任何业务逻辑；不出现具体 App 的品牌/配置 |
-| **H5 子应用** | 全部业务功能、页面路由、UI；只通过 `window.RN`（api.js）接触原生 | 直接使用 `window.ReactNativeWebView`；不得自建与原生的第二条通道 |
-| **middleware/** | 网络、设备能力等原生适配，供 Bridge 模块装配 | 业务判断 |
-| **api.js（scripts/）** | 能力清单唯一真源，同步到子应用与 h5/js/ | — |
-| **子应用 config** | 应用名/包名/图标/闪屏/版本（app.config.json） | 基座不内置任何 App 值 |
+| 层                     | 负责                                                                                                                                 | 不负责                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| **RN 基座（src/）**    | 启动与生命周期、WebView 容器、Bridge 协议与服务端、原生能力、权限、H5 包管理/更新/回滚、网络状态、文件图片、日志可观测性、性能、安全 | 任何业务逻辑；不出现具体 App 的品牌/配置                         |
+| **H5 子应用**          | 全部业务功能、页面路由、UI；只通过 `window.RN`（api.js）接触原生                                                                     | 直接使用 `window.ReactNativeWebView`；不得自建与原生的第二条通道 |
+| **middleware/**        | 网络、设备能力等原生适配，供 Bridge 模块装配                                                                                         | 业务判断                                                         |
+| **api.js（scripts/）** | 能力清单唯一真源，同步到子应用与 h5/js/                                                                                              | —                                                                |
+| **子应用 config**      | 应用名/包名/图标/闪屏/版本（app.config.json）                                                                                        | 基座不内置任何 App 值                                            |
 
 ## 5. 环境与安装、开发约定
 
@@ -423,47 +454,55 @@ npm run stop                 # 停 App + 释放端口 + gradlew --stop
 > `version.json` 与 `app-registry.json` 都是**本地产物，不入基仓库**（`.gitignore` 已忽略，
 > 模板分别是 `version.example.json` / `app-registry.example.json`）。基座本身不内置任何 App 值——
 > 品牌信息只在子应用侧 `app.config.json` 里，由 `app:use` / `brand:apply` 下发到基座，
-> 这样「行测」「古诗」这类具体业务就不会在基座 diff 里留下痕迹。
+> 这样具体业务的名字、底色、图标就不会在基座 diff 里留下痕迹。
 > 万一 `version.json` 被误删，`npm run init:version` 可从模板重建。
 
 ### 5.3 常用命令
 
 命令按平台加后缀（`:android` / `:harmony` / `:ios`），三平台互不共用；`dev` / `emulator` / `stop` 是安卓短别名。
 
-| 用途 | 命令 |
-|---|---|
-| **Android** | `npm run dev` · `emulator` · `stop` · `build:android` · `build:android:release` · `build:android:install` · `clean:android` · `apk:hash`（写 SHA-256 并打印升级清单字段） |
-| **鸿蒙** | `npm run emulator:harmony` · `dev:harmony` · `install:harmony`（HAP + hdc 转发 + 装机 + 拉起）· `build:harmony[:release]` · `clean:harmony` |
-| **iOS** | `npm run ios:doctor`（任意平台可跑）· `ios:pods` · `dev:ios` · `build:ios` |
-| **子应用与品牌** | `npm run app:show` · `app:use -- <名> [--sync]` · `brand:apply` · `brand:reset` · `brand:gen -- --src <主图> --out <目录>` |
-| **版本** | `npm run version:show` · `version:bump[:patch/:minor/:major]` |
-| **协议同步** | `npm run sync:api`（api.js 同步到子应用模板与基座 H5）· `gen:api-doc`（生成 Bridge API 文档） |
-| **质量** | `npm run typecheck` · `lint` · `test` · `format` / `format:check` |
+| 用途             | 命令                                                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Android**      | `npm run dev` · `emulator` · `stop` · `build:android` · `build:android:release` · `build:android:install` · `clean:android` · `apk:hash`（写 SHA-256 并打印升级清单字段） |
+| **鸿蒙**         | `npm run emulator:harmony` · `dev:harmony` · `install:harmony`（HAP + hdc 转发 + 装机 + 拉起）· `build:harmony[:release]` · `clean:harmony`                               |
+| **iOS**          | `npm run ios:doctor`（任意平台可跑）· `ios:pods` · `dev:ios` · `build:ios`                                                                                                |
+| **子应用与品牌** | `npm run app:show` · `app:use -- <名> [--sync]` · `brand:apply` · `brand:reset` · `brand:gen -- --src <主图> --out <目录>`                                                |
+| **版本**         | `npm run version:show` · `version:bump[:patch/:minor/:major]`                                                                                                             |
+| **协议同步**     | `npm run sync:api`（api.js 同步到子应用模板与基座 H5）· `gen:api-doc`（生成 Bridge API 文档）                                                                             |
+| **质量**         | `npm run typecheck` · `lint` · `test` · `format` / `format:check`                                                                                                         |
 
 当前质量基线：tsc 无错、eslint 0 warning、`npm test` **45 套件 / 510 用例全绿**（测试集中在 `__tests__/`，覆盖 WebView、Bridge、更新回滚、media、observability、performance、security、权限网络等模块）。
 Prettier 未进 CI 硬门禁（仓库存在预存在格式偏差），统一由提交钩子对暂存文件自动修复向前约束。
 
 > `media.test.ts` 的上传重试用例靠 `setTimeout` 等时序，全量跑（尤其带 `--coverage` 插桩变慢时）
-> 偶发 1～2 例失败，单跑该套件必过——是测试自身的时序敏感，非产品缺陷。
+> 偶发 1 ～ 2 例失败，单跑该套件必过——是测试自身的时序敏感，非产品缺陷。
 
 ### 5.4 改代码如何生效
 
-| 改动位置 | 生效方式 |
-|---|---|
-| 子应用源码（`h5/` 的上游工程） | debug 包直接吃它的 dev server，保存即生效（见 4.4），无需 `build:base` / 重装 |
-| `h5/index.html`（已同步进基座的产物） | 按 `r` 热载 WebView；debug 直连开启时不参与入口（关掉直连或打 release 才读它） |
-| `src/` 下 JS/TS | Metro Fast Refresh 秒级热更（鸿蒙需设备侧 hdc 转发在位） |
-| Android 原生（Kotlin/Manifest/Gradle） | 重新构建安装 |
-| 鸿蒙原生（ArkTS `ets/` / C++ `cpp/`） | 重新出 HAP（`npm run install:harmony`）；改 TurboModule 方法名/签名须同步改 `cpp/BaseTurboModules.h` 的方法名单，漏一边的表现是「方法存在但一调就抛错」 |
-| 新增测试 | 放 `__tests__/` 对应模块目录，src 下不存放测试文件 |
+| 改动位置                               | 生效方式                                                                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 子应用源码（`h5/` 的上游工程）         | debug 包直接吃它的 dev server，保存即生效（见 4.4），无需 `build:base` / 重装                                                                           |
+| `h5/index.html`（已同步进基座的产物）  | 按 `r` 热载 WebView；debug 直连开启时不参与入口（关掉直连或打 release 才读它）                                                                          |
+| `src/` 下 JS/TS                        | Metro Fast Refresh 秒级热更（鸿蒙需设备侧 hdc 转发在位）                                                                                                |
+| Android 原生（Kotlin/Manifest/Gradle） | 重新构建安装                                                                                                                                            |
+| 鸿蒙原生（ArkTS `ets/` / C++ `cpp/`）  | 重新出 HAP（`npm run install:harmony`）；改 TurboModule 方法名/签名须同步改 `cpp/BaseTurboModules.h` 的方法名单，漏一边的表现是「方法存在但一调就抛错」 |
+| 新增测试                               | 放 `__tests__/` 对应模块目录，src 下不存放测试文件                                                                                                      |
 
 ### 5.5 代码规范
 
-- **格式化**：Prettier，`printWidth: 100`；`npm run format` / `format:check`。
+- **格式化**：Prettier，配置只有根目录 `.prettierrc` 一份
+  （`printWidth: 100` / `singleQuote` / `trailingComma: all` / `arrowParens: avoid`
+  / `endOfLine: auto`）；`npm run format` 全量对齐、`format:check` 已进 CI 硬门禁。
+  曾经同时存在 `.prettierrc` 与 `.prettierrc.js`，而 prettier 只认前者（实测
+  `--find-config-path`），后者写了却从未生效，`format:check` 也因此一直进不了 CI。
+  `endOfLine: auto` 是给 Windows 留的：`core.autocrlf=true` 下钉死 `lf` 会让 git 一 touch
+  文件就整片假红，门禁该管风格，不该管换行符归属。
 - **命名**：React 组件（`.tsx`）PascalCase；非组件（`.ts`）kebab-case（如 `bridge-server.ts`）。
 - **类型**：禁止 `any`，用具体类型或 `unknown` + 类型守卫；原生模块用可选链 + 能力探测。
 - **链式调用**：短链一行写完；含 `.then()` 的长链式改 `async/await` + `try/catch`；禁止调用对象单独占行再逐方法拆行。
-- **Lint**：ESLint 零警告。
+- **Lint**：ESLint 零警告；`npm run lint` 跑全仓（**含 `scripts/`**：参与出包的脚本必须参与
+  lint，否则端口拼错、退出码写反只有真打包时才暴露。Node 侧只放宽 `no-bitwise`
+  ——校验和/sha256 手写不可避免——和 `consistent-this`，正确性规则照常生效）。
 
 ### 5.6 已知环境坑（速查）
 
@@ -508,8 +547,8 @@ node scripts/create-subapp.js --name demo_h5 --framework react --app-name "演�
      --application-id com.qux.demo --apk-name Demo
 
 # 仅配置应用（远程站点打包用：无源码、无需 npm install，见 4.3）
-node scripts/create-subapp.js --name xingce_app --no-source \
-     --app-name "行测" --application-id com.qux.xingce --remote-url https://xxx.host/
+node scripts/create-subapp.js --name remote_site_demo --no-source \
+     --app-name "示例站点" --application-id com.qux.demo --remote-url https://xxx.host/
 ```
 
 ### 5.9 打包工作台（RNBuild Studio）

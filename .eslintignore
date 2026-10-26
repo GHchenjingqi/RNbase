@@ -1,7 +1,6 @@
 h5/
 h5.backup/
 h5-subapp-setup/
-scripts/
 dist/
 platforms/
 # 第三方/构建产物：不纳入 lint（RNOH 依赖源码等 vendored 代码）
@@ -9,5 +8,7 @@ harmony/oh_modules/
 **/oh_modules/
 node_modules/
 build/
+# jest --coverage 生成的报告（第三方 js 混在里面），lint 它只会留一堆无法修的噪音
+coverage/
 *.hap
 *.apk

@@ -333,7 +333,12 @@ function main() {
     // 逐行拷贝裁切区间（cropSquare 只支持方形，这里宽高独立）
     const out = Buffer.alloc(w * h * 4);
     for (let y = 0; y < h; y++) {
-      src.data.copy(out, y * w * 4, ((top + y) * src.width + left) * 4, ((top + y) * src.width + left + w) * 4);
+      src.data.copy(
+        out,
+        y * w * 4,
+        ((top + y) * src.width + left) * 4,
+        ((top + y) * src.width + left + w) * 4,
+      );
     }
     console.log(
       `[gen-brand] 闪屏 ${path.basename(file)} ${src.width}x${src.height} → 保比例 ${w}x${h}` +
@@ -400,9 +405,7 @@ function main() {
   }
 
   for (const c of crops) {
-    console.log(
-      `[gen-brand] ${c.dir}/${c.file}  ${c.w}x${c.h}  ${(c.bytes / 1024).toFixed(1)} KB`,
-    );
+    console.log(`[gen-brand] ${c.dir}/${c.file}  ${c.w}x${c.h}  ${(c.bytes / 1024).toFixed(1)} KB`);
   }
   if (args.dryRun) {
     console.log('[gen-brand] --dry-run：未写入文件');

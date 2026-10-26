@@ -22,7 +22,7 @@ export function createAppBridgeServer(
   capabilities: CapabilityAdapters = {},
   lifecycle: LifecycleHandlers = {},
   network?: NetworkAdapter,
-  options: BridgeServerOptions = {}
+  options: BridgeServerOptions = {},
 ): ReturnType<typeof createBridgeServer> {
   return createBridgeServer(new PermissionManager(), capabilities, lifecycle, network, {
     onCall: options.onCall,

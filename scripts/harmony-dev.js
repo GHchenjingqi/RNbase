@@ -16,14 +16,15 @@ const http = require('http');
 const path = require('path');
 const { killPort } = require('./free-port');
 const { assertHarmonyReady } = require('./harmony-ready');
+const { METRO_HOST_PORT, H5_DEV_PORT } = require('./ports');
 const { createTee } = require('./log-tee');
 
 const root = path.join(__dirname, '..');
 const logDir = path.join(root, 'log');
 fs.mkdirSync(logDir, { recursive: true });
 const isWin = process.platform === 'win32';
-// 与 scripts/dev.js、scripts/hvigor.js 保持一致的 Metro 端口。
-const PORT = 8082;
+// 与 scripts/dev.js、scripts/hvigor.js 同源的 Metro 端口（真源 ports.json）。
+const PORT = METRO_HOST_PORT;
 
 // 创建 tee 流用共享实现：终端管道断开（工作台关窗 / 停止任务 / `| head`）时
 // 不能让 EPIPE 把 dev server 打死，详见 scripts/log-tee.js。
@@ -101,7 +102,7 @@ async function main() {
   console.log('[harmony-dev] Metro 就绪。另开终端执行：');
   console.log('  npm run install:harmony   # 出 debug HAP + 配 hdc 端口转发 + 装机启动');
   console.log(
-    '  子应用里 npm run dev        # 起本机 vite(5173)，debug 包的 H5 入口就是它；' +
+    `  子应用里 npm run dev        # 起本机 vite(${H5_DEV_PORT})，debug 包的 H5 入口就是它；` +
       '没起则停在基座诊断页',
   );
   console.log('[harmony-dev] Metro 保持前台运行，Ctrl+C 停止。');

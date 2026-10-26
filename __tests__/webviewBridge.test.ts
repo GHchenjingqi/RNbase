@@ -62,7 +62,7 @@ describe('createWebViewMessageHandler', () => {
   it('把事件里的来源交给 BridgeServer 判定：站外来源直接吃 SECURITY_BLOCKED', async () => {
     const server = createBridgeServer(undefined, undefined, undefined, undefined, {
       // 与 WebViewBridge 的接线一致：谓词由 webview/message-origin 组，这里只验透传
-      isTrustedOrigin: (origin) => origin === 'file://',
+      isTrustedOrigin: origin => origin === 'file://',
     });
     const handler = createWebViewMessageHandler(server);
     const req = JSON.stringify({

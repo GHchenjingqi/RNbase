@@ -4,7 +4,7 @@
  * 此前基座在 App.tsx 直接挂载 WebViewBridge，任何渲染期异常（H5 注入、Bridge 装配、
  * 安全区计算等）在 release 下都会整屏白屏且无记录。本边界：
  *
- *  - 捕获子树渲染异常，渲染降级 UI（复用 DiagnosticPage 风格的居中卡片）；
+ *  - 捕获子树渲染异常，渲染降级 UI（居中卡片，与 WebViewErrorPage 同风格）；
  *  - 通过 crash-reporter 上报 message + componentStack 到设备日志；
  *  - 提供「重试」：重置边界状态，瞬态错误可自愈（如 H5 资源偶发不可用）。
  *

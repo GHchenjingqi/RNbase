@@ -62,14 +62,14 @@
 }
 ```
 
-| 字段 | 类型 | 必填 | 说明 |
-|---|---|---|---|
-| `type` | string | 是 | 固定 `"request"` |
-| `id` | string | 是 | 请求唯一编号，用于对应响应 |
-| `version` | string | 是 | Bridge 协议版本，当前 `1.0.0`；`1.0` 亦兼容 |
-| `module` | string | 是 | 模块名（小驼峰），见 §4 |
-| `action` | string | 是 | 方法名（小驼峰），见 §4 |
-| `params` | object | 否 | 方法入参 |
+| 字段      | 类型   | 必填 | 说明                                        |
+| --------- | ------ | ---- | ------------------------------------------- |
+| `type`    | string | 是   | 固定 `"request"`                            |
+| `id`      | string | 是   | 请求唯一编号，用于对应响应                  |
+| `version` | string | 是   | Bridge 协议版本，当前 `1.0.0`；`1.0` 亦兼容 |
+| `module`  | string | 是   | 模块名（小驼峰），见 §4                     |
+| `action`  | string | 是   | 方法名（小驼峰），见 §4                     |
+| `params`  | object | 否   | 方法入参                                    |
 
 ### 2.2 响应（RN → H5）
 
@@ -116,25 +116,27 @@ H5 通过 `RN.ON(event, handler)` 订阅，返回取消订阅函数。
 
 ## 3. 设备能力总览
 
-| 模块 | 方法 | 说明 | 当前接入状态（Android 真机） |
-|---|---|---|---|
-| APP | GETINFO / GETVERSION / GETCAPABILITIES / GETCLIENTID / READY / LIFECYCLE / NATIVEBACKRESULT | App 信息、能力清单、clientId、启动握手、生命周期、返回键回执 | ✅ 可用（RN 侧实现） |
-| AUTH | GETTOKEN / GETUSER / LOGOUT | 登录态获取与登出 | ✅ 可用（内存态存储） |
-| PERMISSION | CHECK / REQUEST / REQUESTALL / OPENSETTINGS | 权限查询/申请/批量申请/跳系统设置 | ✅ 可用（RN `PermissionManager`：Android 走 `PermissionsAndroid`，iOS 走原生 `BasePermissions`） |
-| NETWORK | GETSTATUS | 网络状态 | ✅ 可用（原生 `BaseNetwork` 已注册） |
-| SYSTEM | VIBRATE / COPY / SHARE / GETDARKMODE / GETLANGUAGE / GETSCREENINFO / GETSTATUSBARHEIGHT / GETPLATFORM / GETACCESSIBILITY / GETINFO / GETDEVICEINFO / GETBATTERY | 震动 / 剪贴板 / 分享 / 外观 / 屏幕 / 无障碍 / 设备信息汇总 | ✅ 可用（COPY/SHARE 走 RN `Clipboard`/`Share`；GETDEVICEINFO/GETBATTERY 需原生 `BaseSystem`，已注册） |
-| NOTIFICATION | GETTOKEN / SETBADGE / PLAYSOUND / SENDNOTIFICATION | 推送 token / 角标 / 提示音 / 本地通知 | ✅ 可用（`BaseCapabilities`）；GETTOKEN 是模拟值，项目未接 FCM/厂商推送 |
-| CAMERA | TAKEPHOTO | 拍照 | ✅ 可用（原生 `BaseCapabilities` 已注册） |
-| SCANNER | SCAN | 扫码 | ✅ 可用（原生 `MLKitScanActivity`，Google ML Kit） |
-| MEDIA | PICKIMAGE / SAVEIMAGE | 相册选图 / 保存图片 | ✅ 可用 |
-| FILE | PICK / PICKIMAGE / READASBASE64 / DOWNLOAD / OPEN | 文件选择/读取/下载/打开 | ✅ 可用（READASBASE64 仅限小文件调试，业务仍走 URI） |
-| LOCATION | GETCURRENTPOSITION | 定位 | ✅ 可用 |
-| CLIPBOARD | GETSTRING / SETSTRING / HASSTRING | 剪贴板读 / 写 / 是否有文本 | ✅ 可用（原生 `BaseCapabilities`；Android 10+ 读剪贴板受焦点限制） |
-| APPMANAGER | ISINSTALLED / OPENAPP / OPENAPPSTORE / OPENAPPSETTINGS / OPENSYSTEMSETTINGS / GETINSTALLEDAPPS | 检测安装 / 按包名打开 / 应用市场 / 应用设置 / 系统设置分区 | ✅ 前五项可用；GETINSTALLEDAPPS 未接入（原生不枚举应用列表） |
-| UPDATE | GETINFO / STARTDOWNLOAD / GETPROGRESS / CANCELDOWNLOAD / INSTALL / CANREQUESTINSTALL / OPENINSTALLSETTINGS / COPYTODOWNLOADS / CLEANUP | 整包 APK 远程升级（下载→校验→拉起安装器） | ✅ 仅 Android（原生 `BaseUpdate`）；iOS 由 App Store 分发，统一 DEVICE_UNSUPPORTED |
-| NFC | AVAILABLE / READTAG / WRITENDEF | NFC 可用性 / 读标签 / 写 NDEF | ✅ 可用（设备需带 NFC 硬件） |
-| LOG | INFO / ERROR / WARN / DEBUG | H5 主动打点的事件日志 | ⚠️ 调用一定成功，但**落盘未接原生**：dev 输出到 console、生产走内存适配器（`FileLogWriter` 需注入 RNFS/`BaseLog` 才真正写文件，见 §4.16）。设备调用日志（§12）另走原生 `BaseLog` |
-| KEYBOARD | —（无请求方法，仅事件） | 软键盘显隐事件 `keyboard.change` | ✅ 可用（RN 侧 `Keyboard` 监听，见 §8） |
+| 模块         | 方法                                                                                                                                                            | 说明                                                          | 当前接入状态（Android 真机）                                                                                                                                                                                                                                                                |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| APP          | GETINFO / GETVERSION / GETCAPABILITIES / GETCLIENTID / READY / LIFECYCLE / NATIVEBACKRESULT                                                                     | App 信息、能力清单、clientId、启动握手、生命周期、返回键回执  | ✅ 可用（RN 侧实现）                                                                                                                                                                                                                                                                        |
+| AUTH         | GETTOKEN / GETUSER / LOGOUT                                                                                                                                     | 登录态获取与登出                                              | ✅ 可用（内存态存储）                                                                                                                                                                                                                                                                       |
+| PERMISSION   | CHECK / REQUEST / REQUESTALL / OPENSETTINGS                                                                                                                     | 权限查询/申请/批量申请/跳系统设置                             | ✅ 可用（RN `PermissionManager`：Android 走 `PermissionsAndroid`，iOS 走原生 `BasePermissions`）                                                                                                                                                                                            |
+| NETWORK      | GETSTATUS                                                                                                                                                       | 网络状态                                                      | ✅ 可用（原生 `BaseNetwork` 已注册）                                                                                                                                                                                                                                                        |
+| SYSTEM       | VIBRATE / COPY / SHARE / GETDARKMODE / GETLANGUAGE / GETSCREENINFO / GETSTATUSBARHEIGHT / GETPLATFORM / GETACCESSIBILITY / GETINFO / GETDEVICEINFO / GETBATTERY | 震动 / 剪贴板 / 分享 / 外观 / 屏幕 / 无障碍 / 设备信息汇总    | ✅ 可用（COPY/SHARE 走 RN `Clipboard`/`Share`；GETDEVICEINFO/GETBATTERY 需原生 `BaseSystem`，已注册）                                                                                                                                                                                       |
+| NOTIFICATION | GETTOKEN / SETBADGE / PLAYSOUND / SENDNOTIFICATION                                                                                                              | 推送 token / 角标 / 提示音 / 本地通知                         | ✅ 可用（`BaseCapabilities`）；GETTOKEN 是模拟值，项目未接 FCM/厂商推送                                                                                                                                                                                                                     |
+| CAMERA       | TAKEPHOTO                                                                                                                                                       | 拍照                                                          | ✅ 可用（原生 `BaseCapabilities` 已注册）                                                                                                                                                                                                                                                   |
+| SCANNER      | SCAN                                                                                                                                                            | 扫码                                                          | ✅ 可用（原生 `MLKitScanActivity`，Google ML Kit）                                                                                                                                                                                                                                          |
+| MEDIA        | PICKIMAGE / SAVEIMAGE                                                                                                                                           | 相册选图 / 保存图片                                           | ✅ 可用                                                                                                                                                                                                                                                                                     |
+| FILE         | PICK / PICKIMAGE / READASBASE64 / DOWNLOAD / OPEN                                                                                                               | 文件选择/读取/下载/打开                                       | ✅ 可用（READASBASE64 仅限小文件调试，业务仍走 URI）                                                                                                                                                                                                                                        |
+| LOCATION     | GETCURRENTPOSITION                                                                                                                                              | 定位                                                          | ✅ 可用                                                                                                                                                                                                                                                                                     |
+| CLIPBOARD    | GETSTRING / SETSTRING / HASSTRING                                                                                                                               | 剪贴板读 / 写 / 是否有文本                                    | ✅ 可用（原生 `BaseCapabilities`；Android 10+ 读剪贴板受焦点限制）                                                                                                                                                                                                                          |
+| APPMANAGER   | ISINSTALLED / OPENAPP / OPENAPPSTORE / OPENAPPSETTINGS / OPENSYSTEMSETTINGS / GETINSTALLEDAPPS                                                                  | 检测安装 / 按包名打开 / 应用市场 / 应用设置 / 系统设置分区    | ✅ 前五项可用；GETINSTALLEDAPPS 未接入（原生不枚举应用列表）                                                                                                                                                                                                                                |
+| UPDATE       | GETINFO / STARTDOWNLOAD / GETPROGRESS / CANCELDOWNLOAD / INSTALL / CANREQUESTINSTALL / OPENINSTALLSETTINGS / COPYTODOWNLOADS / CLEANUP                          | 整包 APK 远程升级（下载 → 校验 → 拉起安装器）                 | ✅ 仅 Android（原生 `BaseUpdate`）；iOS 由 App Store 分发，统一 DEVICE_UNSUPPORTED                                                                                                                                                                                                          |
+| NFC          | AVAILABLE / READTAG / WRITENDEF                                                                                                                                 | NFC 可用性 / 读标签 / 写 NDEF                                 | ✅ 可用（设备需带 NFC 硬件）                                                                                                                                                                                                                                                                |
+| LOG          | INFO / ERROR / WARN / DEBUG                                                                                                                                     | H5 主动打点的事件日志                                         | ⚠️ 调用一定成功，但**落盘未接原生**：dev 输出到 console、生产走内存适配器（`FileLogWriter` 需注入 RNFS/`BaseLog` 才真正写文件，见 §4.16）。设备调用日志（§12）另走原生 `BaseLog`                                                                                                            |
+| KEYBOARD     | —（无请求方法，仅事件）                                                                                                                                         | 软键盘显隐事件 `keyboard.change`                              | ✅ 可用（RN 侧 `Keyboard` 监听，见 §8）                                                                                                                                                                                                                                                     |
+| DEVICE       | GETAPPNAME / GETBUNDLEID / GETBUILDNUMBER / GETUNIQUEID / GETFIRSTINSTALLTIME / GETLASTUPDATETIME / GETCHANNEL                                                  | 显示名 / 包名 / 构建号 / 设备标识 / 首次安装与更新时间 / 渠道 | ✅ 前三项取打包下发的 `version.json`（跨端可用）；后三项中 **GETUNIQUEID / GETFIRSTINSTALLTIME / GETLASTUPDATETIME 依赖原生 `BaseSystem.getInstallInfo`，目前仅 Android 实现**，iOS / 鸿蒙统一 `DEVICE_UNSUPPORTED`；GETCHANNEL 无原生来源，恒返回字面量 `"default"`（雷电 Android 9 实测） |
+| BATTERY      | GETINFO / GETLEVEL / ISCHARGING                                                                                                                                 | 电量 / 充电状态                                               | ✅ Android（`BaseSystem.getDeviceInfo`）。原生读不到电量时 `level` 为 `null`（与 SYSTEM.GETBATTERY 同一表示，不夹成 0）；iOS / 鸿蒙未接该原生方法 → `DEVICE_UNSUPPORTED`                                                                                                                    |
 
 > **说明**：`MainApplication.kt` 的 `packageList` 已注册 6 个原生包
 > （`BaseNetwork` / `BaseLog` / `BaseH5` / `BaseSystem` / `BaseCapabilities` / `BaseUpdate`），
@@ -147,7 +149,8 @@ H5 通过 `RN.ON(event, handler)` 订阅，返回取消订阅函数。
 > backgroundTask / inAppReview。补原生方法后即可用，无需改 RN 侧与 H5 侧协议。
 >
 > 另有纯 RN 容器模块（不经原生）：toast / dialog / orientation / statusBar / navigation /
-> webView / device / battery，调用方式与本文范式一致。
+> webView，调用方式与本文范式一致。`device` / `battery` 也注册在桥接层，但它们走
+> `src/middleware/native/device-battery-adapter.ts` 取原生 `BaseSystem`，见上表两行。
 
 ---
 
@@ -162,7 +165,7 @@ H5 通过 `RN.ON(event, handler)` 订阅，返回取消订阅函数。
 **`RN.APP.GETINFO()` → `{ appVersion, bridgeVersion, platform }`**
 
 ```js
-RN.APP.GETINFO().then((info) => {
+RN.APP.GETINFO().then(info => {
   // { appVersion: '0.0.1', bridgeVersion: '1.0.0', platform: 'android' }
 });
 ```
@@ -172,7 +175,7 @@ RN.APP.GETINFO().then((info) => {
 **`RN.APP.GETCAPABILITIES()` → `{ bridgeVersion, platform, features }`**
 
 ```js
-RN.APP.GETCAPABILITIES().then((res) => {
+RN.APP.GETCAPABILITIES().then(res => {
   // res.features = { camera, scanner, location, filePicker, share, clipboard, openApp, nfc }
   // 均为 boolean；openApp 仅安卓为 true（iOS 无包名概念，只能走 URL scheme）；
   // nfc 由 RN 启动时异步探测，未探完前可能为 false。
@@ -227,10 +230,10 @@ RN.ON('native.back', async () => {
 
 ```js
 RN.PERMISSION.REQUEST({ permission: 'camera' })
-  .then((res) => {
+  .then(res => {
     // res = { permission: 'camera', status: 'granted', granted: true, canAskAgain: true }
   })
-  .catch((err) => {
+  .catch(err => {
     // err.code 可能是 PERMISSION_DENIED / PERMISSION_BLOCKED / PERMISSION_UNAVAILABLE
   });
 ```
@@ -242,7 +245,7 @@ RN.PERMISSION.REQUEST({ permission: 'camera' })
 批量申请：按数组顺序逐项申请，**单项被拒不中断后续**，`results` 回每一项的最终授权结果。
 
 ```js
-RN.PERMISSION.REQUESTALL({ permissions: ['camera', 'notification'] }).then((res) => {
+RN.PERMISSION.REQUESTALL({ permissions: ['camera', 'notification'] }).then(res => {
   // res = { ok: true, results: { camera: true, notification: false } }
 });
 ```
@@ -262,7 +265,7 @@ RN.PERMISSION.REQUESTALL({ permissions: ['camera', 'notification'] }).then((res)
 **`RN.NETWORK.GETSTATUS()` → `{ connected: boolean, type: string }`**
 
 ```js
-RN.NETWORK.GETSTATUS().then((s) => {
+RN.NETWORK.GETSTATUS().then(s => {
   // type: 'wifi' | 'cellular' | 'wired' | 'none' | 'unknown'
 });
 ```
@@ -272,7 +275,7 @@ RN.NETWORK.GETSTATUS().then((s) => {
 **`RN.CAMERA.TAKEPHOTO()` → `{ uri: string }`**（可传 `{ quality? }`，服务端当前忽略）
 
 ```js
-RN.CAMERA.TAKEPHOTO().then((res) => {
+RN.CAMERA.TAKEPHOTO().then(res => {
   // res.uri 为拍照结果文件 URI
 });
 ```
@@ -290,7 +293,7 @@ RN.CAMERA.TAKEPHOTO().then((res) => {
 **`RN.MEDIA.PICKIMAGE({ multiple? })` → `{ files: PickedFile[] }`**
 
 ```js
-RN.MEDIA.PICKIMAGE({ multiple: false }).then((res) => {
+RN.MEDIA.PICKIMAGE({ multiple: false }).then(res => {
   // res.files = [{ name, size, mimeType, uri }, ...]
 });
 ```
@@ -301,10 +304,10 @@ RN.MEDIA.PICKIMAGE({ multiple: false }).then((res) => {
 
 ```ts
 {
-  name: string;      // 文件名
-  size: number;      // 字节数
-  mimeType: string;  // MIME 类型
-  uri: string;       // content:// 或 file:// URI
+  name: string; // 文件名
+  size: number; // 字节数
+  mimeType: string; // MIME 类型
+  uri: string; // content:// 或 file:// URI
 }
 ```
 
@@ -331,7 +334,7 @@ RN.MEDIA.PICKIMAGE({ multiple: false }).then((res) => {
 **`RN.LOCATION.GETCURRENTPOSITION()` → `{ latitude, longitude, accuracy? }`**
 
 ```js
-RN.LOCATION.GETCURRENTPOSITION().then((pos) => {
+RN.LOCATION.GETCURRENTPOSITION().then(pos => {
   // { latitude: 34.03, longitude: 113.85, accuracy: 25 }
 });
 ```
@@ -399,11 +402,20 @@ if (!installed) {
 
 ```json
 {
-  "platform": "android", "versionName": "1.2.2", "versionCode": 122,
-  "apkInstall": true, "canRequestInstall": true,
+  "platform": "android",
+  "versionName": "1.2.2",
+  "versionCode": 122,
+  "apkInstall": true,
+  "canRequestInstall": true,
   "updateDir": "/storage/emulated/0/Android/data/com.qux/files/update",
-  "taskState": "idle", "received": 0, "total": 0,
-  "errorCode": "", "errorMessage": "", "sha256": "", "apkPath": "", "apkSize": 0
+  "taskState": "idle",
+  "received": 0,
+  "total": 0,
+  "errorCode": "",
+  "errorMessage": "",
+  "sha256": "",
+  "apkPath": "",
+  "apkSize": 0
 }
 ```
 
@@ -501,6 +513,7 @@ Android 15+ edge-to-edge 下 `StatusBar.currentHeight` 已废弃返回 0，这�
 `env(safe-area-inset-top)` 或默认值。
 
 **深浅色与安全区的同步取值**：
+
 - H5 加载前容器注入 `window.RN_APPEARANCE`（`'dark' | 'light'`，首载快照），首帧即可同步读取，
   不必先按浅色渲染再等 `GETDARKMODE` 回包；运行期切换仍以 `system.darkmodechange` 事件为准。
 - `window.RN_SAFE_AREA` 与 URL query 的 `safeTop` 等都是**首载快照**；旋转 / 分屏 / 折叠屏
@@ -520,10 +533,23 @@ Android 15+ edge-to-edge 下 `StatusBar.currentHeight` 已废弃返回 0，这�
   "language": "zh",
   "locale": "zh_CN",
   "screen": { "width": 1080, "height": 2400, "scale": 3, "fontScale": 1.2 },
-  "accessibility": { "screenReader": false, "reduceMotion": false, "boldText": false, "invertColors": false },
-  "device": { "brand": "vivo", "model": "V2217A", "systemVersion": "13", "sdkInt": 33,
-              "batteryLevel": 61, "isCharging": true, "totalStorage": 250000000000,
-              "freeStorage": 120000000000, "timezone": "Asia/Shanghai" }
+  "accessibility": {
+    "screenReader": false,
+    "reduceMotion": false,
+    "boldText": false,
+    "invertColors": false
+  },
+  "device": {
+    "brand": "vivo",
+    "model": "V2217A",
+    "systemVersion": "13",
+    "sdkInt": 33,
+    "batteryLevel": 61,
+    "isCharging": true,
+    "totalStorage": 250000000000,
+    "freeStorage": 120000000000,
+    "timezone": "Asia/Shanghai"
+  }
 }
 ```
 
@@ -621,7 +647,7 @@ RN.PERMISSION.REQUEST({ permission: 'camera' });
 ### 5.3 能力检测与降级
 
 ```js
-RN.SUPPORTS('camera').then((ok) => {
+RN.SUPPORTS('camera').then(ok => {
   if (ok) {
     return RN.CAMERA.TAKEPHOTO();
   }
@@ -640,7 +666,7 @@ RN.SUPPORTS('camera').then((ok) => {
 ### 5.4 事件订阅
 
 ```js
-const off = RN.ON('auth.logout', (data) => {
+const off = RN.ON('auth.logout', data => {
   // 登录态失效，跳转登录页
   location.href = './login.html';
 });
@@ -652,31 +678,31 @@ const off = RN.ON('auth.logout', (data) => {
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="./js/api.js"></script>
-</head>
-<body>
-  <button id="btn">拍照并保存</button>
-  <script>
-    document.getElementById('btn').addEventListener('click', async () => {
-      try {
-        // 1. 申请相机权限
-        await RN.PERMISSION.REQUEST({ permission: 'camera' });
-        // 2. 拍照
-        const { uri } = await RN.CAMERA.TAKEPHOTO();
-        // 3. 保存到相册
-        const { saved } = await RN.MEDIA.SAVEIMAGE({ uri });
-        // 4. 读取网络状态
-        const net = await RN.NETWORK.GETSTATUS();
-        alert(`已保存: ${saved}, 网络: ${net.type}`);
-      } catch (e) {
-        alert(`失败: ${e.code} ${e.message}`);
-      }
-    });
-  </script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="./js/api.js"></script>
+  </head>
+  <body>
+    <button id="btn">拍照并保存</button>
+    <script>
+      document.getElementById('btn').addEventListener('click', async () => {
+        try {
+          // 1. 申请相机权限
+          await RN.PERMISSION.REQUEST({ permission: 'camera' });
+          // 2. 拍照
+          const { uri } = await RN.CAMERA.TAKEPHOTO();
+          // 3. 保存到相册
+          const { saved } = await RN.MEDIA.SAVEIMAGE({ uri });
+          // 4. 读取网络状态
+          const net = await RN.NETWORK.GETSTATUS();
+          alert(`已保存: ${saved}, 网络: ${net.type}`);
+        } catch (e) {
+          alert(`失败: ${e.code} ${e.message}`);
+        }
+      });
+    </script>
+  </body>
 </html>
 ```
 
@@ -684,10 +710,16 @@ const off = RN.ON('auth.logout', (data) => {
 
 ```js
 const id = 'req_' + Date.now();
-window.ReactNativeWebView.postMessage(JSON.stringify({
-  type: 'request', id, version: '1.0.0', module: 'network', action: 'getStatus',
-}));
-window.addEventListener('message', (e) => {
+window.ReactNativeWebView.postMessage(
+  JSON.stringify({
+    type: 'request',
+    id,
+    version: '1.0.0',
+    module: 'network',
+    action: 'getStatus',
+  }),
+);
+window.addEventListener('message', e => {
   const msg = JSON.parse(e.data);
   if (msg.type === 'response' && msg.id === id) {
     console.log(msg.success ? msg.data : msg.error);
@@ -702,14 +734,14 @@ window.addEventListener('message', (e) => {
 
 ## 6. 中间件说明
 
-| 项 | 说明 |
-|---|---|
-| 文件位置 | `h5/js/api.js` |
-| 暴露对象 | `window.RN` |
-| 运行环境 | RN WebView（真实桥接）；普通浏览器自动降级 Mock |
-| 版本 | `RN.VERSION = '1.0.0'`，与 RN 侧 `src/config` 一致 |
-| 环境标识 | `RN.ENV`：`'rn'` 或 `'browser'` |
-| 错误码 | `RN.ERRORS.*`（见 §7） |
+| 项       | 说明                                               |
+| -------- | -------------------------------------------------- |
+| 文件位置 | `h5/js/api.js`                                     |
+| 暴露对象 | `window.RN`                                        |
+| 运行环境 | RN WebView（真实桥接）；普通浏览器自动降级 Mock    |
+| 版本     | `RN.VERSION = '1.0.0'`，与 RN 侧 `src/config` 一致 |
+| 环境标识 | `RN.ENV`：`'rn'` 或 `'browser'`                    |
+| 错误码   | `RN.ERRORS.*`（见 §7）                             |
 
 **RN 对象结构速览**（`RN.<模块>.<方法>(params) → Promise<data>`）：
 
@@ -749,26 +781,27 @@ RN.VERSION  RN.SDK_VERSION  RN.PROTOCOL_VERSION  RN.APP_ID  RN.ENV  RN.PLATFORM 
 
 ## 7. 错误码表
 
-| 错误码 | 含义 | 建议处理 |
-|---|---|---|
-| `BRIDGE_NOT_READY` | Bridge 未初始化 / 已清理 | 重新加载页面 |
-| `BRIDGE_VERSION_NOT_SUPPORTED` | H5 协议版本与服务端不兼容 | 升级 H5 或 App |
-| `METHOD_NOT_FOUND` | 方法不存在 | 检查模块/方法名 |
-| `INVALID_PARAMS` | 参数校验失败 | 检查入参 |
-| `TIMEOUT` | 调用超时（30s） | 重试或降级 |
-| `PERMISSION_DENIED` | 权限被拒绝（可再申请） | 引导再次授权 |
-| `PERMISSION_BLOCKED` | 权限被永久拒绝 | 引导 `OPENSETTINGS` |
-| `PERMISSION_UNAVAILABLE` | 设备不支持该权限 | 降级提示 |
-| `USER_CANCELLED` | 用户取消（拍照/选文件等） | 静默处理 |
-| `DEVICE_UNSUPPORTED` | 当前设备/App 未接入该能力 | 降级 UI |
-| `NETWORK_ERROR` | 网络错误 | 提示重试 |
-| `NATIVE_ERROR` | 原生调用异常 | 上报/提示 |
-| `FILE_NOT_FOUND` | 文件不存在 | 提示 |
-| `FILE_TOO_LARGE` | 文件过大 | 提示 |
-| `SECURITY_BLOCKED` | 安全策略阻止 | 检查来源是否受信 |
-| `UNKNOWN_ERROR` | 未知错误 | 兜底处理 |
+| 错误码                         | 含义                      | 建议处理            |
+| ------------------------------ | ------------------------- | ------------------- |
+| `BRIDGE_NOT_READY`             | Bridge 未初始化 / 已清理  | 重新加载页面        |
+| `BRIDGE_VERSION_NOT_SUPPORTED` | H5 协议版本与服务端不兼容 | 升级 H5 或 App      |
+| `METHOD_NOT_FOUND`             | 方法不存在                | 检查模块/方法名     |
+| `INVALID_PARAMS`               | 参数校验失败              | 检查入参            |
+| `TIMEOUT`                      | 调用超时（30s）           | 重试或降级          |
+| `PERMISSION_DENIED`            | 权限被拒绝（可再申请）    | 引导再次授权        |
+| `PERMISSION_BLOCKED`           | 权限被永久拒绝            | 引导 `OPENSETTINGS` |
+| `PERMISSION_UNAVAILABLE`       | 设备不支持该权限          | 降级提示            |
+| `USER_CANCELLED`               | 用户取消（拍照/选文件等） | 静默处理            |
+| `DEVICE_UNSUPPORTED`           | 当前设备/App 未接入该能力 | 降级 UI             |
+| `NETWORK_ERROR`                | 网络错误                  | 提示重试            |
+| `NATIVE_ERROR`                 | 原生调用异常              | 上报/提示           |
+| `FILE_NOT_FOUND`               | 文件不存在                | 提示                |
+| `FILE_TOO_LARGE`               | 文件过大                  | 提示                |
+| `SECURITY_BLOCKED`             | 安全策略阻止              | 检查来源是否受信    |
+| `UNKNOWN_ERROR`                | 未知错误                  | 兜底处理            |
 
 > 两条常见误判：
+>
 > 1. **原生 reject 不会被吞成「未知错误」**：适配器统一用 `wrapNativeError` 把原生异常包成
 >    `NATIVE_ERROR`，message 保留原生真实文案；只有桥接层之外的意外异常才是 `UNKNOWN_ERROR`。
 > 2. **`DEVICE_UNSUPPORTED` ≠ 出错**：表示该能力在**当前平台/当前原生版本**未实现（例如 iOS 调
@@ -780,15 +813,15 @@ RN.VERSION  RN.SDK_VERSION  RN.PROTOCOL_VERSION  RN.APP_ID  RN.ENV  RN.PLATFORM 
 
 ## 8. 事件表（RN → H5）
 
-| 事件名 | data | 触发时机 | 当前状态 |
-|---|---|---|---|
-| `bridge.ready` | `{ protocolVersion, bridgeVersion, appVersion, appId, capabilities, h5Version }` | `app.ready` 握手成功 | 已接通（与 `RN.READY()` 的响应双路径，任一先到即 ready） |
-| `auth.logout` | `{ timestamp }` | AUTH.LOGOUT 成功后 | 已接通 |
-| `app.resume` / `app.background` | `{ timestamp }` | App 前后台切换 | 已接通（`AppState` 监听） |
-| `system.darkmodechange` | `{ mode: 'dark' \| 'light' \| 'system' }` | 系统切换深色/浅色模式时 | 已接通 |
-| `keyboard.change` | `{ height: number（dp）, visible: boolean }` | 软键盘弹出/收起 | 已接通（`modules/keyboard.ts`） |
-| `native.back` | `{ ts }` | 用户按硬件/手势返回键 | 已接通（需 H5 用 `RN.APP.NATIVEBACKRESULT` 回执，见 §4.1） |
-| `notification.tap` | `{ ts }` | 用户点通知栏消息（仅 Android） | 已接通（只当「有货」信号，负载由 H5 调 `NOTIFICATION.GETPENDINGNOTIFICATION` 取，见 §4.15） |
+| 事件名                          | data                                                                             | 触发时机                       | 当前状态                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `bridge.ready`                  | `{ protocolVersion, bridgeVersion, appVersion, appId, capabilities, h5Version }` | `app.ready` 握手成功           | 已接通（与 `RN.READY()` 的响应双路径，任一先到即 ready）                                    |
+| `auth.logout`                   | `{ timestamp }`                                                                  | AUTH.LOGOUT 成功后             | 已接通                                                                                      |
+| `app.resume` / `app.background` | `{ timestamp }`                                                                  | App 前后台切换                 | 已接通（`AppState` 监听）                                                                   |
+| `system.darkmodechange`         | `{ mode: 'dark' \| 'light' \| 'system' }`                                        | 系统切换深色/浅色模式时        | 已接通                                                                                      |
+| `keyboard.change`               | `{ height: number（dp）, visible: boolean }`                                     | 软键盘弹出/收起                | 已接通（`modules/keyboard.ts`）                                                             |
+| `native.back`                   | `{ ts }`                                                                         | 用户按硬件/手势返回键          | 已接通（需 H5 用 `RN.APP.NATIVEBACKRESULT` 回执，见 §4.1）                                  |
+| `notification.tap`              | `{ ts }`                                                                         | 用户点通知栏消息（仅 Android） | 已接通（只当「有货」信号，负载由 H5 调 `NOTIFICATION.GETPENDINGNOTIFICATION` 取，见 §4.15） |
 
 > **`keyboard.change` 为什么要 H5 自己避让**：Android 15+（targetSdk 35+）edge-to-edge 让
 > `adjustResize` 失效，布局视口不再随键盘缩小，键盘只能由 H5 让——把 `height` 写进 CSS 变量，
@@ -860,14 +893,14 @@ RECORD_AUDIO / POST_NOTIFICATIONS / VIBRATE / NFC / REQUEST_INSTALL_PACKAGES
 
 `platforms/android/app/src/main/java/com/qux/MainApplication.kt` 的 `packageList` 当前注册 6 个包：
 
-| 原生模块 | 状态 | 对应 Bridge 能力 |
-|---|---|---|
-| `BaseNetworkModule.kt` + `BaseNetworkPackage` | ✅ 已注册 | network |
-| `BaseLogModule.kt` + `BaseLogPackage` | ✅ 已注册 | log、设备调用日志落盘 |
-| `BaseH5Module.kt` + `BaseH5Package` | ✅ 已注册 | H5 子包本地版本管理（§13） |
-| `BaseSystemModule.kt` + `BaseSystemPackage` | ✅ 已注册 | system.getDeviceInfo / getBattery |
+| 原生模块                                                | 状态      | 对应 Bridge 能力                                                                         |
+| ------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| `BaseNetworkModule.kt` + `BaseNetworkPackage`           | ✅ 已注册 | network                                                                                  |
+| `BaseLogModule.kt` + `BaseLogPackage`                   | ✅ 已注册 | log、设备调用日志落盘                                                                    |
+| `BaseH5Module.kt` + `BaseH5Package`                     | ✅ 已注册 | H5 子包本地版本管理（§13）                                                               |
+| `BaseSystemModule.kt` + `BaseSystemPackage`             | ✅ 已注册 | system.getDeviceInfo / getBattery                                                        |
 | `BaseCapabilitiesModule.kt` + `BaseCapabilitiesPackage` | ✅ 已注册 | camera / scanner / media / file / location / clipboard / appManager / nfc / notification |
-| `BaseUpdateModule.kt` + `BaseUpdatePackage` | ✅ 已注册 | update（整包 APK 远程升级，仅 Android） |
+| `BaseUpdateModule.kt` + `BaseUpdatePackage`             | ✅ 已注册 | update（整包 APK 远程升级，仅 Android）                                                  |
 
 新增原生包时在 `packageList` 里 `add(XxxPackage())` 即可，RN 侧与 H5 侧协议不用改（规则 10）。
 
@@ -877,21 +910,21 @@ RECORD_AUDIO / POST_NOTIFICATIONS / VIBRATE / NFC / REQUEST_INSTALL_PACKAGES
 原生模块整体缺失 → 返回空适配器；单个方法缺失 → 该动作 `DEVICE_UNSUPPORTED`。
 因此下表就是当前真实可用性，H5 侧无需再做平台判断。（**鸿蒙** 那一列不在这里，逐条见 §9.6。）
 
-| Bridge 方法 | Android 原生 | iOS 原生 | 实现要点 |
-|---|---|---|---|
-| `scanner.scan` | ✅ `scan` | ❌ 占位（reject `NOT_IMPLEMENTED`） | Android 走 `MLKitScanActivity`（CameraX + ML Kit），ZXing `CaptureActivity` 保留为降级 |
-| `camera.takePhoto` | ✅ `takePhoto` | ✅ `takePhoto` | Android 输出到 app 专属目录，经 FileProvider `content://` 回传，不需要 `WRITE_EXTERNAL_STORAGE` |
-| `media.pickImage` / `saveImage` | ✅ | ✅ | Android 用 PhotoPicker；保存走 MediaStore |
-| `file.pick` / `readAsBase64` / `download` / `open` | ✅ | ✅（iOS 无 `readFileAsBase64`） | `download` 用 `HttpURLConnection` 直写 `cacheDir`（不依赖 DownloadManager），回传 `file://` uri；`open` 走 `ACTION_VIEW` |
-| `location.getCurrentPosition` | ✅ | ✅ | 原生 `getCurrentPosition(promise)` 只接受 promise，**opts 不透传**（高精度/超时参数当前忽略） |
-| `clipboard.getString` / `setString` / `hasString` | ✅ | ✅ | Android 10+ 非焦点态读取受限；iOS 用 `UIPasteboard` |
-| `appManager.isInstalled` / `openApp` / `openAppStore` / `openSystemSettings` | ✅ | ❌ | 包名/Intent 分区是 Android 概念；iOS 的 `canOpenURL` 需 `LSApplicationQueriesSchemes` 白名单，结果不可信，故**故意不实现** |
-| `appManager.openAppSettings` | ✅ | ✅ | iOS 用 `UIApplication.openSettingsURLString`（唯一入口） |
-| `appManager.getInstalledApps` | ❌ | ❌ | 原生不枚举应用列表（隐私 + 11+ 可见性噪音） |
-| `notification.setBadge` / `playSound` / `sendNotification` | ✅ | ❌ | 渠道 `base_notify` / `base_badge`；提示音用 `RingtoneManager` 默认通知铃声；同 (title, content) 5s 滑动窗口去重（复用 id 原地更新 + `setOnlyAlertOnce`，重复调用不叠条不重响） |
-| `notification.getToken` | ✅（模拟值） | ✅（模拟值） | 项目未接 FCM/厂商推送，返回 `mock-token-emulator` 供 H5 联调 |
-| `nfc.isAvailable` / `readTag` / `writeNdef` | ✅ | ❌ | iOS 未接 CoreNFC |
-| brightness / flashlight / sensor / biometric / contacts / calendar / bluetooth / audio / storage / networkInfo / qr / image / haptics / speech / backgroundTask / inAppReview | ❌ | ❌ | 桥接层已注册、原生方法未实现 → 一律 `DEVICE_UNSUPPORTED` |
+| Bridge 方法                                                                                                                                                                   | Android 原生   | iOS 原生                            | 实现要点                                                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scanner.scan`                                                                                                                                                                | ✅ `scan`      | ❌ 占位（reject `NOT_IMPLEMENTED`） | Android 走 `MLKitScanActivity`（CameraX + ML Kit），ZXing `CaptureActivity` 保留为降级                                                                                         |
+| `camera.takePhoto`                                                                                                                                                            | ✅ `takePhoto` | ✅ `takePhoto`                      | Android 输出到 app 专属目录，经 FileProvider `content://` 回传，不需要 `WRITE_EXTERNAL_STORAGE`                                                                                |
+| `media.pickImage` / `saveImage`                                                                                                                                               | ✅             | ✅                                  | Android 用 PhotoPicker；保存走 MediaStore                                                                                                                                      |
+| `file.pick` / `readAsBase64` / `download` / `open`                                                                                                                            | ✅             | ✅（iOS 无 `readFileAsBase64`）     | `download` 用 `HttpURLConnection` 直写 `cacheDir`（不依赖 DownloadManager），回传 `file://` uri；`open` 走 `ACTION_VIEW`                                                       |
+| `location.getCurrentPosition`                                                                                                                                                 | ✅             | ✅                                  | 原生 `getCurrentPosition(promise)` 只接受 promise，**opts 不透传**（高精度/超时参数当前忽略）                                                                                  |
+| `clipboard.getString` / `setString` / `hasString`                                                                                                                             | ✅             | ✅                                  | Android 10+ 非焦点态读取受限；iOS 用 `UIPasteboard`                                                                                                                            |
+| `appManager.isInstalled` / `openApp` / `openAppStore` / `openSystemSettings`                                                                                                  | ✅             | ❌                                  | 包名/Intent 分区是 Android 概念；iOS 的 `canOpenURL` 需 `LSApplicationQueriesSchemes` 白名单，结果不可信，故**故意不实现**                                                     |
+| `appManager.openAppSettings`                                                                                                                                                  | ✅             | ✅                                  | iOS 用 `UIApplication.openSettingsURLString`（唯一入口）                                                                                                                       |
+| `appManager.getInstalledApps`                                                                                                                                                 | ❌             | ❌                                  | 原生不枚举应用列表（隐私 + 11+ 可见性噪音）                                                                                                                                    |
+| `notification.setBadge` / `playSound` / `sendNotification`                                                                                                                    | ✅             | ❌                                  | 渠道 `base_notify` / `base_badge`；提示音用 `RingtoneManager` 默认通知铃声；同 (title, content) 5s 滑动窗口去重（复用 id 原地更新 + `setOnlyAlertOnce`，重复调用不叠条不重响） |
+| `notification.getToken`                                                                                                                                                       | ✅（模拟值）   | ✅（模拟值）                        | 项目未接 FCM/厂商推送，返回 `mock-token-emulator` 供 H5 联调                                                                                                                   |
+| `nfc.isAvailable` / `readTag` / `writeNdef`                                                                                                                                   | ✅             | ❌                                  | iOS 未接 CoreNFC                                                                                                                                                               |
+| brightness / flashlight / sensor / biometric / contacts / calendar / bluetooth / audio / storage / networkInfo / qr / image / haptics / speech / backgroundTask / inAppReview | ❌             | ❌                                  | 桥接层已注册、原生方法未实现 → 一律 `DEVICE_UNSUPPORTED`                                                                                                                       |
 
 ### 9.4 整包远程升级（update）链路
 
@@ -915,15 +948,15 @@ RN.UPDATE.INSTALL       → FileProvider.getUriForFile + FLAG_GRANT_READ_URI_PER
 原生 reject 的错误码 → Bridge 错误码映射（`src/middleware/native/update-native-adapter.ts`，
 `BridgeErrorCode` 是封闭联合，原生自定义码不能直接透传，原始文案拼进 `message`）：
 
-| 原生码 | Bridge 码 | H5 处理 |
-|---|---|---|
-| `INSTALL_PERMISSION_DENIED` | `PERMISSION_DENIED` | 引导 `RN.UPDATE.OPENINSTALLSETTINGS()`，**不要报「安装失败」** |
-| `APK_MISSING` | `FILE_NOT_FOUND` | 还没下载完/包被清理，重新 `STARTDOWNLOAD` |
-| `INSTALL_FAILED` | `SECURITY_BLOCKED` | 系统安全策略拦截（如华为纯净模式），给「复制到下载目录后手动安装」兜底 |
-| `NO_INSTALLER` | `NATIVE_ERROR` | 设备上没有能打开安装包的应用，提示人工处理 |
-| `SETTINGS_UNAVAILABLE` / `COPY_FAILED` | `NATIVE_ERROR` | 上报 + 提示 |
-| `UNSUPPORTED` | `DEVICE_UNSUPPORTED` | 隐藏升级入口 |
-| 其他 / 无码异常 | `NATIVE_ERROR` | 上报 + 提示重试 |
+| 原生码                                 | Bridge 码            | H5 处理                                                                |
+| -------------------------------------- | -------------------- | ---------------------------------------------------------------------- |
+| `INSTALL_PERMISSION_DENIED`            | `PERMISSION_DENIED`  | 引导 `RN.UPDATE.OPENINSTALLSETTINGS()`，**不要报「安装失败」**         |
+| `APK_MISSING`                          | `FILE_NOT_FOUND`     | 还没下载完/包被清理，重新 `STARTDOWNLOAD`                              |
+| `INSTALL_FAILED`                       | `SECURITY_BLOCKED`   | 系统安全策略拦截（如华为纯净模式），给「复制到下载目录后手动安装」兜底 |
+| `NO_INSTALLER`                         | `NATIVE_ERROR`       | 设备上没有能打开安装包的应用，提示人工处理                             |
+| `SETTINGS_UNAVAILABLE` / `COPY_FAILED` | `NATIVE_ERROR`       | 上报 + 提示                                                            |
+| `UNSUPPORTED`                          | `DEVICE_UNSUPPORTED` | 隐藏升级入口                                                           |
+| 其他 / 无码异常                        | `NATIVE_ERROR`       | 上报 + 提示重试                                                        |
 
 `GETINFO` 顺带做一件事：若升级目录里那个包的版本号已等于当前已装版本名，直接删掉它
 （升级装上之后进程重启、内存态清零，而 H5 的 `CLEANUP` 会被 24h 节流挡在门外，
@@ -961,27 +994,27 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
 
 #### 能力有无
 
-| Bridge 方法 | 鸿蒙 | 说明 |
-|---|---|---|
-| `camera.takePhoto` | ✅ | `cameraPicker` 拉起系统相机，不走自研预览页 |
-| `scanner.scan` | ⚠️ | Scan Kit 懒加载，**只在真机生效**；模拟器上会失败 |
-| `media.pickImage` / `saveImage` | ✅ | `photoAccessHelper` 选图；保存写 MediaToolbox/相册 |
-| `file.pick` / `readAsBase64` / `download` / `open` | ✅ | 选中文件先 `copyIntoSandbox` 进应用沙箱再回 URI |
-| `location.getCurrentPosition` | ✅ | 权限/定位服务未开时分别抛中文错误；与安卓一样**不透传 opts** |
-| `clipboard.setString` / `getString` / `hasString` | ✅ | 自研 `clipboardSetString/GetString/HasString`，**不走 RN `Clipboard`**（RNOH 不保证实现它）；读失败回空串而不是抛错 |
-| `system.copy` | ✅ | 优先原生 `clipboardSetString`，拿不到才回落 RN `Clipboard` |
-| `system.share` | ✅ | 走 RN `Share`（RNOH 有 `ShareTurboModule`），**不经过** `BaseCapabilities.share`；ArkTS 侧那个 `share` 注册了但基座不用 |
-| `appManager.openAppSettings` | ✅ | `settings` ability：`application_info_entry` + 本包 detail |
-| `appManager.openSystemSettings` | ✅ | 只有**两个落点**：`application_details`/空/`notification` → 应用详情页，其余 → 设置首页。安卓那种按分区跳的语义拿不到 |
-| `appManager.isInstalled` | ❌ | 需系统级 `GET_BUNDLE_INFO_PRIVILEGED`，公开 API 做不到 → `DEVICE_UNSUPPORTED` |
-| `appManager.openApp` / `openAppStore` | ❌ | 鸿蒙没有「按包名拉起/跳市场」的公开入口 → `DEVICE_UNSUPPORTED` |
-| `notification.setBadge` / `playSound` / `sendNotification` | ✅ | 角标走 `notificationManager.setBadgeNumber`（免权限，失败回 `ok:false` 不抛错，免得刷未读数把设备日志淹掉）；提示音是先把 rawfile 里的 beep 资源写进 cacheDir 再用 `media.AVPlayer` 播（默认 3s，`duration` 可覆盖），**不是**系统通知铃声；通知未授权时会拉起系统授权弹窗 |
-| `notification.getToken` | ❌ | 未注册（项目本来也没接 FCM/厂商推送，安卓返回的是模拟值） |
-| `nfc.*` | ❌ | 读标签要 system API + 真机标签，故意不注册 → `DEVICE_UNSUPPORTED` |
-| `update.*`（整包升级） | ❌ | `BaseUpdate` 未移植；鸿蒙整包分发归 AppGallery，H5 应隐藏升级入口 |
-| H5 子包动态升级（§13） | ❌ | `BaseH5` 未移植，`createRealRuntime()` 检测不到即降级为内存演示运行时（不崩） |
-| `network.getStatus` / `log.*` / `system.getDeviceInfo` | ✅ | 对应 `BaseNetwork` / `BaseLog` / `BaseSystem`；容器退出用 `BaseSystem.exitApp`（RNOH 没有安卓的 `ExitApp`） |
-| `permission.*` | ⚠️ | 见下 |
+| Bridge 方法                                                | 鸿蒙 | 说明                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `camera.takePhoto`                                         | ✅   | `cameraPicker` 拉起系统相机，不走自研预览页                                                                                                                                                                                                                                |
+| `scanner.scan`                                             | ⚠️   | Scan Kit 懒加载，**只在真机生效**；模拟器上会失败                                                                                                                                                                                                                          |
+| `media.pickImage` / `saveImage`                            | ✅   | `photoAccessHelper` 选图；保存写 MediaToolbox/相册                                                                                                                                                                                                                         |
+| `file.pick` / `readAsBase64` / `download` / `open`         | ✅   | 选中文件先 `copyIntoSandbox` 进应用沙箱再回 URI                                                                                                                                                                                                                            |
+| `location.getCurrentPosition`                              | ✅   | 权限/定位服务未开时分别抛中文错误；与安卓一样**不透传 opts**                                                                                                                                                                                                               |
+| `clipboard.setString` / `getString` / `hasString`          | ✅   | 自研 `clipboardSetString/GetString/HasString`，**不走 RN `Clipboard`**（RNOH 不保证实现它）；读失败回空串而不是抛错                                                                                                                                                        |
+| `system.copy`                                              | ✅   | 优先原生 `clipboardSetString`，拿不到才回落 RN `Clipboard`                                                                                                                                                                                                                 |
+| `system.share`                                             | ✅   | 走 RN `Share`（RNOH 有 `ShareTurboModule`），**不经过** `BaseCapabilities.share`；ArkTS 侧那个 `share` 注册了但基座不用                                                                                                                                                    |
+| `appManager.openAppSettings`                               | ✅   | `settings` ability：`application_info_entry` + 本包 detail                                                                                                                                                                                                                 |
+| `appManager.openSystemSettings`                            | ✅   | 只有**两个落点**：`application_details`/空/`notification` → 应用详情页，其余 → 设置首页。安卓那种按分区跳的语义拿不到                                                                                                                                                      |
+| `appManager.isInstalled`                                   | ❌   | 需系统级 `GET_BUNDLE_INFO_PRIVILEGED`，公开 API 做不到 → `DEVICE_UNSUPPORTED`                                                                                                                                                                                              |
+| `appManager.openApp` / `openAppStore`                      | ❌   | 鸿蒙没有「按包名拉起/跳市场」的公开入口 → `DEVICE_UNSUPPORTED`                                                                                                                                                                                                             |
+| `notification.setBadge` / `playSound` / `sendNotification` | ✅   | 角标走 `notificationManager.setBadgeNumber`（免权限，失败回 `ok:false` 不抛错，免得刷未读数把设备日志淹掉）；提示音是先把 rawfile 里的 beep 资源写进 cacheDir 再用 `media.AVPlayer` 播（默认 3s，`duration` 可覆盖），**不是**系统通知铃声；通知未授权时会拉起系统授权弹窗 |
+| `notification.getToken`                                    | ❌   | 未注册（项目本来也没接 FCM/厂商推送，安卓返回的是模拟值）                                                                                                                                                                                                                  |
+| `nfc.*`                                                    | ❌   | 读标签要 system API + 真机标签，故意不注册 → `DEVICE_UNSUPPORTED`                                                                                                                                                                                                          |
+| `update.*`（整包升级）                                     | ❌   | `BaseUpdate` 未移植；鸿蒙整包分发归 AppGallery，H5 应隐藏升级入口                                                                                                                                                                                                          |
+| H5 子包动态升级（§13）                                     | ❌   | `BaseH5` 未移植，`createRealRuntime()` 检测不到即降级为内存演示运行时（不崩）                                                                                                                                                                                              |
+| `network.getStatus` / `log.*` / `system.getDeviceInfo`     | ✅   | 对应 `BaseNetwork` / `BaseLog` / `BaseSystem`；容器退出用 `BaseSystem.exitApp`（RNOH 没有安卓的 `ExitApp`）                                                                                                                                                                |
+| `permission.*`                                             | ⚠️   | 见下                                                                                                                                                                                                                                                                       |
 
 #### 行为差异（不是「能不能」，是「不一样」）
 
@@ -1026,7 +1059,7 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
   的 JS 变量，`targetSdk 36` 又强制 edge-to-edge，不留白就是页头被状态栏压住。留白交给页面背景绘制才
   跟站点配色一致（容器 `paddingTop` 试过，透出 RN 窗口背景会切出一条白条）。这条注入不写任何
   `window.*`，给第三方 origin 的能力面仍是零。两条路由 `bridgeEnabled` 二选一，不会同时生效。
-- 握手与 H5 子包更新检查跳过：第三方页不会发 `app.ready`，等握手就是 10s 后进诊断页。
+- 握手与 H5 子包更新检查跳过：第三方页不会发 `app.ready`，等握手只会被当成启动失败。
 - 硬件返回键只剩容器兜底（`native.back` 没人回执）：先在按键那一刻按**原生真值**判断
   WebView 还能不能回退（`BaseSystem.webViewGoBack`，内部读 `WebView.canGoBack()` 并原子 goBack），
   能就 `goBack()`；退无可退**不直接退出**，只提示「再按一次退出应用」，2 秒内再按一次才退出。
@@ -1038,50 +1071,50 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
 
 ## 10. 关键代码位置
 
-| 文件 | 职责 |
-|---|---|
-| `src/bridge/protocol.ts` | 协议类型（request/response/event、错误码、`BRIDGE_EVENTS`） |
-| `src/bridge/bridge-server.ts` | 服务端：派发、超时、版本/来源校验、事件 |
-| `src/bridge/index.ts` | 装配入口：注册全部 41 个模块 + 注入原生适配器 |
-| `src/bridge/schema.ts` | 消息校验与 requestId |
-| `src/bridge/event-bus.ts` | RN→H5 事件总线 |
-| `src/bridge/modules/` | 业务/容器模块（app/auth/permission/system/notification/log/keyboard/toast/dialog/navigation…） |
-| `src/bridge/modules/update.ts` | 整包远程升级模块（拆「起任务 + 轮询」，见 §4.12） |
-| `src/bridge/modules/capabilities/` | 能力模块（camera/scanner/media/file/location/clipboard/appManager/nfc 适配器契约 `types.ts`） |
-| `src/middleware/native/capability-native-adapters.ts` | `NativeModules.BaseCapabilities` → 能力适配器（逐项探测，缺失降级） |
-| `src/middleware/native/system-native-adapter.ts` | `BaseSystem` 设备信息 + copy（优先原生 `clipboardSetString`，回落 RN `Clipboard`）/ share（RN `Share`） |
-| `src/middleware/native/update-native-adapter.ts` | `NativeModules.BaseUpdate` → update 模块适配器 + 原生码映射 |
-| `src/middleware/network/` | network 模块与原生适配器 |
-| `src/platform/os.ts` | 平台判定唯一入口（`currentOs` / `isHarmony` / `isIos`）——`Platform.OS` 是封闭联合，鸿蒙分支只能从这里走 |
-| `src/platform/harmony/safe-area-context.harmony.tsx` | 鸿蒙安全区纯 JS 替身（metro 按 platform 换包名，见 §9.6） |
-| `src/permissions/` | 权限管理器、Android / iOS / 鸿蒙权限适配器 |
-| `src/webview/WebViewBridge.tsx` | WebView 容器：消息派发、事件透传、返回键拦截（`native.back`）、前后台事件、安全区两条路（本地注入 `window.RN_SAFE_AREA` / 远程只注入 `<style>`，见 §9.7） |
-| `src/diagnostics/device-logger.ts` | 设备调用日志（级别控制/脱敏/落盘） |
-| `src/diagnostics/device-log-store.ts` | 日志文件查询/读取/清理（RN 侧） |
-| `platforms/android/.../base/` | Android 原生模块（BaseCapabilities / BaseNetwork / BaseLog / BaseH5 / BaseSystem / BaseUpdate / MLKitScanActivity） |
-| `platforms/android/.../AndroidManifest.xml` | 权限声明、FileProvider、`<queries>` 包可见性、扫码 Activity |
-| `platforms/ios/qux/BaseCapabilities.swift` + `.m` | iOS 能力实现 + `RCT_EXTERN_MODULE` 导出（见 §9.5） |
-| `harmony/entry/src/main/ets/base/` | 鸿蒙自研 TurboModule（BaseCapabilities / BaseSystem / BaseLog / BaseNetwork + `BaseScanCapability.ets`） |
-| `harmony/entry/src/main/cpp/BaseTurboModules.h` | 方法注册表（`ARK_ASYNC_METHOD_METADATA`），必须与 ArkTS 的 `public async` 方法逐一对应 |
-| `harmony/oh-package.json5` | 用 `file:../node_modules/...` 指到 RNOH HAR —— 这就是 `harmony/` 必须在仓库根的原因 |
-| `src/config/index.ts` | 集中配置；`REMOTE_H5_URL` / `IS_REMOTE_H5` / `REMOTE_H5_ORIGIN` 是远程模式开关（scheme 白名单校验在这里） |
-| `src/app/resolve-h5-source.ts` | H5 入口决策：远程模式直接返回 `remoteUrl`，否则本地激活版本 → 内置兜底页 |
-| `src/webview/web-view-controller.ts` | WebView 加载状态机；`canGoBack()` 的状态从导航事件里取（v14 无该命令），返回键兜底的快照来源 |
-| `src/webview/back-policy.ts` | 返回键兜底策略：原生真值回退 → 「再按一次退出应用」二次确认（`EXIT_CONFIRM_WINDOW_MS`） |
-| `src/diagnostics/harmony-native-self-test.ts` | 上机后的原生能力自检（写设备日志，`App.tsx` 自动触发一次） |
-| `scripts/harmony-ready.js` | 鸿蒙版本闸的唯一判据（RNOH / CLI / HAR / DevEco 工具位置），`hvigor.js`、`harmony-dev.js`、`doctor.js` 共用 |
-| `scripts/hvigor.js` | 跨平台跑 hvigorw：出包前拷 `h5/` 进 rawfile、校验 hermesc、注入 api.js，产物投递 `dist/<applicationId>/`，`--install` 走 hdc 装包并拉起 |
-| `scripts/harmony-dev.js` / `scripts/harmony-emulator.js` | 鸿蒙 Metro(8082) + 两条 `hdc rport` + 模拟器启动与 boot 等待 |
-| `scripts/ios.js` | iOS 命令入口：`doctor` 任何平台可读，其余在非 macOS 明确拒绝并列出缺口 |
-| `scripts/api.js` | **H5 中间件唯一真源**（`npm run sync:api` 分发到模板/活动子应用与 `h5/js/api.js`） |
-| `scripts/free-port.js` | 释放端口（Windows 连进程树 `taskkill /t /f`，Unix `lsof`+kill） |
-| `scripts/adb-forward.js` | `adb reverse` 映射 Metro（`tcp:8081` → dev server） |
-| `scripts/doctor.js` | `npm run doctor`：只读的构建前环境自查（依赖/活动子应用/version.json/h5 产物/api.js 漂移/qux.* + 末尾「平台链路」三平台可用性） |
-| `scripts/check-hermesc.js` | 构建前校验 hermesc 是否产出真字节码（被 `doctor` 与 gradle.js 复用） |
-| `scripts/gradle-home.js` | 隔离 gradle 缓存 / 指定 aapt2（`local.properties` 的 `qux.*` 键） |
-| `scripts/apk-hash.js` | 构建产物旁写 `<apk>.sha256.txt`，并打印 `STARTDOWNLOAD` 的四个入参（见 §9.4） |
-| `h5/js/api.js` | H5 侧统一 API 中间件（本文档配套，由 `scripts/api.js` 同步而来） |
-| `h5/index.html` | H5 入口页（能力调试页） |
+| 文件                                                     | 职责                                                                                                                                                      |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/bridge/protocol.ts`                                 | 协议类型（request/response/event、错误码、`BRIDGE_EVENTS`）                                                                                               |
+| `src/bridge/bridge-server.ts`                            | 服务端：派发、超时、版本/来源校验、事件                                                                                                                   |
+| `src/bridge/index.ts`                                    | 装配入口：注册全部 41 个模块 + 注入原生适配器                                                                                                             |
+| `src/bridge/schema.ts`                                   | 消息校验与 requestId                                                                                                                                      |
+| `src/bridge/event-bus.ts`                                | RN→H5 事件总线                                                                                                                                            |
+| `src/bridge/modules/`                                    | 业务/容器模块（app/auth/permission/system/notification/log/keyboard/toast/dialog/navigation…）                                                            |
+| `src/bridge/modules/update.ts`                           | 整包远程升级模块（拆「起任务 + 轮询」，见 §4.12）                                                                                                         |
+| `src/bridge/modules/capabilities/`                       | 能力模块（camera/scanner/media/file/location/clipboard/appManager/nfc 适配器契约 `types.ts`）                                                             |
+| `src/middleware/native/capability-native-adapters.ts`    | `NativeModules.BaseCapabilities` → 能力适配器（逐项探测，缺失降级）                                                                                       |
+| `src/middleware/native/system-native-adapter.ts`         | `BaseSystem` 设备信息 + copy（优先原生 `clipboardSetString`，回落 RN `Clipboard`）/ share（RN `Share`）                                                   |
+| `src/middleware/native/update-native-adapter.ts`         | `NativeModules.BaseUpdate` → update 模块适配器 + 原生码映射                                                                                               |
+| `src/middleware/network/`                                | network 模块与原生适配器                                                                                                                                  |
+| `src/platform/os.ts`                                     | 平台判定唯一入口（`currentOs` / `isHarmony` / `isIos`）——`Platform.OS` 是封闭联合，鸿蒙分支只能从这里走                                                   |
+| `src/platform/harmony/safe-area-context.harmony.tsx`     | 鸿蒙安全区纯 JS 替身（metro 按 platform 换包名，见 §9.6）                                                                                                 |
+| `src/permissions/`                                       | 权限管理器、Android / iOS / 鸿蒙权限适配器                                                                                                                |
+| `src/webview/WebViewBridge.tsx`                          | WebView 容器：消息派发、事件透传、返回键拦截（`native.back`）、前后台事件、安全区两条路（本地注入 `window.RN_SAFE_AREA` / 远程只注入 `<style>`，见 §9.7） |
+| `src/diagnostics/device-logger.ts`                       | 设备调用日志（级别控制/脱敏/落盘）                                                                                                                        |
+| `src/diagnostics/device-log-store.ts`                    | 日志文件查询/读取/清理（RN 侧）                                                                                                                           |
+| `platforms/android/.../base/`                            | Android 原生模块（BaseCapabilities / BaseNetwork / BaseLog / BaseH5 / BaseSystem / BaseUpdate / MLKitScanActivity）                                       |
+| `platforms/android/.../AndroidManifest.xml`              | 权限声明、FileProvider、`<queries>` 包可见性、扫码 Activity                                                                                               |
+| `platforms/ios/qux/BaseCapabilities.swift` + `.m`        | iOS 能力实现 + `RCT_EXTERN_MODULE` 导出（见 §9.5）                                                                                                        |
+| `harmony/entry/src/main/ets/base/`                       | 鸿蒙自研 TurboModule（BaseCapabilities / BaseSystem / BaseLog / BaseNetwork + `BaseScanCapability.ets`）                                                  |
+| `harmony/entry/src/main/cpp/BaseTurboModules.h`          | 方法注册表（`ARK_ASYNC_METHOD_METADATA`），必须与 ArkTS 的 `public async` 方法逐一对应                                                                    |
+| `harmony/oh-package.json5`                               | 用 `file:../node_modules/...` 指到 RNOH HAR —— 这就是 `harmony/` 必须在仓库根的原因                                                                       |
+| `src/config/index.ts`                                    | 集中配置；`REMOTE_H5_URL` / `IS_REMOTE_H5` / `REMOTE_H5_ORIGIN` 是远程模式开关（scheme 白名单校验在这里）                                                 |
+| `src/app/resolve-h5-source.ts`                           | H5 入口决策：远程模式直接返回 `remoteUrl`，否则已激活子包 → 平台内置资源入口；两者都没有 = 组合根渲染「配置缺失」错误页                                   |
+| `src/webview/web-view-controller.ts`                     | WebView 加载状态机；`canGoBack()` 的状态从导航事件里取（v14 无该命令），返回键兜底的快照来源                                                              |
+| `src/webview/back-policy.ts`                             | 返回键兜底策略：原生真值回退 → 「再按一次退出应用」二次确认（`EXIT_CONFIRM_WINDOW_MS`）                                                                   |
+| `src/diagnostics/harmony-native-self-test.ts`            | 上机后的原生能力自检（写设备日志，`App.tsx` 自动触发一次）                                                                                                |
+| `scripts/harmony-ready.js`                               | 鸿蒙版本闸的唯一判据（RNOH / CLI / HAR / DevEco 工具位置），`hvigor.js`、`harmony-dev.js`、`doctor.js` 共用                                               |
+| `scripts/hvigor.js`                                      | 跨平台跑 hvigorw：出包前拷 `h5/` 进 rawfile、校验 hermesc、注入 api.js，产物投递 `dist/<applicationId>/`，`--install` 走 hdc 装包并拉起                   |
+| `scripts/harmony-dev.js` / `scripts/harmony-emulator.js` | 鸿蒙 Metro(8082) + 两条 `hdc rport` + 模拟器启动与 boot 等待                                                                                              |
+| `scripts/ios.js`                                         | iOS 命令入口：`doctor` 任何平台可读，其余在非 macOS 明确拒绝并列出缺口                                                                                    |
+| `scripts/api.js`                                         | **H5 中间件唯一真源**（`npm run sync:api` 分发到模板/活动子应用与 `h5/js/api.js`）                                                                        |
+| `scripts/free-port.js`                                   | 释放端口（Windows 连进程树 `taskkill /t /f`，Unix `lsof`+kill）                                                                                           |
+| `scripts/adb-forward.js`                                 | `adb reverse` 映射 Metro（`tcp:8081` → dev server）                                                                                                       |
+| `scripts/doctor.js`                                      | `npm run doctor`：只读的构建前环境自查（依赖/活动子应用/version.json/h5 产物/api.js 漂移/qux.\* + 末尾「平台链路」三平台可用性）                          |
+| `scripts/check-hermesc.js`                               | 构建前校验 hermesc 是否产出真字节码（被 `doctor` 与 gradle.js 复用）                                                                                      |
+| `scripts/gradle-home.js`                                 | 隔离 gradle 缓存 / 指定 aapt2（`local.properties` 的 `qux.*` 键）                                                                                         |
+| `scripts/apk-hash.js`                                    | 构建产物旁写 `<apk>.sha256.txt`，并打印 `STARTDOWNLOAD` 的四个入参（见 §9.4）                                                                             |
+| `h5/js/api.js`                                           | H5 侧统一 API 中间件（本文档配套，由 `scripts/api.js` 同步而来）                                                                                          |
+| `h5/index.html`                                          | H5 入口页（能力调试页）                                                                                                                                   |
 
 ---
 
@@ -1112,16 +1145,16 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
 
 ### 12.1 记录内容
 
-| 字段 | 说明 |
-|---|---|
-| 时间戳 | `yyyy-MM-dd HH:mm:ss.SSS` |
-| 级别 | `INFO` / `SUCCESS` / `WARN` / `ERROR` / `DEBUG` |
-| requestId | 调用唯一编号（与 Bridge 响应对应） |
-| 调用 | `module.action`，如 `camera.takePhoto` |
-| 参数 | 脱敏后的入参 JSON（token/手机号/身份证自动掩码） |
-| 结果 | 成功时脱敏后的返回 JSON |
-| 错误 | 失败时的 `code:message`，成功为 `-` |
-| 耗时 | `durationMs` |
+| 字段      | 说明                                             |
+| --------- | ------------------------------------------------ |
+| 时间戳    | `yyyy-MM-dd HH:mm:ss.SSS`                        |
+| 级别      | `INFO` / `SUCCESS` / `WARN` / `ERROR` / `DEBUG`  |
+| requestId | 调用唯一编号（与 Bridge 响应对应）               |
+| 调用      | `module.action`，如 `camera.takePhoto`           |
+| 参数      | 脱敏后的入参 JSON（token/手机号/身份证自动掩码） |
+| 结果      | 成功时脱敏后的返回 JSON                          |
+| 错误      | 失败时的 `code:message`，成功为 `-`              |
+| 耗时      | `durationMs`                                     |
 
 真实日志示例：
 
@@ -1132,7 +1165,7 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
 [2026-09-02 09:53:28.871] [SUCCESS] h5_1788314018865 network.getStatus params={} result={"type":"wifi","connected":true} error=- durationMs=2
 ```
 
-级别规则：调用成功→`SUCCESS`；方法不存在→`WARN`；其他失败→`ERROR`。
+级别规则：调用成功 →`SUCCESS`；方法不存在 →`WARN`；其他失败 →`ERROR`。
 
 ### 12.2 日志级别控制
 
@@ -1146,8 +1179,8 @@ Swift 模块必须经 `RCT_EXTERN_MODULE` 导出（`BaseCapabilities.m` 已补�
 
 ```ts
 import { deviceLogger } from '../src/diagnostics/device-logger';
-deviceLogger.setLevel('error');   // 仅记录 error
-deviceLogger.setLevel('info');    // 恢复默认
+deviceLogger.setLevel('error'); // 仅记录 error
+deviceLogger.setLevel('info'); // 恢复默认
 ```
 
 ### 12.3 按日期分包
@@ -1170,10 +1203,10 @@ adb shell run-as com.qux cat files/logs/device-2026-09-02.log > device.log
 
 ```ts
 import { deviceLogStore } from '../src/diagnostics/device-log-store';
-const dir = await deviceLogStore.getLogDir();          // 日志目录绝对路径
-const files = await deviceLogStore.listLogs();          // [{name, date, size, path}]
+const dir = await deviceLogStore.getLogDir(); // 日志目录绝对路径
+const files = await deviceLogStore.listLogs(); // [{name, date, size, path}]
 const text = await deviceLogStore.readLog('device-2026-09-02.log'); // 文件内容
-await deviceLogStore.clearLogs();                       // 清空，返回 { cleared }
+await deviceLogStore.clearLogs(); // 清空，返回 { cleared }
 ```
 
 ### 12.5 实现说明
@@ -1196,41 +1229,44 @@ APK 自带一个内置 H5 子包（`h5/` 目录，经 `build.gradle` 打进 APK 
 
 ### 13.2 manifest 地址服务配置在哪里
 
-**唯一配置点：`src/config/index.ts` 的 `H5_MANIFEST_URL`**（已预留，当前为占位地址）：
+**唯一配置点：子应用 `app.config.json` 的 `manifestUrl`**，由品牌下发
+（`npm run app:use <name>` → `scripts/apply-app-meta.js`）写进基座 `version.json`，
+`src/config/index.ts` 的 `H5_MANIFEST_URL` 只是它的读取结果。**不要改基座源码里的这个值**：
+`version.json` 是打包时由子应用配置生成的，手改会被下一次下发覆盖。
 
-```ts
-// src/config/index.ts
-export const H5_MANIFEST_URL = 'https://mobile-base.example.com/manifest.json';
+```jsonc
+// <子应用>/app.config.json
+{
+  "appName": "…",
+  "applicationId": "…",
+  "manifestUrl": "https://your-cdn.com/base-h5/manifest.json"
+}
 ```
 
-真正启用动态升级时，把该值替换为你的 manifest 服务地址，例如：
-
-```ts
-export const H5_MANIFEST_URL = 'https://your-cdn.com/base-h5/manifest.json';
-```
+**留空 = 增量更新链路关闭**（出厂默认）。此时 `checkForUpdate()` 直接返回
+`{ available: false, reason: 'manifest_not_configured' }`，`update()` 明确报错，
+不会去请求任何地址。以前这里写死一个 `*.example.com` 占位域，后果是每次启动都真的
+发一次注定失败的请求并写一条 `h5_update_failed` 日志——看起来像升级坏了，其实是配置坏了。
 
 消费链路：`create-real-runtime.ts` → `new ManifestClient({ latestUrl: H5_MANIFEST_URL })`
 → `H5VersionManager.manifestProvider.fetchManifest()`。
-
-> 当前占位地址 `*.example.com` 无法解析，App 启动时会拉取失败并写日志
-> （`h5_update_failed`），**不影响**内置包正常加载。把地址换成真实服务即可生效。
 
 ### 13.3 子包发布要求
 
 manifest 服务需返回 `manifest.json`，字段与 `src/updater/types.ts` 的 `H5Manifest` 对齐：
 
-| 字段 | 必填 | 说明 |
-|---|---|---|
-| `version` | 是 | 语义化版本号，如 `1.0.1`（数字比较，版本号大于当前才更新） |
-| `buildId` | 是 | 构建唯一标识 |
-| `entry` | 是 | 入口文件名，默认 `index.html` |
-| `packageUrl` | 是 | 子包 zip 的下载地址（https） |
-| `sha256` | 是 | 子包 zip 的 SHA-256（小写 hex），安装前强校验 |
-| `size` | 是 | 子包 zip 字节数 |
-| `publishedAt` | 是 | 发布时间（ISO 8601） |
-| `minAppVersion` | 否 | 最低 APK 版本（App 版本过低则不升级） |
-| `bridgeVersion` | 否 | 最低 Bridge 版本（Bridge 不兼容则不升级） |
-| `forceUpdate` | 否 | 是否强制升级 |
+| 字段            | 必填 | 说明                                                       |
+| --------------- | ---- | ---------------------------------------------------------- |
+| `version`       | 是   | 语义化版本号，如 `1.0.1`（数字比较，版本号大于当前才更新） |
+| `buildId`       | 是   | 构建唯一标识                                               |
+| `entry`         | 是   | 入口文件名，默认 `index.html`                              |
+| `packageUrl`    | 是   | 子包 zip 的下载地址（https）                               |
+| `sha256`        | 是   | 子包 zip 的 SHA-256（小写 hex），安装前强校验              |
+| `size`          | 是   | 子包 zip 字节数                                            |
+| `publishedAt`   | 是   | 发布时间（ISO 8601）                                       |
+| `minAppVersion` | 否   | 最低 APK 版本（App 版本过低则不升级）                      |
+| `bridgeVersion` | 否   | 最低 Bridge 版本（Bridge 不兼容则不升级）                  |
+| `forceUpdate`   | 否   | 是否强制升级                                               |
 
 版本目录约定：`{base}/manifest.json` 为 latest manifest；单版本 manifest 模板
 `{base}/releases/{version}/manifest.json`（`ManifestClient.versionUrlTemplate`，可选）。
@@ -1260,28 +1296,35 @@ h5-versions/
 
 ### 13.5 升级流程（自动触发）
 
-App 启动后（`AppRoot.tsx` 后台 useEffect）自动执行：
+App 启动后（`App.tsx` 的后台 useEffect）自动执行：
 
 ```
-启动 → resolveH5Source 加载当前版本（内置包或已激活子包）
+启动 → resolveH5Source 加载当前版本（已激活子包优先，否则平台内置包）
      → 后台 checkForUpdate()：拉 manifest，比较版本号/minAppVersion/bridgeVersion
      → 有可用版本 → update()：
           DOWNLOADING → PackageDownloader(RN fetch，带重试/进度)
           VERIFYING    → 原生 SHA-256 与 manifest.sha256 比对
           INSTALLING   → BaseH5 解压落盘
           ACTIVATING   → 原子切换 current 指针
-          SMOKE_TEST   → 刷新 WebView 用新包
-     → H5 握手 READY → markReady() 标记 STABLE（冒烟通过）
-     → H5 启动失败   → markFailed() / 回滚到 previous 版本
+          SMOKE_TEST   → 重新解析入口，WebView 用新包
+     → 新包在握手窗口内发 app.ready → markReady() 标记 STABLE（冒烟通过）
+     → 握手超时        → markFailed() 回滚到 previous 版本并重新解析入口
 ```
 
 - 状态机：`src/updater/h5-version-manager.ts`（IDLE→CHECKING→AVAILABLE→DOWNLOADING→…→STABLE）。
+- 这条链路在三种情况下**整段不启动**（`App.tsx` 的闸门，不是藏 UI 而是压根不跑）：
+  远程站点模式（页面在站点那边，本地没有可激活的子包）、debug 直连本机 H5
+  （入口就是宿主机源码，拉包只会把它拉回旧包）、`manifestUrl` 未配置（不白跑请求）。
+- 握手期限只作用于「本次刚被激活的那一版」：内置包和远程站点没有回滚对象，不起计时。
 - 每次状态迁移写日志：`h5.update.state=<STATE>`（`deviceLogger.info`）。
-- 更新成功/失败追加事件日志：`h5_update_applied` / `h5_update_failed`（`logger.log`）。
+- 更新成功/失败追加事件日志：`h5_update_applied` / `h5_update_failed` / `h5_handshake_timeout`（`logger.log`）。
 
 ### 13.6 回滚
 
-- 启动失败：H5 未能在握手窗口内发送 `app.ready` → 触发诊断页，可回滚到 `previous`。
+- 启动失败：刚激活的子包在握手窗口（`HANDSHAKE_TIMEOUT_MS`）内没发 `app.ready`
+  → `markFailed()` 自动退回 `previous` 版本并重新加载；无需用户操作。
+  原生侧未在 `current.json` 里记「未验证」标记，所以期限只在**激活它的那次会话**内判定，
+  冷启动直接加载已激活版本时不再冒烟。
 - 安装/校验失败：`update()` 内部自动 `rollbackToPrevious()`，恢复上一版本。
 
 ### 13.7 WebView 安全放行
@@ -1291,8 +1334,8 @@ App 启动后（`AppRoot.tsx` 后台 useEffect）自动执行：
 
 ```ts
 // navigation.ts — 放行动态子包
-url.startsWith('file:///data/user/0/com.qux/files/h5-versions/')
-url.startsWith('file:///data/data/com.qux/files/h5-versions/')
+url.startsWith('file:///data/user/0/com.qux/files/h5-versions/');
+url.startsWith('file:///data/data/com.qux/files/h5-versions/');
 ```
 
 `WebViewBridge` 已开启 `allowFileAccess` / `allowFileAccessFromFileURLs` /
@@ -1308,13 +1351,13 @@ url.startsWith('file:///data/data/com.qux/files/h5-versions/')
 
 ### 13.9 关键代码位置
 
-| 职责 | 位置 |
-|---|---|
-| manifest 地址配置 | `src/config/index.ts` → `H5_MANIFEST_URL` |
-| manifest 拉取 | `src/updater/manifest-client.ts` → `ManifestClient` |
+| 职责                    | 位置                                                       |
+| ----------------------- | ---------------------------------------------------------- |
+| manifest 地址配置       | `src/config/index.ts` → `H5_MANIFEST_URL`                  |
+| manifest 拉取           | `src/updater/manifest-client.ts` → `ManifestClient`        |
 | 下载（RN fetch + 重试） | `src/updater/native-http.ts` + `src/updater/downloader.ts` |
-| SHA-256（原生） | `src/updater/native-sha256.ts` + `BaseH5.sha256` |
-| 本地版本存储 | `src/storage/native-h5-storage.ts` + `BaseH5Module.kt` |
-| 生产装配 | `src/app/create-real-runtime.ts` |
-| 自动触发与状态机 | `src/app/AppRoot.tsx` + `src/updater/h5-version-manager.ts` |
-| WebView 放行 | `src/webview/navigation.ts` |
+| SHA-256（原生）         | `src/updater/native-sha256.ts` + `BaseH5.sha256`           |
+| 本地版本存储            | `src/storage/native-h5-storage.ts` + `BaseH5Module.kt`     |
+| 生产装配                | `src/app/create-real-runtime.ts`                           |
+| 自动触发与状态机        | `App.tsx` + `src/updater/h5-version-manager.ts`            |
+| WebView 放行            | `src/webview/navigation.ts`                                |

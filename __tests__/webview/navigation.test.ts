@@ -1,7 +1,30 @@
 /**
  * Phase 2：导航白名单决策单元测试（规范 §24）。
  */
-import { decideNavigation, shouldStartLoad } from '../../src/webview/navigation';
+import { decideNavigation, normalizeOrigin, shouldStartLoad } from '../../src/webview/navigation';
+
+/**
+ * origin 归一化的契约（真机踩过的坑）：
+ * Hermes/RN 的 URL 允许相对解析，`new URL('null')` 不抛，返回 protocol='' 的半成品，
+ * 拼成 "//" 是个真值 —— 而安卓 WebMessageListener 对 file:// 页给的 sourceOrigin
+ * 正是字面量 "null"（雷电 Android 9 实测），于是本地模式的 Bridge 调用全被拒。
+ * 这里钉住「没有 scheme 就不是 origin」，jest 用 Node 的 URL（会抛）也测得出同一契约。
+ */
+describe('normalizeOrigin', () => {
+  it('没有 scheme 的串一律 null（含安卓本地页给的 "null"）', () => {
+    expect(normalizeOrigin('null')).toBeNull();
+    expect(normalizeOrigin('')).toBeNull();
+    expect(normalizeOrigin('   ')).toBeNull();
+    expect(normalizeOrigin('//evil.com')).toBeNull();
+    expect(normalizeOrigin('evil.com/path')).toBeNull();
+  });
+
+  it('带 scheme 的取 scheme://host，丢掉 path/query/尾斜杠', () => {
+    expect(normalizeOrigin('https://h5.demo.test/app/?x=1')).toBe('https://h5.demo.test');
+    expect(normalizeOrigin('http://10.0.2.2:5173')).toBe('http://10.0.2.2:5173');
+    expect(normalizeOrigin('file:///android_asset/index.html')).toBe('file://');
+  });
+});
 
 const WHITELIST = ['https://mobile-base.example.com'];
 
@@ -39,7 +62,7 @@ describe('decideNavigation', () => {
   test('动态 H5 子包 file:// (h5-versions) -> allow', () => {
     const result = decideNavigation(
       'file:///data/user/0/com.qux/files/h5-versions/1.0.1/index.html',
-      WHITELIST
+      WHITELIST,
     );
     expect(result.action).toBe('allow');
     expect(result.reason).toBe('h5_versions');
@@ -48,7 +71,7 @@ describe('decideNavigation', () => {
   test('h5-versions 目录外的 file:// 仍 block', () => {
     const result = decideNavigation(
       'file:///data/user/0/com.qux/files/other/secret.html',
-      WHITELIST
+      WHITELIST,
     );
     expect(result.action).toBe('block');
     expect(result.reason).toBe('file_scheme_blocked');

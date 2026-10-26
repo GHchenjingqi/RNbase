@@ -25,7 +25,7 @@ test('renders fallback UI and reports crash when child throws during render', ()
     tree = create(
       <AppErrorBoundary>
         <Boom />
-      </AppErrorBoundary>
+      </AppErrorBoundary>,
     );
   });
   expect(JSON.stringify(tree!.toJSON())).toContain('应用出现异常');
@@ -55,7 +55,7 @@ test('retry resets error state and re-renders recovered child', () => {
     tree = create(
       <AppErrorBoundary onReset={resetThrowFlag}>
         <Gated />
-      </AppErrorBoundary>
+      </AppErrorBoundary>,
     );
   });
   // 首次渲染失败：降级 UI

@@ -38,10 +38,10 @@ function readLedger(file) {
 /** 取台账里最近一次 release 的版本码；没有 release 记录返回 null。 */
 function lastReleaseCode(entries) {
   const releases = entries.filter(
-    (e) => e && e.mode === 'release' && Number.isFinite(Number(e.versionCode))
+    e => e && e.mode === 'release' && Number.isFinite(Number(e.versionCode)),
   );
   if (releases.length === 0) return null;
-  return Math.max(...releases.map((e) => Number(e.versionCode)));
+  return Math.max(...releases.map(e => Number(e.versionCode)));
 }
 
 /**
@@ -105,7 +105,7 @@ function show() {
     console.log(
       `[ledger] ${appId}: 共 ${entries.length} 次，最近 ${last.mode} v${last.versionName}(${last.versionCode}) ` +
         `${last.at ? last.at.slice(0, 16).replace('T', ' ') : ''} → ${last.artifact}` +
-        `｜release 最大版本码 ${lastReleaseCode(entries) ?? '无'}`
+        `｜release 最大版本码 ${lastReleaseCode(entries) ?? '无'}`,
     );
   }
   if (printed === 0) console.log('[ledger] 暂无台账记录');

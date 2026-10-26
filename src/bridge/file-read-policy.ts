@@ -62,7 +62,7 @@ export function decideFileReadUri(uri: string): FileReadDecision {
   if (segments.includes('..')) {
     return { allow: false, reason: 'path_traversal' };
   }
-  if (segments.some((s) => DENIED_SEGMENTS.includes(s))) {
+  if (segments.some(s => DENIED_SEGMENTS.includes(s))) {
     return { allow: false, reason: 'credential_dir_denied' };
   }
   if (isHarmonyPreUnlockArea(pathname)) {
@@ -79,7 +79,7 @@ export function decideFileReadUri(uri: string): FileReadDecision {
  */
 export function assertReadableSize(
   result: { size?: number; base64?: string },
-  maxBytes: number
+  maxBytes: number,
 ): { allow: boolean; bytes: number } {
   const reported = Number(result?.size);
   const bytes =

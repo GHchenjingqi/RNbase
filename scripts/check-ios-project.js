@@ -45,7 +45,7 @@ function entriesOf(sectionText) {
 function sourcePhaseBuildIds(source) {
   const m = source.match(/isa\s*=\s*PBXSourcesBuildPhase;[\s\S]*?files\s*=\s*\(([\s\S]*?)\);/);
   if (!m) return [];
-  return Array.from(m[1].matchAll(new RegExp(`(${ID})`, 'g'))).map((x) => x[1]);
+  return Array.from(m[1].matchAll(new RegExp(`(${ID})`, 'g'))).map(x => x[1]);
 }
 
 /** 工程目录下的源文件：AppDelegate + Base*（与 scripts/ios.js 的 nativeSources 同口径）。 */
@@ -80,14 +80,12 @@ function collectIosProjectDrift(iosDir) {
 
   for (const rel of diskSources(iosDir)) {
     const name = path.basename(rel);
-    const ref = fileRefs.find(
-      (e) => e.comment === name || new RegExp(`path = ${rel};`).test(e.body)
-    );
+    const ref = fileRefs.find(e => e.comment === name || new RegExp(`path = ${rel};`).test(e.body));
     if (!ref) {
       problems.push(`${rel} 未加入工程（缺 PBXFileReference）：文件在磁盘上但永远不参与编译`);
       continue;
     }
-    const build = buildFiles.find((e) => new RegExp(`fileRef\\s*=\\s*${ref.id}\\b`).test(e.body));
+    const build = buildFiles.find(e => new RegExp(`fileRef\\s*=\\s*${ref.id}\\b`).test(e.body));
     if (!build) {
       problems.push(`${rel} 只有文件引用、没有 PBXBuildFile：不会进任何构建阶段`);
       continue;
@@ -102,7 +100,7 @@ function collectIosProjectDrift(iosDir) {
 function findProjectName(iosDir) {
   const proj = fs
     .readdirSync(iosDir)
-    .filter((f) => f.endsWith('.xcodeproj'))
+    .filter(f => f.endsWith('.xcodeproj'))
     .sort();
   return proj.length ? proj[0] : 'qux.xcodeproj';
 }
@@ -110,21 +108,21 @@ function findProjectName(iosDir) {
 function main() {
   const i = process.argv.indexOf('--ios-dir');
   const iosDir = path.resolve(
-    i === -1 ? path.join(__dirname, '..', 'platforms', 'ios') : process.argv[i + 1]
+    i === -1 ? path.join(__dirname, '..', 'platforms', 'ios') : process.argv[i + 1],
   );
   const problems = collectIosProjectDrift(iosDir);
   if (problems.length === 0) {
     console.log(
-      `[ios-project] 工程引用完整：${diskSources(iosDir).length} 个源文件全部挂在 Sources 阶段`
+      `[ios-project] 工程引用完整：${diskSources(iosDir).length} 个源文件全部挂在 Sources 阶段`,
     );
     return;
   }
   console.error(
-    '[ios-project] iOS 工程与磁盘源文件不一致（CI 的 xcodebuild 会绿着打出缺能力的包）：'
+    '[ios-project] iOS 工程与磁盘源文件不一致（CI 的 xcodebuild 会绿着打出缺能力的包）：',
   );
   for (const p of problems) console.error(`  - ${p}`);
   console.error(
-    '  修法：在 Xcode 里 Add Files to "qux" 并勾选 App target，或直接补 project.pbxproj 的引用与 Sources 段。'
+    '  修法：在 Xcode 里 Add Files to "qux" 并勾选 App target，或直接补 project.pbxproj 的引用与 Sources 段。',
   );
   process.exit(1);
 }

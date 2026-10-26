@@ -176,7 +176,7 @@ const CASES: Case[] = [
 const keyOf = (module: string, action: string) => `${module}.${action}`;
 
 /** 表里出现过的能力模块；listMethods() 过滤出来的能力动作必须与之完全一致。 */
-const CAPABILITY_MODULES = [...new Set(CASES.map((c) => c.module))].sort();
+const CAPABILITY_MODULES = [...new Set(CASES.map(c => c.module))].sort();
 
 function req(module: string, action: string, params?: unknown): BridgeRequest {
   return {
@@ -247,9 +247,9 @@ describe('capability 表驱动：清单完整性', () => {
   it('表覆盖了 Bridge 注册出来的全部能力动作（新增动作必须先进表）', () => {
     const registered = baselineServer
       .listMethods()
-      .filter((m) => CAPABILITY_MODULES.includes(m.split('.')[0]))
+      .filter(m => CAPABILITY_MODULES.includes(m.split('.')[0]))
       .sort();
-    const table = CASES.map((c) => keyOf(c.module, c.action)).sort();
+    const table = CASES.map(c => keyOf(c.module, c.action)).sort();
     expect(table).toEqual(registered);
   });
 
@@ -261,14 +261,14 @@ describe('capability 表驱动：清单完整性', () => {
 });
 
 describe('capability 表驱动：适配器缺失 -> DEVICE_UNSUPPORTED', () => {
-  test.each(CASES.filter((c) => !c.nativeFree))(
+  test.each(CASES.filter(c => !c.nativeFree))(
     '$module.$action',
     async ({ module, action, params }) => {
       const server = createBridgeServer(new PermissionManager(), {});
       const res = await server.handle(req(module, action, params));
       expect(res.success).toBe(false);
       expect(res.error?.code).toBe('DEVICE_UNSUPPORTED');
-    }
+    },
   );
 });
 
@@ -287,7 +287,7 @@ describe('capability 表驱动：适配器就位 -> 走通并命中预期方法'
 describe('capability 表驱动：适配器抛错 -> 错误收口', () => {
   it('裸 Error 归一为 UNKNOWN_ERROR，且不外泄原生信息', async () => {
     const adapters = throwingAdapters();
-    for (const c of CASES.filter((x) => x.calls !== null)) {
+    for (const c of CASES.filter(x => x.calls !== null)) {
       const server = createBridgeServer(new PermissionManager(), adapters);
       const res = await server.handle(req(c.module, c.action, c.params));
       expect(res.success).toBe(false);

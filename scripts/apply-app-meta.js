@@ -82,6 +82,10 @@ const NEUTRAL = {
   remoteUrl: '',
   statusBarStyle: '',
   h5DevUrl: '',
+  // 信任源三项的中性值：基座出厂谁也不信、没有升级清单地址、appId 校验停在观察期。
+  trustedDomains: [],
+  manifestUrl: '',
+  trustedAppIds: [],
 };
 
 // 鸿蒙工程（可选）：仓库里没有 harmony/ 时下面的下发整段跳过。
@@ -93,7 +97,7 @@ const HARMONY_APP_STRINGS = path.join(
   'resources',
   'base',
   'element',
-  'string.json'
+  'string.json',
 );
 const HARMONY_ENTRY_STRINGS = path.join(
   baseDir,
@@ -104,15 +108,79 @@ const HARMONY_ENTRY_STRINGS = path.join(
   'resources',
   'base',
   'element',
-  'string.json'
+  'string.json',
 );
 
 function fail(msg) {
   console.error(`[app-meta] ${msg}`);
   process.exit(1);
 }
-const readJson = (f) => JSON.parse(fs.readFileSync(f, 'utf8'));
-const xmlEscape = (s) =>
+const readJson = f => JSON.parse(fs.readFileSync(f, 'utf8'));
+
+/**
+ * 信任源三字段（导航域名白名单 / H5 升级清单地址 / 可信 appId）的下发归一。
+ *
+ * 为什么与 remoteUrl 一样「未声明即清空」，而不是保留现值：这三项决定容器放行哪些 origin、
+ * 从哪个地址拉子包升级、认哪些 appId 的握手。留值继承等于「切到 B 子应用仍然信 A 的域」，
+ * 与当年「选了本地还走远程」是同一个坑，只是后果从白屏升级成了权限。
+ *
+ * 为什么校验放在下发时而不是运行期：origin 里多写一个 path（`https://x.com/app/`）在
+ * src/config 那边只会归一不成信任域，运行期表现为「页面跳出去了」，出包的人根本查不到
+ * 是 version.json 写歪。这里一次拒掉，比留一个静默闸门便宜得多。
+ */
+const TRUST_ORIGIN_RE = /^https?:\/\/[^\s/?#]+$/i;
+
+/**
+ * 数组型信任列表逐项收：只接受非空字符串。
+ * 写成 42 / {} 一定是配置笔误，当场拒掉而不是静默丢掉——丢掉的那一项本来是要放行的，
+ * 表现是「配了却不生效」，比报错难查一个量级。
+ */
+function toTrustList(value, field, example) {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    fail(`${field} 必须是数组（${example}）`);
+  }
+  const out = [];
+  for (const item of value) {
+    if (typeof item !== 'string') {
+      fail(`${field} 含非字符串项：${JSON.stringify(item)}（每项都应是字符串）`);
+    }
+    const trimmed = item.trim();
+    if (trimmed !== '') {
+      out.push(trimmed);
+    }
+  }
+  return out;
+}
+
+function normalizeTrustFields(raw, reset) {
+  if (reset) {
+    return { trustedDomains: [], manifestUrl: '', trustedAppIds: [] };
+  }
+  const trustedDomains = toTrustList(
+    raw.trustedDomains,
+    'trustedDomains',
+    'origin 列表，如 ["https://h5.example.com"]',
+  );
+  for (const d of trustedDomains) {
+    if (!TRUST_ORIGIN_RE.test(d)) {
+      fail(`trustedDomains 项非法：${d}（只接受 scheme://host[:port]，不带 path/query/尾斜杠）`);
+    }
+  }
+  const manifestUrl = raw.manifestUrl === undefined ? '' : String(raw.manifestUrl).trim();
+  if (manifestUrl && !/^https?:\/\/\S+$/i.test(manifestUrl)) {
+    fail(`manifestUrl 非法：${manifestUrl}（应为 http(s) 地址，或留空表示关闭 H5 子包增量更新）`);
+  }
+  const trustedAppIds = toTrustList(
+    raw.trustedAppIds,
+    'trustedAppIds',
+    '允许握手接管的子应用 appId，留空=观察期放行全部',
+  );
+  return { trustedDomains, manifestUrl, trustedAppIds };
+}
+const xmlEscape = s =>
   s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -178,7 +246,7 @@ function applyColor(name, hex) {
   fs.writeFileSync(COLORS_XML, xml, 'utf8');
 }
 
-const splashDrawableXml = (withLogo) =>
+const splashDrawableXml = withLogo =>
   `<?xml version="1.0" encoding="utf-8"?>\n` +
   `<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n` +
   `    <item android:drawable="@color/splash_bg" />\n` +
@@ -252,14 +320,14 @@ function applySplashAsset(hasSplashMaster, masterPath) {
     fs.writeFileSync(
       SPLASH_ACTIVE_TS,
       `${SPLASH_ACTIVE_DOC}export const SPLASH_ACTIVE: number | null = require('./splash-brand.png');\n`,
-      'utf8'
+      'utf8',
     );
   } else {
     fs.rmSync(SPLASH_BRAND_PNG, { force: true });
     fs.writeFileSync(
       SPLASH_ACTIVE_TS,
       `${SPLASH_ACTIVE_DOC}export const SPLASH_ACTIVE: number | null = null;\n`,
-      'utf8'
+      'utf8',
     );
   }
 }
@@ -286,7 +354,7 @@ function applyHarmonyStringLabel(file, name, value) {
   if (!fs.existsSync(file)) return;
   const data = JSON.parse(fs.readFileSync(file, 'utf8'));
   const items = Array.isArray(data.string) ? data.string : [];
-  const hit = items.find((i) => i && i.name === name);
+  const hit = items.find(i => i && i.name === name);
   if (!hit) return;
   hit.value = value;
   fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8');
@@ -367,7 +435,7 @@ function verifyApplied(cfg, hasBrand, brandDir, harmonyApplied) {
     ]) {
       if (!fs.existsSync(file)) continue;
       const items = JSON.parse(fs.readFileSync(file, 'utf8')).string;
-      const hit = Array.isArray(items) ? items.find((i) => i && i.name === name) : undefined;
+      const hit = Array.isArray(items) ? items.find(i => i && i.name === name) : undefined;
       if (!hit || hit.value !== cfg.appName) {
         problems.push(`${path.relative(baseDir, file)} 的 ${name} 未同步为 ${cfg.appName}`);
       }
@@ -435,7 +503,7 @@ function main() {
     !['default', 'light-content', 'dark-content'].includes(String(statusBarStyle))
   ) {
     fail(
-      `statusBarStyle 非法：${statusBarStyle}（应为 default / light-content / dark-content，留空表示跟随系统深浅色）`
+      `statusBarStyle 非法：${statusBarStyle}（应为 default / light-content / dark-content，留空表示跟随系统深浅色）`,
     );
   }
   // 留空 = 用平台默认 dev 入口；off = 显式关闭直连；其余必须是 http(s) 地址。
@@ -450,6 +518,9 @@ function main() {
     fail(`splashDurationMs 非法：${splashDurationMs}（应为 0–15000 的整数毫秒，0 表示关闭闪屏）`);
   }
   fs.mkdirSync(baseDir, { recursive: true });
+  // 信任源三项（trustedDomains / manifestUrl / trustedAppIds）：src/config 直接吃它们，
+  // 不在这里下发的话，切一次子应用就把上一个的白名单静默留着。
+  const trust = normalizeTrustFields(rawCfg, reset);
   fs.writeFileSync(
     BASE_VERSION,
     JSON.stringify(
@@ -460,6 +531,9 @@ function main() {
         versionName: cfg.versionName,
         versionCode: cfg.versionCode,
         remoteUrl: remoteUrl === undefined ? '' : remoteUrl,
+        trustedDomains: trust.trustedDomains,
+        manifestUrl: trust.manifestUrl,
+        trustedAppIds: trust.trustedAppIds,
         statusBarStyle: statusBarStyle === undefined ? '' : statusBarStyle,
         h5DevUrl: h5DevUrl === undefined ? '' : h5DevUrl,
         splashDurationMs: splashMsNum,
@@ -468,9 +542,9 @@ function main() {
         splashBackgroundColor: cfg.splashBackgroundColor,
       },
       null,
-      2
+      2,
     ) + '\n',
-    'utf8'
+    'utf8',
   );
 
   // 2. 应用显示名
@@ -510,7 +584,7 @@ function main() {
       `"${cfg.appName}" pkg=${cfg.applicationId} v${cfg.versionName}(${cfg.versionCode}) ` +
       `品牌资源=${hasBrand ? '自定义图标/闪屏' : '基座默认'} ` +
       `倒计时闪屏=${hasSplashMaster ? '品牌闪图' : '默认闪图'} ` +
-      `鸿蒙=${harmonyApplied ? '已同步名称/版本' : '无 harmony/ 工程，跳过'}`
+      `鸿蒙=${harmonyApplied ? '已同步名称/版本' : '无 harmony/ 工程，跳过'}`,
   );
   console.log(`[app-meta] APK 文件名将为：${cfg.apkName}-${cfg.versionName}-<变体>.apk`);
 }
@@ -524,4 +598,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { NEUTRAL };
+module.exports = { NEUTRAL, normalizeTrustFields };

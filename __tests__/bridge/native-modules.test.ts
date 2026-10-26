@@ -350,10 +350,10 @@ describe('10 模块完整性', () => {
   test('createBridgeServer 注册的模块与清单完全一致', () => {
     const server = createBridgeServer();
     const methods = server.listMethods();
-    const modules = new Set(methods.map((m) => m.split('.')[0]));
+    const modules = new Set(methods.map(m => m.split('.')[0]));
     expect({
-      missing: EXPECTED_MODULES.filter((n) => !modules.has(n)),
-      unexpected: [...modules].filter((n) => !EXPECTED_MODULES.includes(n)),
+      missing: EXPECTED_MODULES.filter(n => !modules.has(n)),
+      unexpected: [...modules].filter(n => !EXPECTED_MODULES.includes(n)),
     }).toEqual({ missing: [], unexpected: [] });
   });
 });

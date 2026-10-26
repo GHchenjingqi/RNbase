@@ -19,6 +19,8 @@ const path = require('path');
 const { assertHarmonyReady, discoverTools, readBundleName } = require('./harmony-ready');
 const { check: checkHermesc } = require('./check-hermesc');
 const { appendBuild, checkReleaseVersionCode } = require('./build-ledger');
+const { readVersionInfo: readVersionInfoShared } = require('./version-info');
+const { METRO_HOST_PORT, METRO_DEVICE_PORT, H5_DEV_PORT } = require('./ports');
 const { createTee } = require('./log-tee');
 
 const argv = process.argv.slice(2);
@@ -36,23 +38,16 @@ const isRelease = argv.includes('--release');
 const wantInstall = argv.includes('--install');
 // 与 gradle.js 同一个开关：放行版本码倒退（重装同一包自测时用）。
 const allowSameVersionCode = argv.includes('--allow-same-version');
-const tasks = argv.filter((a) => !a.startsWith('--'));
+const tasks = argv.filter(a => !a.startsWith('--'));
 
-/** Metro 端口，与 scripts/dev.js / gradle.js 保持一致；设备上 RNOH 固定请求 8081。 */
-const METRO_PORT = 8082;
-/** 宿主机 vite（debug 下 H5 走它），与 src/app/resolve-h5-entry.ts 的 HARMONY_DEV_ENTRY 对齐。 */
-const H5_DEV_PORT = 5173;
+/** Metro 端口（真源 ports.json）；设备上 RNOH 固定请求 METRO_DEVICE_PORT，由 hdc rport 映射过来。 */
+const METRO_PORT = METRO_HOST_PORT;
 
 const tools = discoverTools(rootDir);
 const { harmonyDir } = tools;
 
 function readVersionInfo() {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(rootDir, 'version.json'), 'utf8'));
-  } catch (e) {
-    console.warn('[hvigor] 读取 version.json 失败，回退到无版本号命名:', e.message);
-    return null;
-  }
+  return readVersionInfoShared(rootDir, 'hvigor');
 }
 
 /** HAP 文件名前缀与 APK 同源（version.json 的 apkName），没有 version.json 时退回包名。 */
@@ -96,7 +91,7 @@ function toolEnv() {
   }
   const binDirs = [tools.nodeHome, tools.hdc && path.dirname(tools.hdc)].filter(Boolean);
   if (binDirs.length) {
-    const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
+    const key = Object.keys(env).find(k => k.toUpperCase() === 'PATH') || 'PATH';
     env[key] = [...binDirs, env[key]].join(path.delimiter);
   }
   return env;
@@ -116,7 +111,7 @@ function ensureBuildProfile() {
   }
   fs.copyFileSync(template, target);
   console.log(
-    '[hvigor] 已从模板生成 harmony/build-profile.json5（未配置签名，产物为 unsigned HAP）'
+    '[hvigor] 已从模板生成 harmony/build-profile.json5（未配置签名，产物为 unsigned HAP）',
   );
 }
 
@@ -140,12 +135,12 @@ function ensureHarmonyH5Assets() {
     'resources',
     'rawfile',
     'assets',
-    'h5'
+    'h5',
   );
   if (!fs.existsSync(path.join(srcDir, 'index.html'))) {
     console.error(
       `[hvigor] 缺少 ${path.join(srcDir, 'index.html')}，鸿蒙离线包无法构建。\n` +
-        '[hvigor] 请先同步子应用产物：npm run app:use <子应用> -- --sync（或先 npm run build:h5）'
+        '[hvigor] 请先同步子应用产物：npm run app:use <子应用> -- --sync（或先 npm run build:h5）',
     );
     process.exit(1);
   }
@@ -176,12 +171,12 @@ function ensureHarmonyH5Assets() {
   console.log(
     `[hvigor] H5 离线包: h5/ -> resources/rawfile/assets/h5/ ` +
       `(${files} 个文件 / ${(bytes / 1048576).toFixed(2)} MB，` +
-      `快照构建于 ${built.toISOString().slice(0, 16).replace('T', ' ')})`
+      `快照构建于 ${built.toISOString().slice(0, 16).replace('T', ' ')})`,
   );
   if (ageDays > 3) {
     console.warn(
       `[hvigor] 提醒: h5/ 快照已 ${ageDays.toFixed(1)} 天未更新，` +
-        '如与 H5 源码不一致请在子应用重跑 npm run sync:base'
+        '如与 H5 源码不一致请在子应用重跑 npm run sync:base',
     );
   }
 }
@@ -192,7 +187,7 @@ function ensureHarmonyH5Assets() {
  */
 function toCommand(exe, args) {
   if (!isWin) return { cmd: exe, args, opts: {} };
-  const line = [`"${exe}"`, ...args.map((a) => (/\s/.test(a) ? `"${a}"` : a))].join(' ');
+  const line = [`"${exe}"`, ...args.map(a => (/\s/.test(a) ? `"${a}"` : a))].join(' ');
   return { cmd: line, args: [], opts: { shell: true } };
 }
 
@@ -234,7 +229,7 @@ function bundleName() {
 function ensureDevForwards() {
   if (!tools.hdc) return;
   const mappings = [
-    ['tcp:8081', `tcp:${METRO_PORT}`],
+    [`tcp:${METRO_DEVICE_PORT}`, `tcp:${METRO_PORT}`],
     [`tcp:${H5_DEV_PORT}`, `tcp:${H5_DEV_PORT}`],
   ];
   for (const [remote, local] of mappings) {
@@ -247,7 +242,7 @@ function ensureDevForwards() {
     } else {
       console.warn(
         `[hvigor] hdc rport ${remote} -> ${local} 未新注册` +
-          `（端口已被本次开机占用则属正常，重启模拟器后必须重跑）: ${out || '(无输出)'}`
+          `（端口已被本次开机占用则属正常，重启模拟器后必须重跑）: ${out || '(无输出)'}`,
       );
     }
   }
@@ -259,7 +254,7 @@ function installAndStart(hapPath) {
     process.exit(1);
   }
   const remote = `/data/local/tmp/${artifactName(readVersionInfo())}.hap`;
-  const run = (args) => {
+  const run = args => {
     const cmd = toCommand(tools.hdc, args);
     const r = spawnSync(cmd.cmd, cmd.args, { encoding: 'utf8', env: toolEnv(), ...cmd.opts });
     const out = `${r.stdout || ''}${r.stderr || ''}`.trim();
@@ -275,7 +270,7 @@ function installAndStart(hapPath) {
   run(['shell', 'bm', 'install', '-p', remote]);
   run(['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', bundleName()]);
   console.log(
-    '[hvigor] 已安装并启动（debug 包需 Metro 处于运行状态，鸿蒙侧用 npm run dev:harmony 起）'
+    '[hvigor] 已安装并启动（debug 包需 Metro 处于运行状态，鸿蒙侧用 npm run dev:harmony 起）',
   );
 }
 
@@ -298,7 +293,7 @@ assertHarmonyReady(rootDir, 'hvigor');
 // release 出包前的版本码闸门（与安卓 gradle.js 同一套判据，见 scripts/build-ledger.js）。
 if (
   isRelease &&
-  tasks.some((t) => /assembleHap|packageHap|^build$/.test(t)) &&
+  tasks.some(t => /assembleHap|packageHap|^build$/.test(t)) &&
   !allowSameVersionCode
 ) {
   const vi = readVersionInfo();
@@ -319,7 +314,7 @@ if (
 ensureBuildProfile();
 ensureOhModules();
 // 只有出包任务需要离线 H5；clean 等非打包任务不该被 h5/ 快照缺失卡住。
-if (tasks.some((t) => /assembleHap|packageHap|^build$/.test(t))) {
+if (tasks.some(t => /assembleHap|packageHap|^build$/.test(t))) {
   prepareH5Snapshot();
   ensureHarmonyH5Assets();
 }
@@ -344,7 +339,7 @@ console.log(`[hvigor] 工作目录: ${harmonyDir}`);
 console.log(
   `[hvigor] 工具链: hvigorw=${tools.hvigorw || '(未找到)'} ` +
     `NODE_HOME=${tools.nodeHome || '(未设置)'} ` +
-    `DEVECO_SDK_HOME=${tools.sdkHome || '(未设置)'} hdc=${tools.hdc || '(未设置)'}`
+    `DEVECO_SDK_HOME=${tools.sdkHome || '(未设置)'} hdc=${tools.hdc || '(未设置)'}`,
 );
 console.log(`[hvigor] 命令: ${tools.hvigorw} ${buildArgs.join(' ')}`);
 console.log(`[hvigor] 目标 bundleName: ${bundleName()}`);
@@ -358,27 +353,27 @@ const child = spawn(buildCmd.cmd, buildCmd.args, {
   env: toolEnv(),
   ...buildCmd.opts,
 });
-child.stdout.on('data', (c) => buildLog.write(c));
-child.stderr.on('data', (c) => buildLog.write(c));
-child.on('exit', (code) => {
+child.stdout.on('data', c => buildLog.write(c));
+child.stderr.on('data', c => buildLog.write(c));
+child.on('exit', code => {
   buildLog.end();
   if (code !== 0) {
     console.log(`[hvigor] 失败 (exit ${code})`);
     process.exit(code ?? 1);
   }
-  if (!tasks.some((t) => /assembleHap|packageHap/.test(t))) return;
+  if (!tasks.some(t => /assembleHap|packageHap/.test(t))) return;
 
   const outDirHap = path.join(harmonyDir, 'entry', 'build', 'default', 'outputs', 'default');
-  const failNoArtifact = (why) => {
+  const failNoArtifact = why => {
     console.error(`[HAP] 构建进程退 0，但拿不到可交付产物：${why}`);
     console.error(
       `[HAP] 排查顺序：\n` +
         `  1) ${outDirHap} 是否生成（没这个目录说明 assembleHap 根本没跑起来，看 ${path.join(
           logDir,
-          'hvigor.log'
+          'hvigor.log',
         )} 末尾）\n` +
         `  2) 是否只有 entry-default-unsigned.hap 却期望签名包（签名材料在 harmony/build-profile.json5，缺配置就只能出 unsigned）\n` +
-        `  3) 是否改了 build-profile.json5 的 product/outputs 目录名（本脚本按 product=default 的默认路径找）`
+        `  3) 是否改了 build-profile.json5 的 product/outputs 目录名（本脚本按 product=default 的默认路径找）`,
     );
     process.exit(1);
   };
@@ -390,15 +385,15 @@ child.on('exit', (code) => {
   // 只认死名字会把「产物其实生成了」误报成「没有产物」。
   const others = fs
     .readdirSync(outDirHap)
-    .filter((f) => f.endsWith('.hap'))
-    .map((f) => path.join(outDirHap, f));
-  const hapPath = [signedPath, unsignedPath, ...others].find((p) => fs.existsSync(p));
+    .filter(f => f.endsWith('.hap'))
+    .map(f => path.join(outDirHap, f));
+  const hapPath = [signedPath, unsignedPath, ...others].find(p => fs.existsSync(p));
   if (!hapPath) failNoArtifact(`${outDirHap} 下没有任何 .hap`);
 
   const versionInfo = readVersionInfo();
   if (!versionInfo) {
     console.warn(
-      '[HAP] 提醒: 读不到 version.json，产物名不带版本号（远程升级清单需要 version/size/sha256 三项对齐）'
+      '[HAP] 提醒: 读不到 version.json，产物名不带版本号（远程升级清单需要 version/size/sha256 三项对齐）',
     );
   }
   const appId = (versionInfo && versionInfo.applicationId) || 'default';
@@ -431,7 +426,7 @@ child.on('exit', (code) => {
     console.log(
       '[HAP] 注意: 这是未签名包，只有模拟器接受，真机会验签失败。' +
         '签名材料请填 harmony/build-profile.json5 的 signingConfigs（该文件不入库，密码不会泄漏到仓库）。' +
-        (isRelease ? '\n[HAP] 本次是 release 出包：未签名包不能对外交付。' : '')
+        (isRelease ? '\n[HAP] 本次是 release 出包：未签名包不能对外交付。' : ''),
     );
   }
   if (wantInstall) installAndStart(dest);

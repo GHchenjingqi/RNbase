@@ -1,12 +1,11 @@
 /**
- * native-signature-verifier 单测：原生模块探测、SignatureVerifier 包装、
- * 大包防护阈值、base64 编码正确性（含已知向量）。
+ * native-signature-verifier 单测：原生模块探测、SignatureVerifier 包装、大包防护阈值。
+ * base64 编解码本身已收敛到 src/updater/base64.ts，由 __tests__/updater/base64.test.ts 覆盖。
  */
 import { NativeModules } from 'react-native';
 
 import {
   createNativeSignatureVerifier,
-  bytesToBase64,
   MAX_BRIDGE_BYTES,
 } from '../../src/updater/native-signature-verifier';
 
@@ -18,6 +17,11 @@ type BaseH5Mock = {
 };
 
 const native = NativeModules as Record<string, unknown>;
+
+/** 编码正确性不在本文件的职责内（见 __tests__/updater/base64.test.ts），这里只要一个能过桥的字节串。 */
+function bytesOf(s: string): Uint8Array {
+  return Uint8Array.from(s.split('').map(c => c.charCodeAt(0)));
+}
 
 function mockBaseH5(): BaseH5Mock {
   const mock: BaseH5Mock = {
@@ -67,7 +71,7 @@ describe('createNativeSignatureVerifier', () => {
     mock.verifyPackageSignature.mockRejectedValueOnce(new Error('INVALID_PUBLIC_KEY'));
     const verifier = createNativeSignatureVerifier();
     await expect(verifier!(new Uint8Array(1), 'sig', 'bad-pem')).rejects.toThrow(
-      'INVALID_PUBLIC_KEY'
+      'INVALID_PUBLIC_KEY',
     );
   });
 
@@ -77,26 +81,5 @@ describe('createNativeSignatureVerifier', () => {
     const big = new Uint8Array(MAX_BRIDGE_BYTES + 1);
     await expect(verifier!(big, 'sig', 'PEM')).rejects.toThrow('exceeds bridge limit');
     expect(mock.verifyPackageSignature).not.toHaveBeenCalled();
-  });
-});
-
-function bytesOf(s: string): Uint8Array {
-  return Uint8Array.from(s.split('').map((c) => c.charCodeAt(0)));
-}
-
-describe('bytesToBase64', () => {
-  test('已知向量：空串 / RFC 4648 用例', () => {
-    expect(bytesToBase64(new Uint8Array(0))).toBe('');
-    expect(bytesToBase64(bytesOf('f'))).toBe('Zg==');
-    expect(bytesToBase64(bytesOf('fo'))).toBe('Zm8=');
-    expect(bytesToBase64(bytesOf('foo'))).toBe('Zm9v');
-    expect(bytesToBase64(bytesOf('foobar'))).toBe('Zm9vYmFy');
-  });
-
-  test('跨块边界正确（超过 0x8000 分块阈值）', () => {
-    // 0x8000 + 1 字节的确定性数据，与 Node Buffer 编码对拍
-    const bytes = new Uint8Array(0x8001);
-    for (let i = 0; i < bytes.length; i += 1) bytes[i] = i % 256;
-    expect(bytesToBase64(bytes)).toBe(Buffer.from(bytes).toString('base64'));
   });
 });

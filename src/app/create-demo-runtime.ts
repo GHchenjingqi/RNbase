@@ -1,6 +1,6 @@
 /**
- * 演示用运行时（仅 App 组合层示例使用）。
- * 使用内存存储；无本地 H5 版本时由上层（resolveH5Source）回退到内置兜底页。
+ * 演示/降级运行时（原生 BaseH5 缺失时由 createRealRuntime 返回，见其注释）。
+ * 使用内存存储；无本地 H5 版本时由上层（resolveH5Source）回退到平台内置资源入口。
  * 版本管理器配置为“无需更新”的安全桩，便于离线演示 Bridge 全链路。
  */
 import { H5Runtime, H5VersionManager } from '../updater';

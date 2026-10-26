@@ -44,25 +44,25 @@ function makeIosDir(opts: {
     '\tobjects = {',
     '/* Begin PBXBuildFile section */',
     ...buildFiles.map(
-      (n) =>
+      n =>
         `\t\t${buildId(n)} /* ${n} in Sources */ = {isa = PBXBuildFile; fileRef = ${refId(
-          n
-        )} /* ${n} */; };`
+          n,
+        )} /* ${n} */; };`,
     ),
     '/* End PBXBuildFile section */',
     '/* Begin PBXFileReference section */',
     ...refs.map(
-      (n) =>
+      n =>
         `\t\t${refId(
-          n
-        )} /* ${n} */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ${n}; path = qux/${n}; sourceTree = "<group>"; };`
+          n,
+        )} /* ${n} */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ${n}; path = qux/${n}; sourceTree = "<group>"; };`,
     ),
     '/* End PBXFileReference section */',
     '/* Begin PBXSourcesBuildPhase section */',
     '\t\t' + 'CC' + '0'.repeat(21) + '1 /* Sources */ = {',
     '\t\t\tisa = PBXSourcesBuildPhase;',
     '\t\t\tfiles = (',
-    ...phase.map((n) => `\t\t\t\t${buildId(n)} /* ${n} in Sources */,`),
+    ...phase.map(n => `\t\t\t\t${buildId(n)} /* ${n} in Sources */,`),
     '\t\t\t);',
     '\t\t};',
     '/* End PBXSourcesBuildPhase section */',

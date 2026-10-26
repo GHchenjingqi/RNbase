@@ -129,40 +129,50 @@ const SCRIPT = `
       })();
     </script>`;
 
-if (!fs.existsSync(h5Index)) {
-  // 同样不能 process.exit(1)：本脚本被 gradle.js / dev.js 用 require() 拉起，
-  // 退出会把整条打包链杀掉，报错还落在「H5 安全区」上，看不出真正原因。
-  // h5/ 是活动子应用的构建产物拷贝，不在仓库里 —— 首次 clone 后尚未执行
-  // `npm run app:use -- --sync` 时目录本就为空，属于可跳过的前置状态。
-  console.warn(
-    `[fix-h5-safearea] 未找到 h5/index.html（${h5Index}），跳过注入。` +
-      ' 若随后要打包，APK 内将没有 H5 页面：先执行 npm run app:use <子应用> -- --sync',
-  );
-  return;
+/**
+ * 主体包在一个函数里：一是 ESLint 解析器不接受模块顶层的 `return`，
+ * 二是「跳过」本来就该是显式出口，而不是靠顶层 return 这种只有模块才有的语法。
+ * 调用方式不变（gradle.js / dev.js / hvigor.js 都靠 require() 触发本次注入），
+ * 所以函数在文件末尾立即自执行。
+ */
+function injectSafeArea() {
+  if (!fs.existsSync(h5Index)) {
+    // 同样不能 process.exit(1)：本脚本被 gradle.js / dev.js 用 require() 拉起，
+    // 退出会把整条打包链杀掉，报错还落在「H5 安全区」上，看不出真正原因。
+    // h5/ 是活动子应用的构建产物拷贝，不在仓库里 —— 首次 clone 后尚未执行
+    // `npm run app:use -- --sync` 时目录本就为空，属于可跳过的前置状态。
+    console.warn(
+      `[fix-h5-safearea] 未找到 h5/index.html（${h5Index}），跳过注入。` +
+        ' 若随后要打包，APK 内将没有 H5 页面：先执行 npm run app:use <子应用> -- --sync',
+    );
+    return;
+  }
+
+  let html = fs.readFileSync(h5Index, 'utf8');
+  if (html.includes(`data-${MARK}`)) {
+    // 注意：不能 process.exit(0)——gradle.js 会 require 本脚本，
+    // 直接退出会把打包进程一并杀掉（gradlew 永远不会启动）。
+    console.log('[fix-h5-safearea] 已注入，跳过');
+    return;
+  }
+
+  // 1) viewport 补齐 viewport-fit=cover（iOS safe-area 所需，兼容保留）
+  if (!/viewport-fit=cover/.test(html)) {
+    html = html.replace(/<meta\s+name="viewport"[\s\S]*?\/?>/i, m =>
+      m.replace('user-scalable=no', 'user-scalable=no, viewport-fit=cover'),
+    );
+  }
+
+  // 2) 在 </head> 前插入 style + 同步脚本
+  if (!html.includes('</head>')) {
+    // 找不到锚点只影响安全区修复，不该让 gradlew 起不来；
+    // 但必须用 error 级别喊出来——静默跳过会让线上包一直缺这块样式。
+    console.error('[fix-h5-safearea] 未找到 </head>，本次不注入（打包继续）');
+    return;
+  }
+  html = html.replace('</head>', `${STYLE}\n${SCRIPT}\n  </head>`);
+  fs.writeFileSync(h5Index, html, 'utf8');
+  console.log('[fix-h5-safearea] 注入完成:', h5Index);
 }
 
-let html = fs.readFileSync(h5Index, 'utf8');
-if (html.includes(`data-${MARK}`)) {
-  // 注意：不能 process.exit(0)——gradle.js 会 require 本脚本，
-  // 直接退出会把打包进程一并杀掉（gradlew 永远不会启动）。
-  console.log('[fix-h5-safearea] 已注入，跳过');
-  return;
-}
-
-// 1) viewport 补齐 viewport-fit=cover（iOS safe-area 所需，兼容保留）
-if (!/viewport-fit=cover/.test(html)) {
-  html = html.replace(/<meta\s+name="viewport"[\s\S]*?\/?>/i, m =>
-    m.replace('user-scalable=no', 'user-scalable=no, viewport-fit=cover'),
-  );
-}
-
-// 2) 在 </head> 前插入 style + 同步脚本
-if (!html.includes('</head>')) {
-  // 找不到锚点只影响安全区修复，不该让 gradlew 起不来；
-  // 但必须用 error 级别喊出来——静默跳过会让线上包一直缺这块样式。
-  console.error('[fix-h5-safearea] 未找到 </head>，本次不注入（打包继续）');
-  return;
-}
-html = html.replace('</head>', `${STYLE}\n${SCRIPT}\n  </head>`);
-fs.writeFileSync(h5Index, html, 'utf8');
-console.log('[fix-h5-safearea] 注入完成:', h5Index);
+injectSafeArea();

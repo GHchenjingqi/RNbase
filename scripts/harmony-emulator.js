@@ -18,7 +18,6 @@ const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 const { discoverTools } = require('./harmony-ready');
 
-const isWin = process.platform === 'win32';
 const HDC_PORT = process.env.HOS_HDC_PORT || '10000';
 const tools = discoverTools(path.join(__dirname, '..'));
 const { emulator: EMULATOR, hdc: HDC } = tools;

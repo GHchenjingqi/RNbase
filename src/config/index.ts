@@ -12,9 +12,28 @@ import type { PerformanceBaseline } from '../performance/types';
 import type { SignaturePolicy } from '../updater/verifier';
 import { isIos } from '../platform/os';
 import versionInfo from '../../version.json';
+import ports from '../../ports.json';
 
 /** App 版本号，统一从项目根 version.json 读取（与 Android versionName / iOS MARKETING_VERSION 保持一致）。 */
 export const APP_VERSION = versionInfo.versionName;
+
+/**
+ * 当前包的 applicationId（version.json 的 `applicationId`，由子应用 app.config.json 下发）。
+ *
+ * 之所以要在 JS 侧也有真值：离线 H5 子包落在 App 私有目录
+ * （`file:///data/user/0/<applicationId>/files/h5-versions/`），导航拦截要按它判前缀。
+ * 之前那条前缀把 `com.qux` 写死在源码里，换成任何别的包名的子应用都会把自己的离线包拦在门外。
+ * 兜底值与 platforms/android/app/build.gradle 里 `applicationId` 的兜底保持一致。
+ */
+export const APP_PACKAGE: string = (() => {
+  const raw = (versionInfo as { applicationId?: unknown }).applicationId;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : 'com.qux';
+})();
+
+/** 构建号（version.json 的 versionCode，与安卓 versionCode / iOS CFBundleVersion 同源）。 */
+export const APP_BUILD_NUMBER: string = String(
+  (versionInfo as { versionCode?: unknown }).versionCode ?? '',
+);
 /** 应用中文名：打包时由子应用 app.config.json 经 apply-app-meta.js 下发到 version.json，
  *  闪屏居中展示、状态栏/分享等需要「显示名」处复用同一真源。 */
 export const APP_NAME = String(versionInfo.appName ?? '');
@@ -52,25 +71,30 @@ export const CLIENT_ID = {
 };
 
 /**
- * 打包前客户端标识校验（尤其是 iOS）。
+ * 校验「当前运行端」的 clientId 是否仍是占位值或缺失。
  *
  * `CLIENT_ID.ios` 默认是占位值 `PLEASE_SET_IOS_CLIENT_ID`，未替换会导致 iOS 端登录被后端拒绝。
- * App 启动时调用 validateClientIds()，命中占位值会在控制台与设备日志中明确告警，
+ * App 启动时按运行平台调用一次，命中则在控制台与设备日志中明确告警，
  * 避免「装机后才发现白屏/登录失败」再回源码排查。
  *
- * @returns 仍为占位值的端列表（['ios'] / ['android','ios'] 等），全配置则返回空数组。
+ * 为什么只查当前端：登录时 `app.getClientId` 只取本端那一个值（见
+ * `src/bridge/modules/app.ts`），另外两端仍是占位值对这台设备毫无影响。
+ * 早先的实现遍历全部三端，结果每一个安卓启动都打一条 `CLIENT_ID 未配置：ios`
+ * 的 ERROR——既修不掉（除非给 iOS 编一个假 id），又把设备日志里真正的故障淹掉。
+ * iOS 那条链路另有工程闸门：`npm run ios:doctor` / `scripts/ios.js` 会单独拦占位值。
+ *
+ * @param currentPlatform 运行平台标识（'android' / 'ios' / 'harmony'）。
+ * @returns 有问题的端列表（0 或 1 项）；未登记 clientId 的平台（如 web）不校验，返回空数组。
  */
 const PLACEHOLDER_CLIENT_ID = 'PLEASE_SET_IOS_CLIENT_ID';
 
-export function validateClientIds(): string[] {
-  const missing: string[] = [];
-  (Object.keys(CLIENT_ID) as Array<keyof typeof CLIENT_ID>).forEach((platform) => {
-    const id = CLIENT_ID[platform];
-    if (!id || id === PLACEHOLDER_CLIENT_ID) {
-      missing.push(platform);
-    }
-  });
-  return missing;
+export function validateClientIds(currentPlatform: string): string[] {
+  const platforms = Object.keys(CLIENT_ID) as Array<keyof typeof CLIENT_ID>;
+  if (!platforms.includes(currentPlatform as keyof typeof CLIENT_ID)) {
+    return [];
+  }
+  const id = CLIENT_ID[currentPlatform as keyof typeof CLIENT_ID];
+  return !id || id === PLACEHOLDER_CLIENT_ID ? [currentPlatform] : [];
 }
 
 /**
@@ -304,8 +328,35 @@ export const PERF_DEFAULT_BASELINES: PerformanceBaseline[] = [
   },
 ];
 
-/** H5 版本清单地址（规则 6/28）。 */
-export const H5_MANIFEST_URL = 'https://mobile-base.example.com/manifest.json';
+/**
+ * H5 版本清单地址（规则 6/28），来自 version.json 的 `manifestUrl`。
+ *
+ * 为什么不再内置一个占位域：以前首值是 `https://mobile-base.example.com/manifest.json`，
+ * 那是个不存在的域名 —— 每台设备每次启动都真的去请求它，失败后被当成「无更新」，
+ * 既白跑一次网络请求，又把「没配 OTA」和「配了但挂了」两种状态混成同一种表现。
+ * 未配置就是明确的 null：不请求、不进入更新流程（见 H5VersionManager 的 manifestProvider 缺省分支）。
+ *
+ * 为什么正式包只认 https：这个地址的响应决定「下载哪个包并塞进 WebView」，而那个包
+ * 拿得到全部原生能力（文件、剪贴板、相机…）。公钥未配置时签名策略是 `optional`
+ * （见 SIGNATURE_POLICY），此时明文 http 清单等于把换包权交给任一路上的中间人 ——
+ * 所以 http 只在 __DEV__ 放行（本地起 manifest 服务调试用），release 一律视为未配置。
+ */
+const IS_DEV = typeof __DEV__ !== 'undefined' && __DEV__;
+
+export const H5_MANIFEST_URL: string | null = (() => {
+  const raw = (versionInfo as { manifestUrl?: unknown }).manifestUrl;
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const value = raw.trim();
+  if (!/^https?:\/\/[^\s/?#]+/i.test(value)) {
+    return null;
+  }
+  if (!IS_DEV && !/^https:\/\//i.test(value)) {
+    return null;
+  }
+  return value;
+})();
 
 /**
  * Feature Flag 开关地址（P3 通用基座能力，运行时开关不发版止血）。
@@ -344,7 +395,7 @@ function normalizeRemoteUrl(raw: unknown): string | null {
 
 /** 远程站点地址；null 表示本地 H5 模式。 */
 export const REMOTE_H5_URL: string | null = normalizeRemoteUrl(
-  (versionInfo as { remoteUrl?: unknown }).remoteUrl
+  (versionInfo as { remoteUrl?: unknown }).remoteUrl,
 );
 
 /** 是否处于「基座 + URL」模式。 */
@@ -393,10 +444,11 @@ export const SPLASH_BG_COLOR: string = (() => {
 /**
  * 子应用 dev server 在宿主机上的默认端口。
  *
- * 三端统一 5173（vite 默认）：鸿蒙一直这么跑（`hdc rport tcp:5173`），安卓/iOS 对齐
- * 同一个端口后，子应用只需起一次 dev server，改端口的地方只剩这一处常量。
+ * 三端统一到 vite 默认口：鸿蒙一直这么跑（`hdc rport tcp:<该端口>`），安卓/iOS 对齐
+ * 同一个端口后，子应用只需起一次 dev server。真源在根目录 ports.json（脚本侧同源，
+ * 见 scripts/ports.js），改端口只动那个文件。
  */
-export const H5_DEV_SERVER_PORT = 5173;
+export const H5_DEV_SERVER_PORT: number = ports.h5DevPort;
 
 /** version.json 的 `h5DevUrl` 显式关闭值：只改 RN 代码、不想起 dev server 时用。 */
 const H5_DEV_ENTRY_OFF = 'off';
@@ -407,7 +459,7 @@ const H5_DEV_ENTRY_OFF = 'off';
  * 为什么需要：子应用改一行要走 `build → sync:base → 重装 APK/HAP`，反馈循环以分钟计；
  * debug 期让 WebView 直接吃宿主机源码，保存即生效，不必重新装机。
  * 由此也推出一条结论：**debug 期不需要 H5 子包热更新（src/updater 那条 OTA 链路）** ——
- * 入口就是宿主机源码本身，下载子包换入口反而会把页面拉回旧包（见 AppRoot 的分支）。
+ * 入口就是宿主机源码本身，下载子包换入口反而会把页面拉回旧包（见 App.tsx 的更新闸门）。
  *
  * 三端到宿主机的可达路径不同，默认值按平台给：
  *  - 安卓：设备侧 127.0.0.1 由 `adb reverse tcp:5173` 映射到宿主机（scripts/adb-forward.js）；
@@ -469,24 +521,67 @@ export const REMOTE_H5_ORIGIN: string | null = (() => {
   return m ? m[1] : null;
 })();
 
+/**
+ * 基座出厂信任的 https 域（version.json 的 `trustedDomains`，由子应用 app.config.json 下发）。
+ *
+ * 为什么不在这里内置占位域：过去首项写死 `https://mobile-base.example.com`，而容器只取
+ * 首项当唯一信任源 —— 出厂等于「只信一个不存在的域」，真要接入自己的站点必须改基座源码。
+ * 留空是合法状态：本地 H5 走 `asset://` / `file:///android_asset/`（由 decideNavigation 的
+ * 内置前缀放行），不需要任何域名。
+ */
+/**
+ * 被拒的信任域条目（scheme://host[:port] 之外的写法）——启动时由组合根（App.tsx）落一条设备日志。
+ *
+ * 为什么运行期也要挡：`scripts/apply-app-meta.js` 只守走 `npm run app:use` 下发的路，
+ * 而 version.json 是可以手工改的。带 path 的 origin（`https://x.com/app`）在
+ * `decideNavigation` / `isTrustedMessageOrigin` 那里按 origin 逐字比对，永远命中不了——
+ * 表现为「配了白名单，页面照样被弹到系统浏览器」，且没有任何日志。
+ * 这里选择丢弃而不是顺手截成 origin：截了等于替配置方放大信任面。
+ */
+const TRUST_ORIGIN_RE = /^https?:\/\/[^\s/?#]+$/i;
+
+export const DROPPED_TRUSTED_DOMAINS: string[] = [];
+
+const TRUSTED_DOMAINS: string[] = (() => {
+  const raw = (versionInfo as { trustedDomains?: unknown }).trustedDomains;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  const kept: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'string') {
+      continue;
+    }
+    const value = item.trim();
+    if (value === '') {
+      continue;
+    }
+    if (TRUST_ORIGIN_RE.test(value)) {
+      kept.push(value);
+    } else {
+      DROPPED_TRUSTED_DOMAINS.push(value);
+    }
+  }
+  return kept;
+})();
+
 /** WebView 信任源 / 域名白名单（规则 24/25）。 */
 export const DOMAIN_WHITELIST: string[] = (() => {
-  const list = ['https://mobile-base.example.com'];
+  const list = [...TRUSTED_DOMAINS];
   // 远程模式下站点自己就是第一信任源，否则 BridgeServer 的来源校验会拒掉它的消息。
-  if (REMOTE_H5_ORIGIN) {
+  if (REMOTE_H5_ORIGIN && !list.includes(REMOTE_H5_ORIGIN)) {
     list.push(REMOTE_H5_ORIGIN);
   }
-  // dev 模式下自动添加 Metro dev server 地址，否则 H5 入口被导航拦截导致白屏
+  // dev 模式下自动添加 Metro dev server 地址，否则 H5 入口被导航拦截导致白屏。
+  // 端口与模拟器地址全部取自 ports.json（与 scripts/ports.js 同源）。
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    list.push(
-      'http://localhost:8082',
-      'http://127.0.0.1:8082',
-      'http://10.0.2.2:8082', // Android 模拟器访问宿主机的特殊地址
-      // 通过 adb reverse 将模拟器 8081 转发到宿主机 8082 时，WebView 实际加载的是 8081 端口
-      'http://localhost:8081',
-      'http://127.0.0.1:8081',
-      'http://10.0.2.2:8081'
-    );
+    const hosts = ['localhost', '127.0.0.1', ports.androidEmulatorHostIp];
+    const metroPorts = [ports.metroHostPort, ports.metroDevicePort];
+    for (const p of metroPorts) {
+      for (const h of hosts) {
+        list.push(`http://${h}:${p}`);
+      }
+    }
     // debug 期 H5 直连宿主机 dev server：不进白名单会被 decideNavigation 判成
     // untrusted_origin 弹系统浏览器，首屏直接飞出容器。按 origin 匹配（去尾斜杠）。
     if (H5_DEV_SERVER_URL) {
@@ -496,15 +591,26 @@ export const DOMAIN_WHITELIST: string[] = (() => {
   return list;
 })();
 
-/** H5 启动握手超时（规则 9/26）：超时进入诊断页。 */
+/** H5 启动握手超时（规则 9/26）：只用于「刚被 OTA 激活的那一版」，超时即 markFailed 回滚上一版。 */
 export const HANDSHAKE_TIMEOUT_MS = 10000;
 
 /**
  * 可信 H5 子应用 appId 白名单（升级方案 §23 安全：appId 校验）。
- * - 为空：放行所有 appId（仅对非默认 appId 打 warn 日志，灰度观察期）；
+ * - 为空：放行所有 appId（仅对非默认 appId 打设备日志，灰度观察期）；
  * - 配置后：非白名单 appId 的握手被拒绝（SECURITY_BLOCKED）。
+ *
+ * 真源在 version.json 的 `trustedAppIds`（由子应用 app.config.json 经 apply-app-meta.js 下发）：
+ * 这项以前是写死的空数组，等于「观察期」永久生效、谁也没法关掉。
  */
-export const TRUSTED_APP_IDS: string[] = [];
+export const TRUSTED_APP_IDS: string[] = (() => {
+  const raw = (versionInfo as { trustedAppIds?: unknown }).trustedAppIds;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    .map(x => x.trim());
+})();
 
 /** Bridge 单次调用超时（规则 14）。 */
 export const BRIDGE_TIMEOUT_MS = 30000;

@@ -14,7 +14,7 @@
 import { decideNavigation, normalizeOrigin } from './navigation';
 
 export type MessageOriginInput = {
-  /** 平台在 onMessage 事件里给的来源（安卓=源 origin，鸿蒙=整页 URL）；缺失一律拒。 */
+  /** 平台在 onMessage 事件里给的来源（安卓=源 origin，鸿蒙=整页 URL）；本地内置页会是 "null"。 */
   messageOrigin?: string;
   /** 容器当前页 URL（由入口 source 与 onLoadStart/onLoadEnd 跟踪，页面自己说了不算）。 */
   pageUrl: string;
@@ -24,19 +24,40 @@ export type MessageOriginInput = {
   whitelist: string[];
 };
 
+/**
+ * decideNavigation 里代表「这一页是基座自己装进 WebView 的本地资源」的 reason。
+ * 这些页面拿不到消息来源是常态（见 isTrustedMessageOrigin），信任判定改由容器跟踪的当前页承担。
+ */
+const LOCAL_PAGE_REASONS = new Set([
+  'internal_scheme',
+  'android_asset',
+  'android_res',
+  'android_resource',
+  'harmony_rawfile',
+  'h5_versions',
+]);
+
 export function isTrustedMessageOrigin(input: MessageOriginInput): boolean {
   const msgOrigin = normalizeOrigin(input.messageOrigin ?? '');
   const pageOrigin = normalizeOrigin(input.pageUrl);
-  if (!msgOrigin || !pageOrigin) {
+  const entryOrigin = normalizeOrigin(input.entryUrl);
+  const decision = decideNavigation(input.pageUrl, input.whitelist);
+  // 内联 html 入口（source.html，没有 uri）：pageUrl 与 entryUrl 都是空串，
+  // 但那一页的代码本身就是基座拼出来的，不存在「站外脚本混进来」这条路。
+  const pageIsInline = input.pageUrl === '' && input.entryUrl === '';
+  const pageIsEntry = entryOrigin !== null && entryOrigin === pageOrigin;
+  const pageIsLocal = pageIsInline || LOCAL_PAGE_REASONS.has(decision.reason);
+
+  if (!msgOrigin) {
+    // 本地内置页放行：真机实测（雷电 Android 9 + APK 内置 assets 入口）安卓
+    // WebMessageListener 对 file:// 页给的 sourceOrigin 是字面量 "null"（opaque origin），
+    // 鸿蒙与内联 html 同样给不出逐条消息的来源。这一页是容器自己装进 WebView 的，
+    // 来源缺失不是攻击证据 —— 按「当前页可信」放行。
+    // 反过来，站外 http(s) 页给不出来源仍然拒（失败关闭）。
+    return pageIsLocal || pageIsEntry;
+  }
+  if (pageOrigin === null || msgOrigin !== pageOrigin) {
     return false;
   }
-  if (msgOrigin !== pageOrigin) {
-    return false;
-  }
-  // 入口页由基座挑选（本地产物 file:///android_asset/、鸿蒙 rawfile、内联兜底 html），
-  // 形态多过白名单能枚举的种，直接认它，否则兜底重试页会被自己拦死。
-  if (normalizeOrigin(input.entryUrl) === pageOrigin) {
-    return true;
-  }
-  return decideNavigation(input.pageUrl, input.whitelist).action === 'allow';
+  return pageIsEntry || decision.action === 'allow';
 }

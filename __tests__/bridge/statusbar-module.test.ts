@@ -38,7 +38,7 @@ describe('statusbar barStyle 仲裁', () => {
     const server = makeServer();
     registerStatusBarModule(server);
     const received: BarStyle[] = [];
-    setH5BarStyleListener((style) => received.push(style));
+    setH5BarStyleListener(style => received.push(style));
     try {
       const res = await callSetBarStyle(server, { style: 'light-content' });
       expect(res.success).toBe(true);
@@ -64,7 +64,7 @@ describe('statusbar barStyle 仲裁', () => {
     const server = makeServer();
     registerStatusBarModule(server);
     const received: BarStyle[] = [];
-    setH5BarStyleListener((style) => received.push(style));
+    setH5BarStyleListener(style => received.push(style));
     await callSetBarStyle(server, { style: 'dark-content' });
     setH5BarStyleListener(null);
     await callSetBarStyle(server, { style: 'default' });

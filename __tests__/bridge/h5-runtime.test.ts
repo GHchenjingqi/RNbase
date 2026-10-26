@@ -1,9 +1,12 @@
 /**
- * Phase 6：H5 Runtime 单元测试（规范 §5/§6/§7/§8/§9/§34）。
+ * Phase 6：H5 Runtime 单元测试（规范 §5/§6/§7/§8/§9）。
+ *
+ * 注：规范 §34 的「启动状态机」原有一份从未被产品代码引用的纯逻辑实现，已随
+ * 死代码清理删除——真实启动时序由 App.tsx 的入口解析 → OTA 闸门 → 握手期限保证，
+ * 版本层状态机在 h5-version-manager.ts（见 updater 用例）。
  */
 import { H5VersionManager } from '../../src/updater/h5-version-manager';
 import { H5Runtime } from '../../src/updater/h5-runtime';
-import { BootStateMachine } from '../../src/app/boot-state-machine';
 import { InMemoryH5Storage } from '../../src/storage/in-memory-h5-storage';
 import type {
   H5Manifest,
@@ -220,52 +223,6 @@ describe('H5Runtime', () => {
     });
     const runtime = new H5Runtime(deps.storage, manager);
     expect(await runtime.getCurrentVersion()).toBe('1.0.0');
-  });
-});
-
-describe('BootStateMachine', () => {
-  test('初始状态为 BOOT', () => {
-    const sm = new BootStateMachine();
-    expect(sm.getState()).toBe('BOOT');
-  });
-
-  test('正常启动流程', () => {
-    const sm = new BootStateMachine();
-    expect(sm.transition('LOCAL_READY')).toBe(true);
-    expect(sm.getState()).toBe('CHECK_LOCAL');
-    expect(sm.transition('UPDATE_CHECKED')).toBe(true);
-    expect(sm.getState()).toBe('CHECK_UPDATE');
-    expect(sm.transition('H5_PREPARED')).toBe(true);
-    expect(sm.getState()).toBe('PREPARE_H5');
-    expect(sm.transition('WEBVIEW_LOADED')).toBe(true);
-    expect(sm.getState()).toBe('LOAD_WEBVIEW');
-    expect(sm.transition('HANDSHAKE_START')).toBe(true);
-    expect(sm.getState()).toBe('BRIDGE_HANDSHAKE');
-    expect(sm.transition('H5_READY')).toBe(true);
-    expect(sm.getState()).toBe('H5_READY');
-    expect(sm.transition('RUNNING')).toBe(true);
-    expect(sm.getState()).toBe('RUNNING');
-  });
-
-  test('非法转移返回 false', () => {
-    const sm = new BootStateMachine();
-    expect(sm.transition('H5_READY')).toBe(false);
-    expect(sm.getState()).toBe('BOOT');
-  });
-
-  test('ERROR 触发错误恢复', () => {
-    const sm = new BootStateMachine();
-    sm.transition('LOCAL_READY');
-    expect(sm.transition('ERROR')).toBe(true);
-    expect(sm.getState()).toBe('ERROR_RECOVERY');
-  });
-
-  test('错误恢复后可重新加载 WebView', () => {
-    const sm = new BootStateMachine();
-    sm.transition('LOCAL_READY');
-    sm.transition('ERROR');
-    expect(sm.transition('WEBVIEW_LOADED')).toBe(true);
-    expect(sm.getState()).toBe('LOAD_WEBVIEW');
   });
 });
 

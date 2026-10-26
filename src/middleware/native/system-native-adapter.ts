@@ -68,7 +68,7 @@ export function resolveNativeSystemAdapter(): SystemAdapters {
         },
         {
           dialogTitle: options.title ?? '分享',
-        }
+        },
       );
       return result.action === Share.sharedAction;
     } catch {

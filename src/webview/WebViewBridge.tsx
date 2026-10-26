@@ -287,7 +287,7 @@ export function WebViewBridge({
     const s = createAppBridgeServer(capabilities, lifecycle, undefined, {
       onCall: logDeviceCall,
       // 规范 §25 落地：消息来源必须与当前页同源，且当前页本身可信。
-      isTrustedOrigin: (origin) =>
+      isTrustedOrigin: origin =>
         isTrustedMessageOrigin({
           messageOrigin: origin,
           pageUrl: pageUrlRef.current,
@@ -375,7 +375,7 @@ export function WebViewBridge({
     if (!bridgeEnabled) {
       return;
     }
-    server.eventBus.setGlobalListener((e) => {
+    server.eventBus.setGlobalListener(e => {
       const wv = controller._webViewRef.current;
       if (wv && typeof wv.postMessage === 'function') {
         wv.postMessage(JSON.stringify(e));
@@ -413,7 +413,7 @@ export function WebViewBridge({
   // H5 侧通过 RN.ON('app.background' / 'app.resume', handler) 订阅。
   // （PermissionProvider 中另有 AppState 监听，仅用于权限刷新，互不冲突。）
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (next) => {
+    const sub = AppState.addEventListener('change', next => {
       if (next === 'background') {
         server.eventBus.emit(BRIDGE_EVENTS.APP_BACKGROUND, {
           timestamp: Date.now(),
@@ -461,7 +461,7 @@ export function WebViewBridge({
       clearAckTimer();
       backCoordinatorRef.current
         ?.handle()
-        .then((outcome) => {
+        .then(outcome => {
           if (outcome !== 'exit-confirm') return;
           setExitHintVisible(true);
           clearExitHintTimer();
@@ -472,7 +472,7 @@ export function WebViewBridge({
         })
         .catch(() => undefined);
     };
-    setNativeBackResultHandler((consumed) => {
+    setNativeBackResultHandler(consumed => {
       if (!consumed) requestContainerBack();
       else clearAckTimer();
     });
@@ -519,7 +519,7 @@ export function WebViewBridge({
   const handleNativeError = (e: { nativeEvent: unknown }) => {
     clearRemoteLoadTimer();
     const structured = classifyNativeError(
-      e.nativeEvent as Parameters<typeof classifyNativeError>[0]
+      e.nativeEvent as Parameters<typeof classifyNativeError>[0],
     );
     controller._onError(structured);
     onError?.(structured);
@@ -536,7 +536,7 @@ export function WebViewBridge({
     if (isHarmony()) {
       deviceLogger.warn(
         `httpError.ignored(sub-resource) code=${structured.httpStatus ?? '?'}` +
-          ` url=${structured.url ?? '?'}`
+          ` url=${structured.url ?? '?'}`,
       );
       return;
     }
@@ -551,7 +551,7 @@ export function WebViewBridge({
         // @ts-expect-error ref injection for react-native-webview v14
         ref={controller._webViewRef}
         source={webViewSource}
-        onLoadStart={(event) => {
+        onLoadStart={event => {
           if (event.nativeEvent.url) {
             pageUrlRef.current = event.nativeEvent.url;
           }
@@ -572,7 +572,7 @@ export function WebViewBridge({
             }, REMOTE_H5_LOAD_TIMEOUT_MS);
           }
         }}
-        onLoadEnd={(event) => {
+        onLoadEnd={event => {
           clearRemoteLoadTimer();
           if (event.nativeEvent.url) {
             pageUrlRef.current = event.nativeEvent.url;
@@ -580,7 +580,7 @@ export function WebViewBridge({
           controller._onLoadEnd(event.nativeEvent.canGoBack);
           onLoadEnd?.();
         }}
-        onLoadProgress={(event) => {
+        onLoadProgress={event => {
           onLoadProgress?.(event.nativeEvent.progress);
         }}
         onError={handleNativeError}
@@ -636,7 +636,7 @@ export function WebViewBridge({
         injectedJavaScriptBeforeContentLoaded={
           bridgeEnabled
             ? `${devCorsBypassInjection}\n${platformInjection}\n${buildAppearanceInjection(
-                isDarkMode
+                isDarkMode,
               )}\n${safeAreaInjection}\nwindow.__H5_INJECT_END__='1';`
             : safeAreaCssInjection
         }

@@ -205,7 +205,7 @@ bridgeEventBus.emit('bridge.ready', {
 
 
 
-1. `src/webview/WebViewBridge.tsx`：无需传输改动（eventBus.setGlobalListener → postMessage 已通）。若 App.tsx 传入的 lifecycle.onReady 目前为空，改为传入 `{ onReady: () => server.eventBus.emit(...) }`—— 确认 AppRoot 组装处（`createAppBridgeServer(capabilities, lifecycle, …)` 的 lifecycle 参数）。
+1. `src/webview/WebViewBridge.tsx`：无需传输改动（eventBus.setGlobalListener → postMessage 已通）。若 App.tsx 传入的 lifecycle.onReady 目前为空，改为传入 `{ onReady: () => server.eventBus.emit(...) }`—— 确认根目录 `App.tsx` 组装处（`createAppBridgeServer(capabilities, lifecycle, …)` 的 lifecycle 参数）。
 
 H5 侧（`scripts/api.js` 唯一源）：
 

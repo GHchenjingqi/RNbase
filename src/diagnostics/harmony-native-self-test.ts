@@ -18,6 +18,7 @@ import { NativeModules } from 'react-native';
 import { deviceLogger } from './device-logger';
 import { deviceLogStore } from './device-log-store';
 import { isHarmony } from '../platform/os';
+import { H5_DEV_SERVER_PORT } from '../config';
 
 const TAG = '[harmony-selftest]';
 
@@ -50,7 +51,7 @@ let started = false;
  * 否则日志里只会看到「前几条 OK、后几条消失」这种无法定位的现象。
  */
 function runDetached(task: () => Promise<void>): void {
-  task().catch((e) => deviceLogger.error(`${TAG} 批次异常 ${fmt(e)}`));
+  task().catch(e => deviceLogger.error(`${TAG} 批次异常 ${fmt(e)}`));
 }
 
 export function runHarmonyNativeSelfTest(): void {
@@ -106,7 +107,7 @@ export function runHarmonyNativeSelfTest(): void {
     const download = capabilities?.fileDownload;
     if (download) {
       await probe('BaseCapabilities.fileDownload', () =>
-        download.call(capabilities, 'http://127.0.0.1:5173/index.html')
+        download.call(capabilities, `http://127.0.0.1:${H5_DEV_SERVER_PORT}/index.html`),
       );
     }
     const badge = capabilities?.setBadge;
@@ -150,7 +151,7 @@ export function runHarmonyNativeSelfTest(): void {
     }
     if (original) {
       await probe('BaseCapabilities.clipboardSetString(还原)', () =>
-        setString.call(capabilities, original)
+        setString.call(capabilities, original),
       );
     }
   });

@@ -27,7 +27,7 @@ import { BRIDGE_TIMEOUT_MS } from '../config';
 
 export type BridgeHandler<P = unknown, D = unknown> = (
   params: P,
-  request: BridgeRequest<P>
+  request: BridgeRequest<P>,
 ) => Promise<D> | D;
 
 export type BridgeEvent = {
@@ -136,7 +136,7 @@ export class BridgeServer {
     if (this.isTrustedOrigin && (!origin || !this.isTrustedOrigin(origin))) {
       return errorResponse(
         req.id,
-        createBridgeError('SECURITY_BLOCKED', `untrusted origin: ${origin ?? 'unknown'}`)
+        createBridgeError('SECURITY_BLOCKED', `untrusted origin: ${origin ?? 'unknown'}`),
       );
     }
 
@@ -144,7 +144,7 @@ export class BridgeServer {
     if (req.version && !isCompatible(req.version)) {
       return errorResponse(
         req.id,
-        createBridgeError('BRIDGE_VERSION_NOT_SUPPORTED', `required: ${req.version}`)
+        createBridgeError('BRIDGE_VERSION_NOT_SUPPORTED', `required: ${req.version}`),
       );
     }
 
@@ -152,7 +152,7 @@ export class BridgeServer {
     if (!this.idTracker.register(req.id)) {
       return errorResponse(
         req.id,
-        createBridgeError('INVALID_PARAMS', `duplicate requestId: ${req.id}`)
+        createBridgeError('INVALID_PARAMS', `duplicate requestId: ${req.id}`),
       );
     }
 
@@ -164,20 +164,20 @@ export class BridgeServer {
       this.idTracker.complete(req.id);
       const res = errorResponse(
         req.id,
-        createBridgeError('METHOD_NOT_FOUND', `${req.module}.${req.action}`)
+        createBridgeError('METHOD_NOT_FOUND', `${req.module}.${req.action}`),
       );
       this.emit(req, res, start, { params: req.params });
       return res;
     }
 
     // 6. 执行 handler（带 timeout）
-    return new Promise<BridgeResponse>((resolve) => {
+    return new Promise<BridgeResponse>(resolve => {
       const timer = setTimeout(() => {
         this.pending.delete(req.id);
         this.idTracker.complete(req.id);
         const res = errorResponse(
           req.id,
-          createBridgeError('TIMEOUT', `${req.module}.${req.action}`)
+          createBridgeError('TIMEOUT', `${req.module}.${req.action}`),
         );
         this.emit(req, res, start, { params: req.params });
         resolve(res);
@@ -187,7 +187,7 @@ export class BridgeServer {
 
       Promise.resolve()
         .then(() => entry.handler(req.params, req))
-        .then((data) => {
+        .then(data => {
           clearTimeout(timer);
           this.pending.delete(req.id);
           this.idTracker.complete(req.id);
@@ -241,7 +241,7 @@ export class BridgeServer {
     req: BridgeRequest,
     res: BridgeResponse,
     start: number,
-    call?: { params?: unknown; result?: unknown }
+    call?: { params?: unknown; result?: unknown },
   ): void {
     this.onEvent?.({
       requestId: req.id,

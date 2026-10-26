@@ -23,7 +23,7 @@ const LOG_DIR = path.join(__dirname, '..', 'log');
  * @param {NodeJS.EventEmitter & {on: Function}} stream
  */
 function onStreamError(stream) {
-  stream.on('error', (err) => {
+  stream.on('error', err => {
     if (err && (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED')) {
       return;
     }
@@ -53,7 +53,7 @@ function createTee(filename) {
   const stream = fs.createWriteStream(path.join(LOG_DIR, filename), { flags: 'w' });
   // 日志文件写不进去也不该打断构建：报一次就够，后续静默。
   let fileWarned = false;
-  stream.on('error', (err) => {
+  stream.on('error', err => {
     if (fileWarned) {
       return;
     }

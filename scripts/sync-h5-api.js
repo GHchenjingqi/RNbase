@@ -96,11 +96,16 @@ function main() {
   );
 }
 
-/** 简单内容哈希（用于对比，非加密）。 */
+/**
+ * 简单内容哈希（用于对比，非加密）。
+ * 先统一行尾：core.autocrlf=true 会把入库的 LF 落地成 CRLF，按原始字节比会把
+ * 「checkout 的行尾」误判成「副本漂移」，进而每趟构建都无谓重写一遍模板文件。
+ */
 function hash(str) {
+  const normalized = str.replace(/\r\n/g, '\n');
   let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  for (let i = 0; i < normalized.length; i++) {
+    h = ((h << 5) - h + normalized.charCodeAt(i)) | 0;
   }
   return h.toString(36);
 }

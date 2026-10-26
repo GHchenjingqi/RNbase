@@ -19,7 +19,7 @@ async function waitUntil(condition: () => boolean, timeoutMs = 3000): Promise<vo
   const deadline = Date.now() + timeoutMs;
   while (!condition()) {
     if (Date.now() > deadline) throw new Error(`等待条件成立超时（${timeoutMs}ms）`);
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await new Promise(resolve => setTimeout(resolve, 20));
   }
 }
 
@@ -175,7 +175,7 @@ describe('P11.2 文件服务', () => {
     const result = await fileService.download({
       url: 'https://example.com/file.pdf',
       fileName: 'test.pdf',
-      onProgress: (progress) => progressEvents.push(progress.percent),
+      onProgress: progress => progressEvents.push(progress.percent),
     });
     expect(result.uri).toMatch(/^file:\/\//);
     expect(result.name).toBe('test.pdf');
@@ -300,7 +300,7 @@ describe('P11.3 上传队列', () => {
       size: 1024 * 1024,
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
-      onProgress: (progress) => progressEvents.push(progress.percent),
+      onProgress: progress => progressEvents.push(progress.percent),
     });
     await waitUntil(() => progressEvents[progressEvents.length - 1] === 100);
     expect(progressEvents.length).toBeGreaterThan(0);
@@ -413,7 +413,7 @@ describe('P11.3 上传队列', () => {
     await waitUntil(() => queue.getTask(task.id)?.status === 'failed');
     queue.retryTask(task.id); // 第 1 次重试
     await waitUntil(
-      () => queue.getTask(task.id)?.status === 'failed' && queue.getTask(task.id)?.retryCount === 1
+      () => queue.getTask(task.id)?.status === 'failed' && queue.getTask(task.id)?.retryCount === 1,
     );
     const retryResult = queue.retryTask(task.id); // 第 2 次重试（超过限制）
     expect(retryResult).toBe(false);
@@ -489,7 +489,7 @@ describe('P11.3 上传队列', () => {
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 100));
     expect(uploadQueue.getTask(task.id)?.status).toBe('pending');
 
     uploadQueue.resume();
@@ -505,7 +505,7 @@ describe('P11.3 上传队列', () => {
       mimeType: 'image/jpeg',
       uploadUrl: 'https://example.com/upload',
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 100));
     uploadQueue.clear();
     const stats = uploadQueue.getStats();
     expect(stats.total).toBe(0);

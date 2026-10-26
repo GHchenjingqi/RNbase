@@ -1,13 +1,13 @@
 /**
- * H5 ???????? 6/7/8/35??
+ * H5 子包版本管理器（规则 6/7/8/35）。
  *
- * ?????CHECKING -> AVAILABLE -> DOWNLOADING -> VERIFYING ->
- * INSTALLING -> READY_TO_ACTIVATE -> ACTIVATING -> SMOKE_TEST -> STABLE?
+ * 状态机：CHECKING -> AVAILABLE -> DOWNLOADING -> VERIFYING ->
+ * INSTALLING -> READY_TO_ACTIVATE -> ACTIVATING -> SMOKE_TEST -> STABLE。
  *
- * ???????????????????? 8??SMOKE_TEST ??? H5
- * ??????? 9??? markReady / markFailed ???
+ * 任一环节失败都回滚到上一个可用版本（规则 8）；SMOKE_TEST 期间 H5
+ * 握手成功才算稳定（规则 9），由 markReady / markFailed 回报。
  *
- * ?? IO ??????????????? 35??
+ * 本类不做任何 IO：清单、下载、校验、存储全靠注入（规则 35），便于单测。
  */
 import type {
   H5Manifest,
@@ -20,7 +20,11 @@ import type {
 
 export type VersionManagerOptions = {
   storage: H5Storage;
-  manifestProvider: ManifestProvider;
+  /**
+   * 清单来源；未配置 manifest 地址时由上层传 undefined —— 此时整个 OTA 链路视为关闭，
+   * checkForUpdate 直接返回「无更新」，不做任何网络请求（见 config 的 H5_MANIFEST_URL）。
+   */
+  manifestProvider?: ManifestProvider;
   downloader: PackageDownloader;
   verifier: Verifier;
   appVersion: string;
@@ -64,7 +68,7 @@ export class H5VersionManager {
     this.opts.onStateChange?.(state, this);
   }
 
-  /** ????????a>b ?? 1??? 0?a<b ?? -1? */
+  /** 按点分段比较版本号：a>b 返回 1，相等返回 0，a<b 返回 -1。 */
   static compareVersion(a: string, b: string): number {
     const pa = a.split('.').map(n => parseInt(n, 10) || 0);
     const pb = b.split('.').map(n => parseInt(n, 10) || 0);
@@ -85,6 +89,10 @@ export class H5VersionManager {
     reason?: string;
   }> {
     this.setState('CHECKING');
+    if (!this.opts.manifestProvider) {
+      this.setState('NO_UPDATE');
+      return { available: false, reason: 'manifest_not_configured' };
+    }
     const manifest = await this.opts.manifestProvider.fetchManifest();
     this.currentVersion = await this.opts.storage.getCurrentVersion();
 
@@ -113,9 +121,13 @@ export class H5VersionManager {
     return { available: true, manifest };
   }
 
-  /** ????????????????????? 7/8?? */
+  /** 完整更新流程：下载 -> 校验 -> 安装 -> 激活（规则 7/8）。 */
   async update(): Promise<void> {
     const { storage, downloader, verifier, manifestProvider } = this.opts;
+    if (!manifestProvider) {
+      // 调用方不该在没配清单时走到这里；真走到了就明确报错，不去 fetch 一个 undefined。
+      throw new Error('未配置 H5 清单地址（version.json 的 manifestUrl），更新链路处于关闭状态');
+    }
     const manifest = await manifestProvider.fetchManifest();
     this.previousVersion = await storage.getCurrentVersion();
 
@@ -127,7 +139,7 @@ export class H5VersionManager {
       const hash = await verifier.sha256(data);
       if (hash !== manifest.sha256) {
         this.setState('VERIFY_FAILED');
-        throw new Error('H5 ? sha256 ????');
+        throw new Error('H5 包 sha256 校验失败');
       }
 
       this.setState('INSTALLING');
@@ -145,7 +157,7 @@ export class H5VersionManager {
     }
   }
 
-  /** H5 ????????? 9?? */
+  /** H5 握手成功：新版本转为稳定（规则 9）。 */
   async markReady(): Promise<void> {
     if (this.state !== 'SMOKE_TEST') {
       return;
@@ -155,7 +167,7 @@ export class H5VersionManager {
     this.setState('STABLE');
   }
 
-  /** H5 ??????? 9???????????? 8?? */
+  /** H5 握手失败（规则 9）：标记启动失败并回滚上一版本（规则 8）。 */
   async markFailed(): Promise<void> {
     if (this.state !== 'SMOKE_TEST') {
       return;
@@ -172,7 +184,8 @@ export class H5VersionManager {
         await storage.rollback(this.previousVersion);
         this.currentVersion = this.previousVersion;
       } catch {
-        // ????????????????
+        // 回滚本身也失败时无路可退：不向上抛（抛出去会把下载失败盖掉），
+        // 留给下次启动按内置兜底版本（builtin-fallback）拉起。
       }
     }
     this.pendingVersion = null;

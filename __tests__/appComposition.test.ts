@@ -4,21 +4,30 @@
 import { resolveH5Source } from '../src/app/resolve-h5-source';
 import { createAppBridgeServer } from '../src/app/compose-bridge-server';
 
-const FALLBACK = '<html>fallback</html>';
+const BUILTIN = 'file:///android_asset/index.html';
 
 function fakeRuntime(entry: string) {
   return { resolveEntry: async () => entry };
 }
 
 describe('resolveH5Source (rule 5/34)', () => {
-  it('prefers a resolved local/remote entry', async () => {
-    const src = await resolveH5Source(fakeRuntime('https://cdn/x/index.html'), FALLBACK);
+  it('已激活的本地/远端子包优先于内置资源', async () => {
+    const src = await resolveH5Source({
+      runtime: fakeRuntime('https://cdn/x/index.html'),
+      builtinEntry: BUILTIN,
+    });
     expect(src).toEqual({ uri: 'https://cdn/x/index.html' });
   });
 
-  it('falls back to built-in H5 when no entry', async () => {
-    const src = await resolveH5Source(fakeRuntime(''), FALLBACK);
-    expect(src).toEqual({ html: FALLBACK });
+  it('没有激活版本时回落到平台内置资源入口', async () => {
+    const src = await resolveH5Source({ runtime: fakeRuntime(''), builtinEntry: BUILTIN });
+    expect(src).toEqual({ uri: BUILTIN });
+  });
+
+  it('两者都没有时返回 null，由组合根渲染配置缺失页', async () => {
+    await expect(
+      resolveH5Source({ runtime: fakeRuntime(''), builtinEntry: null }),
+    ).resolves.toBeNull();
   });
 });
 

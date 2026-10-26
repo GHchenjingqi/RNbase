@@ -14,7 +14,7 @@ const typed = gen as {
   parseRnModules: (source: string) => string[];
   computeDrift: (
     h5: string[],
-    rn: string[]
+    rn: string[],
   ) => {
     rnOnly: string[];
     h5Only: string[];

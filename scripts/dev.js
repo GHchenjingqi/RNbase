@@ -13,6 +13,7 @@ const path = require('path');
 const { resolveActiveApp, readApplicationId } = require('./active-app');
 const { killPort } = require('./free-port');
 const { setupAdbReverse, H5_DEV_PORT } = require('./adb-forward');
+const { METRO_HOST_PORT } = require('./ports');
 const { gradleHomeArgs, aapt2OverrideArgs } = require('./gradle-home');
 const { createTee } = require('./log-tee');
 
@@ -21,7 +22,7 @@ const androidDir = path.join(root, 'platforms', 'android');
 const logDir = path.join(root, 'log');
 fs.mkdirSync(logDir, { recursive: true });
 const isWin = process.platform === 'win32';
-const PORT = 8082;
+const PORT = METRO_HOST_PORT;
 
 // 创建 tee 流用共享实现：终端管道断开（工作台关窗 / 停止任务 / `| head`）时
 // 不能让 EPIPE 把 dev server 打死，详见 scripts/log-tee.js。

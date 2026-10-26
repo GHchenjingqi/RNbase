@@ -23,7 +23,7 @@ export function validatePinning(trustedPins: string[], presentedHashes: string[]
   if (trustedPins.length === 0) {
     return true;
   }
-  return presentedHashes.some((h) => trustedPins.includes(h));
+  return presentedHashes.some(h => trustedPins.includes(h));
 }
 
 /** 单个 leaf 指纹是否命中 pin（便捷封装）。 */

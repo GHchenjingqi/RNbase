@@ -24,8 +24,8 @@ STAGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$
 
 if [ -n "$STAGED" ]; then
   echo "[pre-commit] eslint 检查暂存文件"
-  # 逐个跑：eslint 8 没有 --no-warn-ignored，把 .eslintignore 里的路径（scripts/、platforms/、
-  # __tests__/scripts/ 等）直接当参数传会报"File ignored…"+超预算警告而退 1，
+  # 逐个跑：eslint 8 没有 --no-warn-ignored，把 .eslintignore 里的路径（platforms/、coverage/ 等）
+  # 直接当参数传会报"File ignored…"+超预算警告而退 1，
   # 那类文件本来就不入 lint 范围，跳过而不是让提交无故红。
   for F in $STAGED; do
     OUT=$(npx eslint --max-warnings=0 -- "$F" 2>&1)

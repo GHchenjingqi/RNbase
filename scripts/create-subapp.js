@@ -17,8 +17,8 @@
  *        --application-id com.qux.demo --apk-name Demo --version-name 1.0.0 --version-code 1
  *
  *   # 仅配置应用（远程站点打包用，无源码、无需 npm install）：
- *   node scripts/create-subapp.js --name xingce_app --no-source \
- *        --app-name "行测" --application-id com.qux.xingce --remote-url https://xxx.host/
+ *   node scripts/create-subapp.js --name remote_site_demo --no-source \
+ *        --app-name "示例站点" --application-id com.qux.demo --remote-url https://xxx.host/
  *
  * 参数：
  *   --name            必填。子应用目录名（建在基座同级），建议 xxx_h5
@@ -65,7 +65,7 @@ function parseArgs(argv) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const fail = (msg) => {
+const fail = msg => {
   console.error(`[create-subapp] ${msg}`);
   process.exit(1);
 };
@@ -114,7 +114,7 @@ const shortName = name.replace(/_h5$/, '');
 const camelName = shortName
   .split(/[_-]/)
   .filter(Boolean)
-  .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+  .map(s => s.charAt(0).toUpperCase() + s.slice(1))
   .join('');
 const applicationId =
   typeof args['application-id'] === 'string'
@@ -173,7 +173,7 @@ if (noSource) {
     fs.copyFileSync(path.join(sharedScripts, f), path.join(targetScripts, f));
   }
   console.log(
-    '[create-subapp] 已补齐对接脚本 scripts/（sync-to-base / inject-api / apply-app-meta）'
+    '[create-subapp] 已补齐对接脚本 scripts/（sync-to-base / inject-api / apply-app-meta）',
   );
 }
 
@@ -207,7 +207,7 @@ if (!noSource) {
   if (/window\.__H5_APP_ID__/.test(html)) {
     html = html.replace(
       /window\.__H5_APP_ID__\s*=\s*['"][^'"]*['"]/,
-      `window.__H5_APP_ID__ = '${appId}'`
+      `window.__H5_APP_ID__ = '${appId}'`,
     );
   } else {
     // 只捕获行首缩进（不含换行），避免 $1 自带换行导致注入块出现空行；
@@ -219,7 +219,7 @@ if (!noSource) {
         `${indent}<script>\n` +
         `${indent}  window.__H5_APP_ID__ = '${appId}';\n` +
         `${indent}</script>\n` +
-        `${indent}${bridge}`
+        `${indent}${bridge}`,
     );
   }
   if (html === before) {
@@ -245,7 +245,7 @@ if (remoteUrl) {
 fs.writeFileSync(
   path.join(targetDir, 'app.config.json'),
   JSON.stringify(appConfig, null, 2) + '\n',
-  'utf8'
+  'utf8',
 );
 console.log('[create-subapp] 已写入 app.config.json');
 
@@ -266,7 +266,7 @@ if (args['no-register'] === true) {
   registry.apps[name] = { dir: `../${name}`, dist: distDirName };
   fs.writeFileSync(REGISTRY_FILE, JSON.stringify(registry, null, 2) + '\n', 'utf8');
   console.log(
-    `[create-subapp] 已登记到 app-registry.json：${name} → ../${name}（产物 ${distDirName}）`
+    `[create-subapp] 已登记到 app-registry.json：${name} → ../${name}（产物 ${distDirName}）`,
   );
 }
 
@@ -275,7 +275,7 @@ console.log('');
 if (noSource) {
   console.log(`[create-subapp] 配置应用已创建（远程站点：${remoteUrl}）。接下来：`);
   console.log(
-    `  1) cd ${ROOT} && npm run app:use -- ${name}   # 设为当前应用并下发品牌（注意：不要加 --sync）`
+    `  1) cd ${ROOT} && npm run app:use -- ${name}   # 设为当前应用并下发品牌（注意：不要加 --sync）`,
   );
   console.log('  2) 回打包向导，选「远程站点」模式直接构建');
   console.log('');

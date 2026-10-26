@@ -42,7 +42,7 @@ function findWorkspace() {
   if (!fs.existsSync(iosDir)) return null;
   const ws = fs
     .readdirSync(iosDir)
-    .filter((f) => f.endsWith('.xcworkspace'))
+    .filter(f => f.endsWith('.xcworkspace'))
     .sort();
   return ws.length ? path.join(iosDir, ws[0]) : null;
 }
@@ -58,7 +58,7 @@ function printGuard(reason) {
       '         npm run dev:ios       # Metro + run-ios（模拟器）\n' +
       '         npm run build:ios     # xcodebuild（模拟器 Debug 构建，不出 .ipa）\n' +
       '[ios] 基座在 Windows/Linux 上的可用链路：安卓（npm run dev / build:android）' +
-      '与鸿蒙（npm run dev:harmony，见 README「鸿蒙（RNOH）」）。'
+      '与鸿蒙（npm run dev:harmony，见 README「鸿蒙（RNOH）」）。',
   );
   for (const gap of KNOWN_GAPS) console.error(`[ios] 注意缺口：${gap}`);
 }
@@ -92,7 +92,7 @@ function doctor() {
   lines.push(
     `Podfile.lock：${
       fs.existsSync(lock) ? '存在（pod install 已跑过）' : '缺失，先 npm run ios:pods'
-    }`
+    }`,
   );
   const ws = findWorkspace();
   lines.push(`workspace：${ws || '缺失（pod install 之后才有）'}`);
@@ -105,8 +105,8 @@ function doctor() {
     drift.length === 0
       ? '工程引用完整性：pbxproj 已引用全部原生源文件'
       : `工程引用完整性：${drift.length} 个源文件没进工程（构建会静默跳过）：\n      ${drift.join(
-          '\n      '
-        )}`
+          '\n      ',
+        )}`,
   );
 
   // clientId 占位校验：直接扫 config 源文件，避免引入 TS 解析依赖。
@@ -122,7 +122,7 @@ function doctor() {
       h5InBundle
         ? '存在（已 sync-h5）'
         : '缺失，运行 npm run ios:sync-h5 并在 Xcode 加 folder reference'
-    }`
+    }`,
   );
 
   console.log('[ios] 当前状态:');
@@ -162,7 +162,7 @@ function build() {
       'release 需要签名与 App Store Connect 配置' +
         '（xcodebuild -archive + -exportArchive + ExportOptions.plist），\n' +
         '        基座尚未固化这套参数；请在 Xcode 里配置 signing 后手动 archive，' +
-        '或按需把命令补进 scripts/ios.js（并同步 README）。'
+        '或按需把命令补进 scripts/ios.js（并同步 README）。',
     );
   }
   // 本地模式前确保 H5 资源到位（远程模式忽略亦可，但 sync 无害）。
@@ -170,7 +170,7 @@ function build() {
   if (!fs.existsSync(path.join(iosDir, 'qux', 'h5', 'index.html'))) {
     console.warn(
       '[ios] platforms/ios/qux/h5 缺失：请先 npm run ios:sync-h5，并在 Xcode 把 h5 ' +
-        '作为 folder reference 加进 App target，否则本地模式 WebView 白屏。'
+        '作为 folder reference 加进 App target，否则本地模式 WebView 白屏。',
     );
   }
   // 模拟器 Debug 构建：不需要签名，能验证 Swift/OC 侧与 pod 依赖是否真的编得过。
@@ -187,7 +187,7 @@ function build() {
       'iphonesimulator',
       'build',
     ],
-    { cwd: iosDir }
+    { cwd: iosDir },
   );
   console.log('[ios] 模拟器 Debug 构建完成（产物在 Xcode DerivedData，本脚本不投递 ipa）。');
 }

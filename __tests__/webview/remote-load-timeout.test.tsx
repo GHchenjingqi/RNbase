@@ -17,7 +17,7 @@ let CapturedWebView: React.ComponentType<Record<string, unknown>> | undefined;
 jest.mock('react-native-webview', () => {
   const ReactMod = require('react');
   const MockWebView = ReactMod.forwardRef((props: Record<string, unknown>, ref: unknown) =>
-    ReactMod.createElement('mock-webview', { ...props, ref })
+    ReactMod.createElement('mock-webview', { ...props, ref }),
   );
   CapturedWebView = MockWebView;
   return { __esModule: true, default: MockWebView, WebView: MockWebView };
@@ -26,7 +26,7 @@ jest.mock('react-native-webview', () => {
 import { WebViewBridge } from '../../src/webview/WebViewBridge';
 import { REMOTE_H5_LOAD_TIMEOUT_MS } from '../../src/config';
 
-const REMOTE = 'https://gushici.example.com/';
+const REMOTE = 'https://remote-h5.example.test/';
 
 function getWebView(tree: ReactTestRenderer) {
   const wv = tree.root.findByType(CapturedWebView as React.ComponentType<Record<string, unknown>>);

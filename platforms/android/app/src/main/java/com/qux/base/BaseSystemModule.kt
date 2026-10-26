@@ -1,11 +1,13 @@
 /**
  * Android 系统信息原生模块（RN 侧拿不到的常用系统状态）。
  *
- * 提供品牌/型号/系统版本/SDK 版本、电量与充电状态、总/可用存储、时区。
+ * 提供品牌/型号/系统版本/SDK 版本、电量与充电状态、总/可用存储、时区，
+ * 以及安装维度信息（唯一 ID / 首次安装时间 / 最近更新时间）。
  * 全部读取无需额外权限：
  *  - Build.* ：设备信息
  *  - BatteryManager：电量/充电状态
  *  - StatFs：存储空间
+ *  - PackageManager / Settings.Secure.ANDROID_ID：安装信息
  *
  * 另提供容器内 WebView 的硬件返回键真值查询（webViewGoBack，见方法注释）。
  */
@@ -16,6 +18,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -60,6 +63,34 @@ class BaseSystemModule(private val reactContext: ReactApplicationContext) :
             promise.resolve(m)
         } catch (e: Exception) {
             promise.reject("DEVICE_INFO_FAILED", e.localizedMessage)
+        }
+    }
+
+    /**
+     * 安装维度信息：设备唯一 ID、首次安装时间、最近更新时间。
+     *
+     * 为什么由原生提供：这三项 JS 侧一律拿不到 —— RN 核心没有安装时间 API，
+     * 唯一 ID 要读 Settings.Secure.ANDROID_ID（应用卸载重装后会重置，这是系统语义，
+     * 基座不额外造假 ID）。iOS / 鸿蒙暂未实现该方法，RN 侧适配器探测不到就保持
+     * DEVICE_UNSUPPORTED（真值缺失优于假值，见 src/middleware/native/device-battery-adapter.ts）。
+     *
+     * applicationInfo 的两个时间戳是「装机端」口径，与 version.json 的版本口径无关。
+     */
+    @ReactMethod
+    fun getInstallInfo(promise: Promise) {
+        try {
+            val info = reactContext.packageManager.getPackageInfo(reactContext.packageName, 0)
+            val m = WritableNativeMap()
+            m.putString(
+                "uniqueId",
+                Settings.Secure.getString(reactContext.contentResolver, Settings.Secure.ANDROID_ID)
+                    ?: ""
+            )
+            m.putDouble("firstInstallTime", info.firstInstallTime.toDouble())
+            m.putDouble("lastUpdateTime", info.lastUpdateTime.toDouble())
+            promise.resolve(m)
+        } catch (e: Exception) {
+            promise.reject("INSTALL_INFO_FAILED", e.localizedMessage)
         }
     }
 

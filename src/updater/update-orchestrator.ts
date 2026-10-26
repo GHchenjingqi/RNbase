@@ -174,7 +174,7 @@ export class UpdateOrchestrator {
       this.stateMachine.transition('DOWNLOAD_START');
       const downloader = new PackageDownloader(this.options.httpDownloader, {
         maxRetries: this.options.downloadOptions?.maxRetries ?? UPDATE_DOWNLOAD_MAX_RETRIES,
-        onProgress: (p) => this.options.downloadOptions?.onProgress?.(p.percent),
+        onProgress: p => this.options.downloadOptions?.onProgress?.(p.percent),
       });
       const packageData = await downloader.download(manifest.packageUrl);
       this.stateMachine.transition('DOWNLOAD_COMPLETE');

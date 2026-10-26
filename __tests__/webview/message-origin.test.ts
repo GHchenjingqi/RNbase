@@ -24,7 +24,7 @@ describe('isTrustedMessageOrigin', () => {
         messageOrigin: 'https://mobile-base.example.com',
         pageUrl: 'https://mobile-base.example.com/app/',
         entryUrl: 'https://mobile-base.example.com/app/',
-      })
+      }),
     ).toBe(true);
   });
 
@@ -34,7 +34,7 @@ describe('isTrustedMessageOrigin', () => {
         messageOrigin: 'https://evil.com',
         pageUrl: 'https://mobile-base.example.com/app/',
         entryUrl: 'https://mobile-base.example.com/app/',
-      })
+      }),
     ).toBe(false);
   });
 
@@ -44,16 +44,56 @@ describe('isTrustedMessageOrigin', () => {
         messageOrigin: 'https://mobile-base.example.com.evil.com',
         pageUrl: 'https://mobile-base.example.com/app/',
         entryUrl: 'https://mobile-base.example.com/app/',
-      })
+      }),
     ).toBe(false);
   });
 
-  test('平台没给消息来源 → 拒（失败关闭）', () => {
+  test('站外页没给消息来源 → 拒（失败关闭只对非本地页保留）', () => {
     expect(
       check({
-        pageUrl: 'file:///android_asset/h5/index.html',
-        entryUrl: 'file:///android_asset/h5/index.html',
-      })
+        pageUrl: 'https://evil.com/phishing',
+        entryUrl: 'https://mobile-base.example.com/app/',
+      }),
+    ).toBe(false);
+  });
+
+  /**
+   * 真机回归（雷电 Android 9 + APK 内置 assets 首屏）：
+   * 安卓 WebMessageListener 对 file:// 页给的 sourceOrigin 是字面量 "null"，
+   * 旧的「拿不到 origin 一律拒」把本地模式的 14 个接口全打成 SECURITY_BLOCKED，
+   * 而单测用的是 http 域，所以只有装机才暴露。
+   */
+  test('本地内置包：安卓给的 sourceOrigin 是字面量 "null" → 放行（真机实测形态）', () => {
+    expect(
+      check({
+        messageOrigin: 'null',
+        pageUrl: 'file:///android_asset/index.html',
+        entryUrl: 'file:///android_asset/index.html',
+      }),
+    ).toBe(true);
+  });
+
+  test('动态 H5 子包：sourceOrigin 为 "null" 也放行（离线包页同样是本地页）', () => {
+    expect(
+      check({
+        messageOrigin: 'null',
+        pageUrl: 'file:///data/user/0/com.qux/files/h5-versions/2/index.html',
+        entryUrl: 'file:///android_asset/index.html',
+      }),
+    ).toBe(true);
+  });
+
+  test('内联兜底 html（source.html，没有 uri）：来源缺失也放行', () => {
+    expect(check({ messageOrigin: 'null', pageUrl: '', entryUrl: '' })).toBe(true);
+  });
+
+  test('本地页里的跨域 iframe 仍然拒：它给得出自己的 origin，与当前页不同源', () => {
+    expect(
+      check({
+        messageOrigin: 'https://evil.com',
+        pageUrl: 'file:///android_asset/index.html',
+        entryUrl: 'file:///android_asset/index.html',
+      }),
     ).toBe(false);
   });
 
@@ -63,7 +103,7 @@ describe('isTrustedMessageOrigin', () => {
         messageOrigin: 'file://',
         pageUrl: 'file:///android_asset/h5/index.html',
         entryUrl: 'file:///android_asset/h5/index.html',
-      })
+      }),
     ).toBe(true);
   });
 
@@ -73,7 +113,7 @@ describe('isTrustedMessageOrigin', () => {
         messageOrigin: 'file://',
         pageUrl: 'file:///data/user/0/com.qux/files/h5-versions/2/index.html',
         entryUrl: '',
-      })
+      }),
     ).toBe(true);
   });
 
@@ -84,7 +124,7 @@ describe('isTrustedMessageOrigin', () => {
 
   test('内联兜底页（about:blank）不会被拦死', () => {
     expect(check({ messageOrigin: 'about:blank', pageUrl: 'about:blank', entryUrl: '' })).toBe(
-      true
+      true,
     );
   });
 
@@ -94,7 +134,7 @@ describe('isTrustedMessageOrigin', () => {
         messageOrigin: 'https://evil.com',
         pageUrl: 'https://evil.com/phishing',
         entryUrl: 'https://mobile-base.example.com/app/',
-      })
+      }),
     ).toBe(false);
   });
 });

@@ -21,7 +21,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('react-native-webview', () => {
   const ReactMod = require('react');
   const MockWebView = ReactMod.forwardRef((props: Record<string, unknown>, ref: unknown) =>
-    ReactMod.createElement('mock-webview', { ...props, ref })
+    ReactMod.createElement('mock-webview', { ...props, ref }),
   );
   return { __esModule: true, default: MockWebView, WebView: MockWebView };
 });
@@ -37,7 +37,7 @@ const ASSET = 'file:///android_asset/index.html';
  * （不含裸字符串），直接和字面量比较会被 TS 判成"永不相等"，所以在这一个地方窄化。
  */
 function findWebView(root: ReactTestInstance) {
-  return root.findAll((n) => (n.type as unknown as string) === 'mock-webview')[0];
+  return root.findAll(n => (n.type as unknown as string) === 'mock-webview')[0];
 }
 
 /** 挂载 → 取快照 → 立刻卸载：状态更新都关在 act 里，断言只看纯数据。 */
@@ -48,7 +48,7 @@ function snapshot(bridgeEnabled: boolean) {
       React.createElement(WebViewBridge, {
         source: { uri: bridgeEnabled ? ASSET : SITE },
         bridgeEnabled,
-      })
+      }),
     );
   });
   const root = tree!.root;

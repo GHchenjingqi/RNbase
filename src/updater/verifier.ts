@@ -13,12 +13,14 @@
  * 生产环境 RN/Hermes 无 Web Crypto subtle，需注入原生签名校验器（见 defaultSignatureVerifier 说明）。
  */
 
+import { base64ToBytes } from './base64';
+
 export type Sha256Hasher = (data: Uint8Array) => Promise<string>;
 
 export type SignatureVerifier = (
   data: Uint8Array,
   signature: string,
-  publicKey: string
+  publicKey: string,
 ) => Promise<boolean>;
 
 /** 签名校验策略（由基座是否配置公钥决定）。 */
@@ -63,7 +65,7 @@ export type VerifyResult =
  */
 export async function verifyPackage(
   data: Uint8Array,
-  options: VerifyOptions
+  options: VerifyOptions,
 ): Promise<VerifyResult> {
   // 1. 大小校验
   const sizeTolerance = options.sizeTolerance ?? 0;
@@ -145,10 +147,10 @@ const defaultSha256Hasher: Sha256Hasher | null = (() => {
     };
   };
   if (g.crypto?.subtle) {
-    return async (data) => {
+    return async data => {
       const hashBuffer = await g.crypto!.subtle!.digest('SHA-256', data);
       return Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, '0'))
+        .map(b => b.toString(16).padStart(2, '0'))
         .join('');
     };
   }
@@ -163,18 +165,6 @@ export function createMockHasher(expectedHash: string): Sha256Hasher {
 /** 创建总是失败的 Mock 校验器（用于测试故障注入）。 */
 export function createFailingHasher(): Sha256Hasher {
   return async () => 'wrong-hash-value';
-}
-
-/** base64 → Uint8Array（环境内置 atob 优先）。 */
-function base64ToBytes(b64: string): Uint8Array {
-  const g = globalThis as unknown as { atob?: (s: string) => string };
-  if (g.atob) {
-    const bin = g.atob(b64);
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
-  }
-  throw new Error('base64 解码需要 atob（运行环境未提供）');
 }
 
 /** PEM(SPKI) → DER 字节。 */
@@ -193,13 +183,13 @@ type SubtleCryptoLike = {
     keyData: ArrayBuffer,
     algorithm: { name: string; hash?: string },
     extractable: boolean,
-    keyUsages: string[]
+    keyUsages: string[],
   ) => Promise<unknown>;
   verify: (
     algorithm: string,
     key: unknown,
     signature: Uint8Array,
-    data: Uint8Array
+    data: Uint8Array,
   ) => Promise<boolean>;
 };
 
@@ -226,7 +216,7 @@ export const defaultSignatureVerifier: SignatureVerifier | null = (() => {
         pemToDer(publicKey).buffer as ArrayBuffer,
         { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
         false,
-        ['verify']
+        ['verify'],
       );
       return await subtle.verify('RSASSA-PKCS1-v1_5', key, base64ToBytes(signature), data);
     } catch {

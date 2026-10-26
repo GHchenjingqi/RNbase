@@ -41,7 +41,10 @@ jobs:
             "applicationId": "com.qux.base",
             "versionName": "1.0.0",
             "versionCode": 1,
-            "remoteUrl": ""
+            "remoteUrl": "",
+            "trustedDomains": [],
+            "manifestUrl": "",
+            "trustedAppIds": []
           }
           EOF
             echo "Created fallback version.json for CI"
@@ -57,6 +60,16 @@ jobs:
 
       - name: Lint (eslint)
         run: npm run lint
+
+      # 格式门禁。此前一直缺席的原因是配置本身是坏的：仓库里同时有 .prettierrc 和
+      # .prettierrc.js，而 prettier 只认前者（实测 --find-config-path 指向 .prettierrc），
+      # 后者带着 RN 社区那套 arrowParens/trailingComma 从未生效，于是仓库按默认风格写，
+      # 全量 --check 永远红。现在合并成一份真配置 + 跑过一次 npm run format，
+      # 这一档才可能作为硬门禁存在。
+      # endOfLine 用 auto 而不是 lf：本机是 Windows（core.autocrlf=true），
+      # 钉死 lf 会让 git 一 touch 文件就整片假红，门禁只该管风格，不该管换行符归属。
+      - name: Format check (prettier)
+        run: npm run format:check
 
       # 带 --coverage 才有门禁：jest.config.js 的 coverageThreshold 只在收集覆盖率时生效。
       - name: Unit tests (jest + coverage gate)
@@ -75,8 +88,3 @@ jobs:
       # 只会打出一个「少了整块 Bridge 能力」的绿包，所以在 linux runner 上先查一遍。
       - name: iOS project reference check
         run: npm run ios:check-project
-
-      # 说明：prettier 格式校验不在 CI 硬门禁内。仓库存在预存在的格式偏差
-      # （缺 .prettierrc 导致长期以默认 80 列检查），格式统一由提交钩子
-      # （.husky/pre-commit）对暂存文件自动修复向前约束；待全量
-      # `npm run format` 对齐后可再加回 format:check。

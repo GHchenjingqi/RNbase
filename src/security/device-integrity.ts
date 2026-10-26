@@ -94,7 +94,7 @@ export function isCompromised(integrity: DeviceIntegrity): boolean {
  */
 export function requiresStepUp(
   integrity: DeviceIntegrity,
-  enforce: boolean = DEVICE_INTEGRITY_ENFORCE
+  enforce: boolean = DEVICE_INTEGRITY_ENFORCE,
 ): boolean {
   return integrity === 'compromised' && enforce;
 }

@@ -15,7 +15,7 @@ const typed = ledger as {
   lastReleaseCode: (entries: { mode: string; versionCode: number }[]) => number | null;
   checkReleaseVersionCode: (
     rootDir: string,
-    opts: { applicationId: string; versionCode: number | string }
+    opts: { applicationId: string; versionCode: number | string },
   ) => { allow: boolean; last: number | null; problem: string };
   appendBuild: (rootDir: string, entry: Record<string, unknown>) => string | null;
 };
@@ -34,7 +34,7 @@ afterAll(() => {
 describe('checkReleaseVersionCode', () => {
   test('没有台账时放行（第一次出包）', () => {
     expect(
-      typed.checkReleaseVersionCode(tempRoot(), { applicationId: 'com.qux', versionCode: 1 })
+      typed.checkReleaseVersionCode(tempRoot(), { applicationId: 'com.qux', versionCode: 1 }),
     ).toEqual({
       allow: true,
       last: null,
@@ -70,7 +70,7 @@ describe('checkReleaseVersionCode', () => {
       artifact: 'x',
     });
     expect(
-      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux', versionCode: 8 }).allow
+      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux', versionCode: 8 }).allow,
     ).toBe(true);
   });
 
@@ -83,7 +83,7 @@ describe('checkReleaseVersionCode', () => {
       artifact: 'x',
     });
     expect(
-      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux', versionCode: 11 }).allow
+      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux', versionCode: 11 }).allow,
     ).toBe(false);
   });
 
@@ -112,7 +112,7 @@ describe('checkReleaseVersionCode', () => {
       artifact: 'x',
     });
     expect(
-      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux.b', versionCode: 1 }).allow
+      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux.b', versionCode: 1 }).allow,
     ).toBe(true);
   });
 
@@ -133,7 +133,7 @@ describe('checkReleaseVersionCode', () => {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, '{ not json', 'utf8');
     expect(
-      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux', versionCode: 3 }).allow
+      typed.checkReleaseVersionCode(root, { applicationId: 'com.qux', versionCode: 3 }).allow,
     ).toBe(true);
   });
 });
@@ -161,7 +161,7 @@ describe('appendBuild', () => {
         { mode: 'release', versionCode: 9 },
         { mode: 'release', versionCode: 11 },
         { mode: 'debug', versionCode: 99 },
-      ])
+      ]),
     ).toBe(11);
     expect(typed.lastReleaseCode([])).toBeNull();
   });

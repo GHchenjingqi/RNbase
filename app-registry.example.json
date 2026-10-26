@@ -6,8 +6,9 @@
       "dir": "../RN_h5",
       "dist": "dist"
     },
-    "gushici": {
-      "dir": "../gushici_h5",
+    "demo_single_file_h5": {
+      "_说明": "另一种打包形态：H5 只产出一个自包含 html（产物目录 dist-file），键名即 app:use 的参数。",
+      "dir": "../demo_single_file_h5",
       "dist": "dist-file"
     }
   }

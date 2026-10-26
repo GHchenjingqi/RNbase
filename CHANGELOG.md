@@ -5,6 +5,31 @@
 
 ## [Unreleased]
 
+### Fixed（启动链路收口：死代码删除 + OTA 真正落地 + clientId 噪声，2026-10-26）
+
+- 删除 `src/app/AppRoot.tsx`、`src/app/fallback-h5.ts`、`src/app/boot-state-machine.ts`、
+  `src/components/DiagnosticPage.tsx`：前两个从未被 `index.js` 挂载（入口解析与 OTA 检查
+  写在那里，真机上一次都没跑过），后两个零引用（`DiagnosticPage` 的三项动作
+  `WebViewErrorPage` 已全部具备且带深浅色；`BootStateMachine` 的转移表没有任何调用方，
+  留着等于宣称「启动时序受状态机约束」，而实际并没有）。
+- H5 子包热更新（OTA）与激活后握手回滚落到组合根 `App.tsx`：入口按
+  「远程站点 → 已激活子包 → 平台内置资源」解析；闸门为
+  `IS_REMOTE_H5 || H5_DEV_SERVER_URL || !H5_MANIFEST_URL`（三条件任一命中就不发请求）；
+  刚激活的那一版给 `HANDSHAKE_TIMEOUT_MS` 期限收 `app.ready`，超时即 `markFailed()`
+  回滚上一版并换入口。OTA 效应只在挂载时跑一次——曾跟着 `entryKey` 走，构成
+  「检查→下载→换入口→再检查」的自激循环。
+- `validateClientIds()` 改为只校验当前运行端：此前遍历三端，每个安卓冷启动都打一条
+  `CLIENT_ID 未配置：ios` 的 ERROR（iOS 的 id 要后端分配，这条在安卓上永远修不掉），
+  设备日志第一行恒为噪声。iOS 侧的拦截本就由 `npm run ios:doctor` 负责。
+- 单测：新增 `__tests__/appEntryOtaWiring.test.tsx`（入口三态 / OTA 闸门 / 握手回滚，17 例）
+  与 `__tests__/config/client-id.test.ts`；删除 `appRootRemoteMode.test.tsx`
+  （断言并入前者）。用例改用真定时器：`jest.useFakeTimers()` 与 react-test-renderer 的
+  异步 `act` 从第 3 次挂载起死锁，与 SplashOverlay、Provider 均无关。
+- 实测（安卓 release 包 + 雷电模拟器）：`bridge.ready entry=file:///android_asset/index.html?_cb=…`
+  （无激活子包 → 落内置入口，符合预期）、Bridge 18 项 SUCCESS / 0 项 SECURITY_BLOCKED、
+  设备日志零 `h5.update`/manifest 行（闸门生效，未误发请求）、`app.ready` SUCCESS，
+  调试台 14 接口 14 正常、无白屏。
+
 ### Added（闪屏等待 H5 首屏就绪，不再露白屏，2026-10-15）
 
 - `SplashOverlay` 新增 `holdUntil` / `holdMaxMs`：倒计时走完后若页面还没加载完成，
@@ -81,10 +106,11 @@
 - `scripts/apply-app-meta.js`：`h5DevUrl` 与 `remoteUrl`/`statusBarStyle` 同等待遇，
   子应用未声明时保留 version.json 现值，避免 `brand:apply` 把真机联调地址清掉。
 - 连带结论（已在 README 4.4 记录）：debug 直连时 H5 子包热更新链路不启动
-  （`AppRoot` 的 `IS_REMOTE_H5 || H5_DEV_SERVER_URL` 分支），所以「debug 下隐藏热更新」
+  （原 `AppRoot` 的 `IS_REMOTE_H5 || H5_DEV_SERVER_URL` 分支；该组件是从未挂载的死代码，
+  闸门已落到 `App.tsx`），所以「debug 下隐藏热更新」
   在基座侧自动成立；H5 侧要跟着隐藏用已有的 `DEVICE.GETPLATFORM().isTesting`。
 - 单测：`resolve-h5-entry` 补 debug 三端分支（含「iOS 无原生路径也不返回 null」），
-  `appRootRemoteMode` 补「直连时不跑子包热更新」。
+  `appRootRemoteMode`（该文件已随 `AppRoot` 删除，同类断言并入 `__tests__/appEntryOtaWiring.test.tsx`）补「直连时不跑子包热更新」。
 
 ### Added（新建子应用脚手架 + 打包工作台配套，2026-10-15 补记）
 - 新增 `scripts/create-subapp.js`：一次补齐「一个子应用可用」的三要素 —— 工程本体

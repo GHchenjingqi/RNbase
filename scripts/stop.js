@@ -22,14 +22,15 @@ const { readApplicationId } = require('./active-app');
 const { killPort } = require('./free-port');
 const { gradleHomeArgs } = require('./gradle-home');
 const { discoverTools, readBundleName } = require('./harmony-ready');
+const { METRO_HOST_PORT, METRO_DEVICE_PORT } = require('./ports');
 
 const isWin = process.platform === 'win32';
-const PORT = 8082;
+const PORT = METRO_HOST_PORT;
 const APP_ID = readApplicationId();
 const root = path.resolve(__dirname, '..');
 const androidDir = path.join(root, 'platforms', 'android');
-/** Metro 在设备侧的端口，hdc fport ls 输出里就是这个字面量 */
-const METRO_REMOTE = 'tcp:8081';
+/** Metro 在设备侧的端口，hdc fport ls 输出里就是这个字面量（真源见 ports.json） */
+const METRO_REMOTE = `tcp:${METRO_DEVICE_PORT}`;
 
 /**
  * 停止 Gradle 守护进程。

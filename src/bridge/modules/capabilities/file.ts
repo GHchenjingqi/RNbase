@@ -36,7 +36,7 @@ export function registerFileModule(server: BridgeServer, adapters: CapabilityAda
       if (!size.allow) {
         throw new BridgeException(
           'FILE_TOO_LARGE',
-          `文件 ${size.bytes} 字节，超过 Bridge 读取上限 ${BRIDGE_FILE_READ_MAX_BYTES} 字节`
+          `文件 ${size.bytes} 字节，超过 Bridge 读取上限 ${BRIDGE_FILE_READ_MAX_BYTES} 字节`,
         );
       }
       return result;

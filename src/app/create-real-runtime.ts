@@ -26,17 +26,23 @@ export function createRealRuntime(): H5Runtime {
   }
 
   const storage = new NativeH5Storage();
-  const manifestClient = new ManifestClient({ latestUrl: H5_MANIFEST_URL });
+  // 没配 manifest 地址就不建清单客户端：整条 OTA 链路关闭（规则 6/28）。
+  // 过去这里固定用一个不存在的占位域名，每次启动白跑一次请求再当成「无更新」。
+  const manifestClient = H5_MANIFEST_URL
+    ? new ManifestClient({ latestUrl: H5_MANIFEST_URL })
+    : null;
   const downloader = new PackageDownloader(nativeHttpDownloader);
 
   const versionManager = new H5VersionManager({
     storage,
-    manifestProvider: { fetchManifest: () => manifestClient.fetchLatest() },
+    manifestProvider: manifestClient
+      ? { fetchManifest: () => manifestClient.fetchLatest() }
+      : undefined,
     downloader,
     verifier: { sha256: nativeSha256Hasher },
     appVersion: APP_VERSION,
     bridgeVersion: BRIDGE_VERSION,
-    onStateChange: (state) => {
+    onStateChange: state => {
       deviceLogger.info(`h5.update.state=${state}`);
     },
   });

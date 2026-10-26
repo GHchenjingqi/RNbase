@@ -76,7 +76,7 @@ export function SplashOverlay({
     if (finishedRef.current) return;
     finishedRef.current = true;
     Animated.timing(opacity, { toValue: 0, duration: FADE_OUT_MS, useNativeDriver: true }).start(
-      () => onFinish()
+      () => onFinish(),
     );
   }, [onFinish, opacity]);
 

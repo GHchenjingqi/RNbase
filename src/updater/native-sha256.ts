@@ -10,7 +10,7 @@ import { bytesToBase64 } from './base64';
 
 const BaseH5 = NativeModules.BaseH5;
 
-export const nativeSha256Hasher: Sha256Hasher = async (data) => {
+export const nativeSha256Hasher: Sha256Hasher = async data => {
   if (!BaseH5 || typeof BaseH5.sha256 !== 'function') {
     throw new Error('BaseH5 原生模块未注册，无法计算 SHA-256');
   }

@@ -12,23 +12,46 @@
  *  - asset:// / resource://rawfile/ → allow（鸿蒙 HAP 内置 rawfile，H5 离线包，安全）
  *  - 其他 file://           → block（禁止本地文件加载，安全策略）
  */
-import { DOMAIN_WHITELIST } from '../config';
+import { APP_PACKAGE, DOMAIN_WHITELIST } from '../config';
 import type { NavigationDecision } from './types';
 
-/** 取 URL 的 origin（`scheme://host`）；解析失败返回 null。Bridge 来源判定共用。 */
+/**
+ * 取 URL 的 origin（`scheme://host`）；解析失败返回 null。Bridge 来源判定共用。
+ *
+ * 为什么先手工验 scheme：Hermes/RN 的 URL 实现允许「相对解析」，
+ * `new URL('null')` 不抛异常，而是给出 protocol='' / host='' 的半成品，
+ * 拼出来是一个真值 `"//"`。真机实测（雷电 Android 9，APK 内置 assets 首屏）：
+ * 安卓 WebMessageListener 对 file:// 页给的 sourceOrigin 正是字面量 "null"，
+ * 于是 "//" !== "file://" → 本地模式 14 个 Bridge 接口全被 SECURITY_BLOCKED 拒掉。
+ * 没有 scheme 的串不是 origin，一律回 null，让「拿不到来源」走来源缺失的分支。
+ */
 export function normalizeOrigin(url: string): string | null {
+  const value = (url ?? '').trim();
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) {
+    return null;
+  }
   try {
-    const u = new URL(url);
+    const u = new URL(value);
     return `${u.protocol}//${u.host}`;
   } catch {
     return null;
   }
 }
 
+/**
+ * 离线 H5 子包所在的应用私有目录前缀（两种形态都放行）。
+ * 包名来自 version.json 的 applicationId —— 写死基座自己的包名会让换了包名的子应用
+ * 把自己的离线包拦在门外（decideNavigation 判成 file_scheme_blocked）。
+ */
+const H5_VERSIONS_PREFIXES = [
+  `file:///data/user/0/${APP_PACKAGE}/files/h5-versions/`,
+  `file:///data/data/${APP_PACKAGE}/files/h5-versions/`,
+];
+
 function isTrustedOrigin(url: string, whitelist: string[]): boolean {
   const origin = normalizeOrigin(url);
   if (!origin) return false;
-  return whitelist.some((w) => {
+  return whitelist.some(w => {
     try {
       const wOrigin = normalizeOrigin(w);
       return wOrigin === origin;
@@ -45,7 +68,7 @@ function isTrustedOrigin(url: string, whitelist: string[]): boolean {
  */
 export function decideNavigation(
   url: string,
-  whitelist: string[] = DOMAIN_WHITELIST
+  whitelist: string[] = DOMAIN_WHITELIST,
 ): NavigationDecision {
   if (!url || url.trim() === '') {
     return { action: 'block', reason: 'empty_url' };
@@ -81,10 +104,10 @@ export function decideNavigation(
 
   // 动态 H5 子包（App 私有目录 h5-versions）允许。
   // 仅放行应用私有目录内的版本文件，杜绝任意本地文件加载。
-  if (
-    url.startsWith('file:///data/user/0/com.qux/files/h5-versions/') ||
-    url.startsWith('file:///data/data/com.qux/files/h5-versions/')
-  ) {
+  // 包名来自 version.json 的 applicationId（config 的 APP_PACKAGE）：写死基座自己的包名
+  // 会让换了包名的子应用读不到自己的离线包，而 /data/data 与 /data/user/0 两个形态
+  // 都要放行 —— 部分机型/工作目录（Android for Work、二次用户）解析出来的形态不同。
+  if (H5_VERSIONS_PREFIXES.some(prefix => url.startsWith(prefix))) {
     return { action: 'allow', reason: 'h5_versions' };
   }
 

@@ -21,9 +21,9 @@ const path = require('path');
 /** 从 api.js 源码解析 H5 SDK 注册表。返回 { modules, appManager }。 */
 function parseH5Registry(source) {
   const modules = {};
-  const modulesMatch = source.match(/var MODULES = \{([\s\S]*?)\n  \};/);
+  const modulesMatch = source.match(/var MODULES = \{([\s\S]*?)\n {2}\};/);
   if (modulesMatch) {
-    const blockRegex = /^\s{4}([A-Z_]+): \{([\s\S]*?)\n    \},?$/gm;
+    const blockRegex = /^\s{4}([A-Z_]+): \{([\s\S]*?)\n {4}\},?$/gm;
     let m;
     while ((m = blockRegex.exec(modulesMatch[1])) !== null) {
       const actions = {};
@@ -40,7 +40,7 @@ function parseH5Registry(source) {
 
   let appManager = {};
   const amModule = source.match(/var APP_MANAGER_MODULE = '([^']+)';/);
-  const amActions = source.match(/var APP_MANAGER_ACTIONS = \{([\s\S]*?)\n  \};/);
+  const amActions = source.match(/var APP_MANAGER_ACTIONS = \{([\s\S]*?)\n {2}\};/);
   if (amModule && amActions) {
     let a;
     const actionRegex = /([A-Z0-9_]+): '([a-zA-Z][a-zA-Z0-9]*)'/g;
@@ -74,9 +74,9 @@ function computeDrift(h5ModuleNames, rnModuleNames) {
   const h5 = new Set(h5ModuleNames);
   const rn = new Set(rnModuleNames);
   return {
-    rnOnly: rnModuleNames.filter((n) => !h5.has(n)),
-    h5Only: h5ModuleNames.filter((n) => !rn.has(n)),
-    common: rnModuleNames.filter((n) => h5.has(n)),
+    rnOnly: rnModuleNames.filter(n => !h5.has(n)),
+    h5Only: h5ModuleNames.filter(n => !rn.has(n)),
+    common: rnModuleNames.filter(n => h5.has(n)),
   };
 }
 
@@ -124,8 +124,8 @@ function renderDoc({ modules, appManager }, rnModules) {
   // 漂移比对统一使用桥接模块名：H5 注册表键为大写（APP），对应桥接名小写（app）；
   // APPMANAGER 是特例，桥接名为驼峰 appManager。
   const h5BridgeNames = Object.keys(modules)
-    .filter((k) => k !== 'APPMANAGER')
-    .map((k) => k.toLowerCase());
+    .filter(k => k !== 'APPMANAGER')
+    .map(k => k.toLowerCase());
   if (Object.keys(appManager).length > 0) {
     h5BridgeNames.push(Object.values(appManager)[0].module);
   }
@@ -164,7 +164,7 @@ function main() {
     const existing = fs.existsSync(docPath) ? fs.readFileSync(docPath, 'utf8') : '';
     if (existing !== md) {
       console.error(
-        '[gen-api-doc] 文档与 api.js 注册表不一致，运行 `node scripts/gen-api-doc.js` 重新生成。'
+        '[gen-api-doc] 文档与 api.js 注册表不一致，运行 `node scripts/gen-api-doc.js` 重新生成。',
       );
       process.exit(1);
     }
@@ -177,7 +177,7 @@ function main() {
   console.log(
     `[gen-api-doc] 已生成 docs/BRIDGE_API.generated.md（${count} 方法 + ${
       Object.keys(registry.appManager).length
-    } APPMANAGER 特例，RN 侧 ${rnModules.length} 模块比对完成）`
+    } APPMANAGER 特例，RN 侧 ${rnModules.length} 模块比对完成）`,
   );
 }
 

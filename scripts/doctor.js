@@ -65,8 +65,18 @@ function entryCount(dir) {
   }
 }
 
+/**
+ * 内容哈希（先统一行尾再算）。
+ *
+ * 为什么必须统一：仓库没配 .gitattributes，core.autocrlf=true 会把入库的 LF 落地成 CRLF，
+ * 而 scripts/api.js 这类由脚本/编辑器改过的文件仍是 LF。按原始字节比，两边永远差
+ * 「每行一个 \r」——实测 react/vue 模板副本与唯一源逐个字节差 874B，去掉 \r 后哈希完全相同。
+ * 这项守卫查的是「副本内容漂没漂」，不是「git  checkout 用了哪种行尾」，
+ * 所以差异必须归一到内容本身，否则 Windows 上的 fresh checkout 会一直报假漂移。
+ */
 function sha256Of(file) {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  const text = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+  return crypto.createHash('sha256').update(text).digest('hex');
 }
 
 function readJsonSafe(file) {

@@ -11,7 +11,7 @@ import { BRIDGE_FILE_READ_MAX_BYTES } from '../../src/config';
 async function callFile(
   server: ReturnType<typeof createAppBridgeServer>,
   action: string,
-  params?: object
+  params?: object,
 ) {
   return server.handle({
     type: 'request',
@@ -85,7 +85,7 @@ describe('decideFileReadUri', () => {
 
   test('文件名里带 databases 字样的普通路径不误伤（只按路径段比较）', () => {
     expect(
-      decideFileReadUri('file:///storage/emulated/0/Download/my_databases_backup.txt')
+      decideFileReadUri('file:///storage/emulated/0/Download/my_databases_backup.txt'),
     ).toEqual({
       allow: true,
       reason: 'allowed',

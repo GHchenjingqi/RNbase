@@ -96,7 +96,7 @@ export function reportCrash(error: Error, context: string, fatal = false): void 
   };
   recordCrash(record);
   deviceLogger.error(
-    `crash context=${context} fatal=${fatal} os=${record.os} appVersion=${record.appVersion} msg=${error.message} stack=${stack}`
+    `crash context=${context} fatal=${fatal} os=${record.os} appVersion=${record.appVersion} msg=${error.message} stack=${stack}`,
   );
   // 上报闭环：有上报器则异步冲刷（best-effort，不阻塞主流程）
   if (crashUploader) {
@@ -168,7 +168,7 @@ export function installGlobalErrorHandlers(): boolean {
       const reason = event.reason;
       reportCrash(
         reason instanceof Error ? reason : new Error(`unhandledrejection: ${String(reason)}`),
-        'unhandledrejection'
+        'unhandledrejection',
       );
     });
   }
@@ -188,7 +188,7 @@ export function installGlobalErrorHandlers(): boolean {
  */
 export function createHttpCrashUploader(
   endpoint: string,
-  opts?: { timeoutMs?: number }
+  opts?: { timeoutMs?: number },
 ): CrashUploader {
   const timeoutMs = opts?.timeoutMs ?? 10_000;
   return {

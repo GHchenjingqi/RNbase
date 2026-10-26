@@ -14,6 +14,7 @@ import {
 } from '../../config';
 import { BRIDGE_EVENTS } from '../protocol';
 import { bridgeEventBus } from '../event-bus';
+import { deviceLogger } from '../../diagnostics/device-logger';
 import { isHarmony } from '../../platform/os';
 
 export { APP_VERSION, BRIDGE_VERSION };
@@ -71,7 +72,7 @@ function detectNfcAvailability(): void {
   if (!native?.nfcAvailable) return;
   native
     .nfcAvailable()
-    .then((r) => {
+    .then(r => {
       nfcAvailableCache = Boolean(r?.available);
     })
     .catch(() => {
@@ -102,7 +103,7 @@ function getCapabilities(): Capabilities {
 /** 能力 features 对象 → 可用能力名数组（过滤 false），用于握手回执与 bridge.ready 事件。 */
 function featuresToArray(features: Capabilities['features']): string[] {
   return (Object.keys(features) as (keyof Capabilities['features'])[]).filter(
-    (k) => features[k] === true
+    k => features[k] === true,
   );
 }
 
@@ -159,7 +160,9 @@ export function registerAppModule(server: BridgeServer, handlers: LifecycleHandl
         };
       }
       if (p?.appId && TRUSTED_APP_IDS.length === 0 && p.appId !== 'base_h5') {
-        console.warn(`[bridge] untrusted appId handshake: ${p.appId}`);
+        // 观察期告警要落进设备日志（按日期分包、可在诊断页回看），
+        // 裸 console.warn 在正式包里没人看得见，等于这条安全信号丢了。
+        deviceLogger.warn(`bridge.untrusted_app_id appId=${p.appId}`);
       }
       handlers.onReady?.({
         h5Version: p?.h5Version,

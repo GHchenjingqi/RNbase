@@ -34,7 +34,7 @@ export function registerDeviceModule(server: BridgeServer, adapters: DeviceAdapt
       return { version: APP_VERSION };
     },
 
-    /** 获取构建号（需原生）。 */
+    /** 获取构建号（取自 version.json，打包时下发）。 */
     async getBuildNumber() {
       if (!adapters.getBuildNumber) {
         throw new BridgeException('DEVICE_UNSUPPORTED', 'getBuildNumber 未接入');
@@ -70,7 +70,7 @@ export function registerDeviceModule(server: BridgeServer, adapters: DeviceAdapt
       return { lastUpdateTime: time };
     },
 
-    /** 获取应用名称（需原生）。 */
+    /** 获取应用名称（取自 version.json，品牌下发时写入）。 */
     async getAppName() {
       if (!adapters.getAppName) {
         throw new BridgeException('DEVICE_UNSUPPORTED', 'getAppName 未接入');
@@ -79,7 +79,7 @@ export function registerDeviceModule(server: BridgeServer, adapters: DeviceAdapt
       return { appName: name };
     },
 
-    /** 获取包名/Bundle ID（需原生）。 */
+    /** 获取包名 / Bundle ID（取自 version.json 的 applicationId）。 */
     async getBundleId() {
       if (!adapters.getBundleId) {
         throw new BridgeException('DEVICE_UNSUPPORTED', 'getBundleId 未接入');

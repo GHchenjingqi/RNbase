@@ -47,7 +47,7 @@ describe('P2-2 崩溃上报闭环', () => {
   test('flush 经上报器上报成功并清空缓冲', async () => {
     const uploaded: CrashRecord[][] = [];
     const uploader: CrashUploader = {
-      upload: async (r) => {
+      upload: async r => {
         uploaded.push(r);
         return { ok: true };
       },
@@ -72,7 +72,7 @@ describe('P2-2 崩溃上报闭环', () => {
   test('reportCrash 自动触发异步冲刷', async () => {
     const uploaded: CrashRecord[][] = [];
     const uploader: CrashUploader = {
-      upload: async (r) => {
+      upload: async r => {
         uploaded.push(r);
         return { ok: true };
       },
@@ -80,7 +80,7 @@ describe('P2-2 崩溃上报闭环', () => {
     setCrashUploader(uploader);
     reportCrash(new Error('crash-on-render'), 'render');
     // 等待 reportCrash 内自动 flush 的微任务
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 0));
     await flushCrashReports();
     expect(uploaded.length).toBeGreaterThanOrEqual(1);
     expect(getCrashBuffer().length).toBe(0);

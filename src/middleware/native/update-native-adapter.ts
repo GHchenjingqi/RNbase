@@ -129,23 +129,23 @@ export function resolveNativeUpdateAdapter(): UpdateAdapters {
       nativeModule
         .getInfo()
         .then(normalizeInfo)
-        .catch((e) => wrapNativeError(e, '读取版本信息失败')),
+        .catch(e => wrapNativeError(e, '读取版本信息失败')),
     startDownload: (options: StartDownloadOptions) =>
-      nativeModule.startDownload(options).catch((e) => wrapNativeError(e, '启动下载失败')),
+      nativeModule.startDownload(options).catch(e => wrapNativeError(e, '启动下载失败')),
     getProgress: () =>
       nativeModule
         .getProgress()
         .then(normalizeProgress)
-        .catch((e) => wrapNativeError(e, '读取下载进度失败')),
+        .catch(e => wrapNativeError(e, '读取下载进度失败')),
     cancelDownload: () =>
-      nativeModule.cancelDownload().catch((e) => wrapNativeError(e, '取消下载失败')),
-    install: () => nativeModule.install().catch((e) => wrapNativeError(e, '拉起安装失败')),
+      nativeModule.cancelDownload().catch(e => wrapNativeError(e, '取消下载失败')),
+    install: () => nativeModule.install().catch(e => wrapNativeError(e, '拉起安装失败')),
     canRequestInstall: () =>
-      nativeModule.canRequestInstallCheck().catch((e) => wrapNativeError(e, '读取安装权限失败')),
+      nativeModule.canRequestInstallCheck().catch(e => wrapNativeError(e, '读取安装权限失败')),
     openInstallSettings: () =>
-      nativeModule.openInstallSettings().catch((e) => wrapNativeError(e, '打不开系统授权页')),
+      nativeModule.openInstallSettings().catch(e => wrapNativeError(e, '打不开系统授权页')),
     copyToDownloads: () =>
-      nativeModule.copyToDownloads().catch((e) => wrapNativeError(e, '导出到下载目录失败')),
-    cleanup: () => nativeModule.cleanup().catch((e) => wrapNativeError(e, '清理升级包失败')),
+      nativeModule.copyToDownloads().catch(e => wrapNativeError(e, '导出到下载目录失败')),
+    cleanup: () => nativeModule.cleanup().catch(e => wrapNativeError(e, '清理升级包失败')),
   };
 }

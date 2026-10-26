@@ -25,12 +25,12 @@ describe('SplashOverlay', () => {
   const render = (durationMs: number, onFinish: () => void) =>
     ReactTestRenderer.act(async () => {
       ReactTestRenderer.create(
-        <SplashOverlay durationMs={durationMs} imageSource={IMAGE} onFinish={onFinish} />
+        <SplashOverlay durationMs={durationMs} imageSource={IMAGE} onFinish={onFinish} />,
       );
     });
 
   const countdownText = (root: ReactTestRenderer.ReactTestRenderer) => {
-    const node = root.root.findAll((n) => n.props.testID === 'splash-countdown')[0] as
+    const node = root.root.findAll(n => n.props.testID === 'splash-countdown')[0] as
       | ReactTestRenderer.ReactTestInstance
       | undefined;
     return node ? String(node.props.children) : null;
@@ -41,7 +41,7 @@ describe('SplashOverlay', () => {
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     ReactTestRenderer.act(() => {
       renderer = ReactTestRenderer.create(
-        <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} />
+        <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} />,
       );
     });
     expect(countdownText(renderer)).toBe('3');
@@ -73,7 +73,7 @@ describe('SplashOverlay', () => {
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} />
+        <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} />,
       );
     });
 
@@ -101,7 +101,7 @@ describe('SplashOverlay', () => {
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <SplashOverlay durationMs={1000} imageSource={IMAGE} onFinish={onFinish} />
+        <SplashOverlay durationMs={1000} imageSource={IMAGE} onFinish={onFinish} />,
       );
     });
     // 到时自动结束。
@@ -121,7 +121,7 @@ describe('SplashOverlay', () => {
   // ── holdUntil / holdMaxMs：倒计时走完但 H5 首屏还没就绪时继续盖着，不露白屏 ──
 
   const hasLoading = (root: ReactTestRenderer.ReactTestRenderer) =>
-    root.root.findAll((n) => n.props.testID === 'splash-loading').length > 0;
+    root.root.findAll(n => n.props.testID === 'splash-loading').length > 0;
 
   const mountSplash = async (element: React.ReactElement) => {
     let renderer!: ReactTestRenderer.ReactTestRenderer;
@@ -134,7 +134,7 @@ describe('SplashOverlay', () => {
   it('holdUntil 为真：倒计时走完不立即退场，转入等待态（数字隐藏、显示载入中）', async () => {
     const onFinish = jest.fn();
     const renderer = await mountSplash(
-      <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} holdUntil />
+      <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} holdUntil />,
     );
     expect(hasLoading(renderer)).toBe(false);
 
@@ -150,7 +150,7 @@ describe('SplashOverlay', () => {
   it('等待中页面加载完成（holdUntil 转 false）→ 淡出并回调一次', async () => {
     const onFinish = jest.fn();
     const renderer = await mountSplash(
-      <SplashOverlay durationMs={1000} imageSource={IMAGE} onFinish={onFinish} holdUntil />
+      <SplashOverlay durationMs={1000} imageSource={IMAGE} onFinish={onFinish} holdUntil />,
     );
     await ReactTestRenderer.act(async () => {
       jest.advanceTimersByTime(1100);
@@ -165,7 +165,7 @@ describe('SplashOverlay', () => {
           imageSource={IMAGE}
           onFinish={onFinish}
           holdUntil={false}
-        />
+        />,
       );
     });
     await ReactTestRenderer.act(async () => {
@@ -183,7 +183,7 @@ describe('SplashOverlay', () => {
         onFinish={onFinish}
         holdUntil
         holdMaxMs={2000}
-      />
+      />,
     );
     await ReactTestRenderer.act(async () => {
       jest.advanceTimersByTime(1100);
@@ -208,7 +208,7 @@ describe('SplashOverlay', () => {
         onFinish={onFinish}
         holdUntil
         holdMaxMs={10000}
-      />
+      />,
     );
     await ReactTestRenderer.act(async () => {
       jest.advanceTimersByTime(1100);
@@ -226,7 +226,7 @@ describe('SplashOverlay', () => {
   it('倒计时进行中 holdUntil 变化不得重启倒计时（数字不回跳）', async () => {
     const onFinish = jest.fn();
     const renderer = await mountSplash(
-      <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} holdUntil />
+      <SplashOverlay durationMs={3000} imageSource={IMAGE} onFinish={onFinish} holdUntil />,
     );
     expect(countdownText(renderer)).toBe('3');
 
@@ -243,7 +243,7 @@ describe('SplashOverlay', () => {
           imageSource={IMAGE}
           onFinish={onFinish}
           holdUntil={false}
-        />
+        />,
       );
     });
     await ReactTestRenderer.act(async () => {

@@ -126,6 +126,11 @@ hvigor/
 # 品牌闪屏位图：apply-app-meta 从子应用 app-brand/splash.png 拷来的派生产物
 src/assets/splash/splash-brand.png
 
+# 本地租户品牌违禁词清单（check-brand-neutral.js 第二层守卫读取，一行一个词）。
+# 不入库的原因：这份词表本身就是「哪些租户标识不能出现在基座」的答案，
+# 提交上去等于把租户身份用另一种方式写进基座仓库；缺这个词表时脚本只提示、不失败。
+brand-denylist.txt
+
 # 本地备份目录（不入库）
 h5.backup/
 

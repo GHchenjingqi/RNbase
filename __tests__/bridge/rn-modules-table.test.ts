@@ -31,6 +31,7 @@ import { getH5BarStyleOverride, setH5BarStyleListener } from '../../src/bridge/m
 import { setWebViewHandle } from '../../src/bridge/modules/webview-control';
 import { BRIDGE_EVENTS } from '../../src/bridge/protocol';
 import type { BridgeRequest } from '../../src/bridge/protocol';
+import { APP_BUILD_NUMBER, APP_NAME, APP_PACKAGE, DOMAIN_WHITELIST } from '../../src/config';
 
 /** 一张表 = 一个 Bridge 动作。 */
 type Case = {
@@ -52,8 +53,18 @@ type Case = {
   expectData?: Record<string, unknown>;
 };
 
+/**
+ * 白名单内的地址必须从 config 现取，不能写死：DOMAIN_WHITELIST 的真源是
+ * version.json 的 trustedDomains + ports.json 的 dev 端口，写死一个假域名的话
+ * 它哪天从出厂白名单里去掉，这张表就整片红，而且红的理由是「测试自己的底稿过期」。
+ */
+const TRUSTED_ORIGIN = DOMAIN_WHITELIST[0];
+if (!TRUSTED_ORIGIN) {
+  throw new Error('DOMAIN_WHITELIST 为空，本表无法构造"白名单内地址"这一态');
+}
+
 const ASSET_URL = 'file:///android_asset/h5/index.html';
-const TRUSTED_URL = 'https://mobile-base.example.com/h5/index.html';
+const TRUSTED_URL = `${TRUSTED_ORIGIN}/h5/index.html`;
 
 const CASES: Case[] = [
   // ── toast：iOS 降级 Alert，Android 走 ToastAndroid，两种平台都要求走通 ──
@@ -206,16 +217,19 @@ const CASES: Case[] = [
     gate: 'SECURITY_BLOCKED',
   },
 
-  // ── device：纯 RN 拿得到的直接回，需原生的没接入就报 DEVICE_UNSUPPORTED ──
+  // ── device：纯 RN / version.json 拿得到的直接回，只有真缺原生实现的才报 DEVICE_UNSUPPORTED ──
+  // getAppName/getBundleId/getBuildNumber 以前恒报 DEVICE_UNSUPPORTED，原因不在能力缺失，
+  // 而是 src/bridge/index.ts 注册时没传 adapters；接线与已知原生缺口由
+  // device-battery-wiring.test.ts 守住。
   { module: 'device', action: 'getVersion' },
   { module: 'device', action: 'getPlatform' },
   { module: 'device', action: 'getChannel', expectData: { channel: 'default' } },
   { module: 'device', action: 'getUniqueId', gate: 'DEVICE_UNSUPPORTED' },
-  { module: 'device', action: 'getBuildNumber', gate: 'DEVICE_UNSUPPORTED' },
+  { module: 'device', action: 'getBuildNumber', expectData: { buildNumber: APP_BUILD_NUMBER } },
   { module: 'device', action: 'getFirstInstallTime', gate: 'DEVICE_UNSUPPORTED' },
   { module: 'device', action: 'getLastUpdateTime', gate: 'DEVICE_UNSUPPORTED' },
-  { module: 'device', action: 'getAppName', gate: 'DEVICE_UNSUPPORTED' },
-  { module: 'device', action: 'getBundleId', gate: 'DEVICE_UNSUPPORTED' },
+  { module: 'device', action: 'getAppName', expectData: { appName: APP_NAME } },
+  { module: 'device', action: 'getBundleId', expectData: { bundleId: APP_PACKAGE } },
 
   // ── battery：纯 RN 拿不到，三个动作全依赖原生 adapter ──
   { module: 'battery', action: 'getInfo', gate: 'DEVICE_UNSUPPORTED' },
@@ -223,7 +237,7 @@ const CASES: Case[] = [
   { module: 'battery', action: 'isCharging', gate: 'DEVICE_UNSUPPORTED' },
 ];
 
-const RN_MODULES = [...new Set(CASES.map((c) => c.module))].sort();
+const RN_MODULES = [...new Set(CASES.map(c => c.module))].sort();
 
 const keyOf = (module: string, action: string) => `${module}.${action}`;
 
@@ -273,13 +287,13 @@ beforeEach(() => {
       (title?: string, message?: string, buttons?: { onPress?: () => void }[]) => {
         rec.alert({ title, message });
         buttons?.[0]?.onPress?.();
-      }
-    )
+      },
+    ),
   );
   restores.push(
     replace(ActionSheetIOS, 'showActionSheetWithOptions', (_o: unknown, cb: (i: number) => void) =>
-      cb(0)
-    )
+      cb(0),
+    ),
   );
   restores.push(replace(ToastAndroid, 'showWithGravity', rec.toastWithGravity));
   restores.push(replace(ToastAndroid, 'show', rec.toastShow));
@@ -288,13 +302,13 @@ beforeEach(() => {
     replace(
       StatusBar,
       'setNetworkActivityIndicatorVisible',
-      rec.statusBarSetNetworkActivityIndicatorVisible
-    )
+      rec.statusBarSetNetworkActivityIndicatorVisible,
+    ),
   );
 });
 
 afterEach(() => {
-  restores.forEach((r) => r());
+  restores.forEach(r => r());
   restores = [];
   setWebViewHandle(null);
   Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true, writable: true });
@@ -345,9 +359,9 @@ describe('纯 RN 模块表驱动：清单完整性', () => {
   it('表覆盖了这 9 个模块注册出来的全部动作（新增动作必须先进表）', () => {
     const registered = baselineServer
       .listMethods()
-      .filter((m) => RN_MODULES.includes(m.split('.')[0]))
+      .filter(m => RN_MODULES.includes(m.split('.')[0]))
       .sort();
-    const table = [...new Set(CASES.map((c) => keyOf(c.module, c.action)))].sort();
+    const table = [...new Set(CASES.map(c => keyOf(c.module, c.action)))].sort();
     expect(table).toEqual(registered);
   });
 
@@ -358,8 +372,8 @@ describe('纯 RN 模块表驱动：清单完整性', () => {
   });
 });
 
-describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', (os) => {
-  const rows = CASES.filter((c) => !c.platform || c.platform === os);
+describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', os => {
+  const rows = CASES.filter(c => !c.platform || c.platform === os);
 
   beforeEach(() => {
     // 平台闸门靠改 Platform.OS 触发：这些 handler 全是运行时读，注册时不读
@@ -367,7 +381,7 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
   });
 
   describe('缺必填参数 -> INVALID_PARAMS', () => {
-    test.each(rows.filter((c) => c.required))(
+    test.each(rows.filter(c => c.required))(
       '$module.$action 缺 $required',
       async ({ module, action, required, params }) => {
         const missing = { ...(params ?? {}) };
@@ -376,24 +390,24 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
         const res = await baselineServer.handle(req(module, action, missing));
         expect(res.success).toBe(false);
         expect(res.error?.code).toBe('INVALID_PARAMS');
-      }
+      },
     );
   });
 
   describe('WebView 句柄缺失 -> DEVICE_UNSUPPORTED', () => {
-    test.each(rows.filter((c) => c.needsWebView && !c.gate))(
+    test.each(rows.filter(c => c.needsWebView && !c.gate))(
       '$module.$action',
       async ({ module, action, params }) => {
         setWebViewHandle(null);
         const res = await baselineServer.handle(req(module, action, params));
         expect(res.error?.code).toBe('DEVICE_UNSUPPORTED');
         expect(res.error?.message).toContain('WebView 未就绪');
-      }
+      },
     );
   });
 
   describe('合法参数 -> 走通或命中平台闸门', () => {
-    test.each(rows.filter((c) => !c.invalidOnly))(
+    test.each(rows.filter(c => !c.invalidOnly))(
       '$module.$action',
       async ({ module, action, params, gate, needsWebView, expectData }) => {
         setWebViewHandle(needsWebView ? (webviewHandle() as never) : null);
@@ -406,7 +420,7 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
         expect(res.error).toBeNull();
         expect(res.success).toBe(true);
         if (expectData) expect(res.data).toMatchObject(expectData);
-      }
+      },
     );
   });
 
@@ -417,7 +431,7 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
         expect(rec.toastWithGravity).toHaveBeenCalledWith(
           '同步完成',
           ToastAndroid.LONG,
-          ToastAndroid.BOTTOM
+          ToastAndroid.BOTTOM,
         );
       } else {
         expect(rec.alert).toHaveBeenCalledWith({ title: '', message: '同步完成' });
@@ -436,8 +450,8 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
           Alert,
           'alert',
           (_t?: string, _m?: string, _b?: unknown, opts?: { onDismiss?: () => void }) =>
-            opts?.onDismiss?.()
-        )
+            opts?.onDismiss?.(),
+        ),
       );
       const res = await baselineServer.handle(req('dialog', 'alert', { title: 't' }));
       expect(res.data).toEqual({ buttonIndex: -1 });
@@ -446,13 +460,13 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
     it('statusBar 的两个平台专属方法各自落到 StatusBar 上', async () => {
       if (os === 'android') {
         const res = await baselineServer.handle(
-          req('statusBar', 'setBackgroundColor', { color: '#112233' })
+          req('statusBar', 'setBackgroundColor', { color: '#112233' }),
         );
         expect(res.success).toBe(true);
         expect(rec.statusBarSetBackgroundColor).toHaveBeenCalledWith('#112233', true);
       } else {
         const res = await baselineServer.handle(
-          req('statusBar', 'setNetworkActivityIndicatorVisible', { visible: true })
+          req('statusBar', 'setNetworkActivityIndicatorVisible', { visible: true }),
         );
         expect(res.success).toBe(true);
         expect(rec.statusBarSetNetworkActivityIndicatorVisible).toHaveBeenCalledWith(true);
@@ -467,7 +481,7 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
           cc: ['c@d.e'],
           subject: '晨会',
           body: 'x y',
-        })
+        }),
       );
       expect(res.success).toBe(true);
       const url = String(openUrl.mock.calls[0]?.[0]);
@@ -506,7 +520,7 @@ describe.each(['ios', 'android'])('纯 RN 模块表驱动（Platform.OS=%s）', 
 describe('纯 RN 模块表驱动：跨平台共有的边界', () => {
   it('statusBar.setBarStyle 记下 H5 接管并通知组合根（否则重渲染会被系统值冲回）', async () => {
     const seen: string[] = [];
-    setH5BarStyleListener((style) => seen.push(style));
+    setH5BarStyleListener(style => seen.push(style));
     try {
       await baselineServer.handle(req('statusBar', 'setBarStyle', { style: 'dark-content' }));
       expect(seen).toEqual(['dark-content']);
@@ -545,7 +559,7 @@ describe('纯 RN 模块表驱动：跨平台共有的边界', () => {
     const postMessage = jest.fn();
     setWebViewHandle({ reload: jest.fn(), postMessage } as never);
     const res = await baselineServer.handle(
-      req('webView', 'injectJavaScript', { script: 'alert(1)' })
+      req('webView', 'injectJavaScript', { script: 'alert(1)' }),
     );
     expect(res.success).toBe(true);
     expect(JSON.parse(String(postMessage.mock.calls[0]?.[0]))).toEqual({
@@ -616,7 +630,7 @@ describe('纯 RN 模块表驱动：跨平台共有的边界', () => {
     const server = new bridgeServer.BridgeServer({});
     keyboard.registerKeyboardModule(server);
     const events: unknown[] = [];
-    const off = bus.bridgeEventBus.on(BRIDGE_EVENTS.KEYBOARD_CHANGE, (d) => events.push(d));
+    const off = bus.bridgeEventBus.on(BRIDGE_EVENTS.KEYBOARD_CHANGE, d => events.push(d));
     const dismiss = jest.fn();
     Object.defineProperty(rn.Keyboard, 'dismiss', {
       value: dismiss,

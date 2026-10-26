@@ -1,0 +1,7 @@
+{
+  "metroHostPort": 8082,
+  "metroDevicePort": 8081,
+  "h5DevPort": 5173,
+  "androidEmulatorHostIp": "10.0.2.2",
+  "_说明": "开发期端口的唯一真源：scripts/ 与 src/config/index.ts 都从这里取值。metro 在宿主机实际监听 metroHostPort（8082），但设备上 RN/RNOH 固定请求 metro 的旧默认口（见各平台脚本的 fport/reverse 映射）；h5DevPort 是三端统一的子应用 vite 端口。metroDevicePort / androidEmulatorHostIp 是同一条链路上的另外两个写死值，一并收进来。"
+}

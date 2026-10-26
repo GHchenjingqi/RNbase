@@ -63,7 +63,7 @@ export type StartDownloadOptions = {
 export type UpdateAdapters = {
   getInfo?: () => Promise<UpdateInfo>;
   startDownload?: (
-    options: StartDownloadOptions
+    options: StartDownloadOptions,
   ) => Promise<{ started: boolean; taskState: string }>;
   getProgress?: () => Promise<DownloadProgress>;
   cancelDownload?: () => Promise<{ ok: boolean }>;
@@ -76,7 +76,7 @@ export type UpdateAdapters = {
 
 function pick<T extends keyof UpdateAdapters>(
   adapters: UpdateAdapters,
-  key: T
+  key: T,
 ): NonNullable<UpdateAdapters[T]> {
   const fn = adapters[key];
   if (!fn) {

@@ -28,7 +28,7 @@ module.exports = {
   // 与 __tests__/bridge/rn-modules-table.test.ts（纯 RN 模块缺参/依赖缺失/走通）。
   //
   // 这里只用 global 一档，是有意的：jest 的 glob 阈值是**逐文件**判定（'./src/bridge/**' 会拿
-  // navigation.ts 这种低覆盖单文件去卡整条 glob，目录聚合只有 global），而且被 glob 命中的
+  // 某个刚拆出来还没测试的单文件去卡整条 glob，目录聚合只有 global），而且被 glob 命中的
   // 文件会从 global 聚合里**剔除**——实测加一条 capabilities glob 会让 global 的 functions
   // 从 63.5% 掉到 60.29%，同一条下限的含义就变了。"每个 module.action 都得有测试"由上面两张表
   // 的 listMethods() 等值断言守，比覆盖率数字准。

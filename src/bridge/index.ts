@@ -55,6 +55,10 @@ import { resolveNativeCapabilityAdapters } from '../middleware/native/capability
 import { resolveNativeUpdateAdapter } from '../middleware/native/update-native-adapter';
 import { resolveNativeNetworkAdapter } from '../middleware/network/native-network-adapter';
 import { resolveNativeSystemAdapter } from '../middleware/native/system-native-adapter';
+import {
+  resolveNativeBatteryAdapter,
+  resolveNativeDeviceAdapter,
+} from '../middleware/native/device-battery-adapter';
 import { registerNetworkModule } from '../middleware/network/network-module';
 import { logger } from '../diagnostics/logger';
 
@@ -63,7 +67,7 @@ export function createBridgeServer(
   capabilities: CapabilityAdapters = {},
   lifecycle: LifecycleHandlers = {},
   networkAdapter?: NetworkAdapter | undefined,
-  options?: { onCall?: BridgeCallHandler; isTrustedOrigin?: (origin?: string) => boolean }
+  options?: { onCall?: BridgeCallHandler; isTrustedOrigin?: (origin?: string) => boolean },
 ): BridgeServer {
   // 原生适配器为默认能力来源，传入的 capabilities 可覆盖（规则 13：适配现有工程）。
   const merged: CapabilityAdapters = {
@@ -71,7 +75,7 @@ export function createBridgeServer(
     ...capabilities,
   };
   const server = new BridgeServer({
-    onEvent: (e) => {
+    onEvent: e => {
       if (!e.success) {
         logger.log({
           event: 'bridge_error',
@@ -142,8 +146,10 @@ export function createBridgeServer(
   registerKeyboardModule(server);
   registerNavigationModule(server);
   registerWebViewControlModule(server);
-  registerDeviceModule(server);
-  registerBatteryModule(server);
+  // device / battery 走原生适配器（真值来源见 device-battery-adapter.ts 的注释）：
+  // 之前这两行没传 adapters，注册出来的 9 个动作在每台设备上都报 DEVICE_UNSUPPORTED。
+  registerDeviceModule(server, resolveNativeDeviceAdapter());
+  registerBatteryModule(server, resolveNativeBatteryAdapter());
 
   return server;
 }

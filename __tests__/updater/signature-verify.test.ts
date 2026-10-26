@@ -36,7 +36,7 @@ function toPem(derB64: string, label: string): string {
 // 形参写 Uint8Array<ArrayBuffer>：@types/node 的 BufferSource 只认 ArrayBuffer 支撑的视图，
 // 裸 Uint8Array（ArrayBufferLike）在 WebCrypto 调用点上不兼容。
 async function makeKeyAndSignature(
-  data: Uint8Array<ArrayBuffer>
+  data: Uint8Array<ArrayBuffer>,
 ): Promise<{ pubPem: string; sigB64: string }> {
   const kp = await subtle.generateKey(
     {
@@ -46,7 +46,7 @@ async function makeKeyAndSignature(
       hash: 'SHA-256',
     },
     true,
-    ['sign', 'verify']
+    ['sign', 'verify'],
   );
   const pubDer = await subtle.exportKey('spki', kp.publicKey);
   const pubPem = toPem(abToBase64(pubDer), 'PUBLIC KEY');
@@ -161,7 +161,7 @@ describe('P2-1 UpdateOrchestrator 签名接线', () => {
   };
 
   async function buildOrchestrator(
-    signatureVerifier: Parameters<typeof verifyPackage>[1]['signatureVerifier']
+    signatureVerifier: Parameters<typeof verifyPackage>[1]['signatureVerifier'],
   ) {
     return new UpdateOrchestrator({
       manifestClient: createMockManifestClient(manifest),
