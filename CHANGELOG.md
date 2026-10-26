@@ -5,7 +5,7 @@
 
 ## [Unreleased]
 
-### Fixed（`c6dc069` 起 CI 三轮红的逐轮收口：单测不再依赖本机品牌、jest 忽略规则锚定、brand 守卫在干净检出恒红、iOS Swift 首次进编译的三处必错，2026-10-26）
+### Fixed（`c6dc069` 起 CI 四轮红的逐轮收口：单测不再依赖本机品牌、jest 忽略规则锚定、brand 守卫在干净检出恒红、iOS Swift 首次进编译的四处必错，2026-10-26）
 
 `c6dc069` 推上去后 CI 两条检查同时红。逐条按 CI 的文件状态复现（`git worktree` 检出该提交 +
 CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就下结论：
@@ -71,6 +71,13 @@ CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就�
   直接带该属性。Message 类算法的第 3 入参是原文，与 WebCrypto `subtle.verify(..., data)`
   口径不变。**仍待真机端到端**（本机无 Mac，这一层只能到「编译通过」；验签闭环要等
   Apple 账号就绪后装机）。
+- **iOS 侧 CFError 取不到文案（第四轮 CI 的 1 条 error）**：`'CFError' is not convertible
+  to 'NSError'`——iOS 26 SDK（runner 用 Xcode 26.6 / iphonesimulator26.5，见截图第 6–10 行）
+  不再允许 `CFError as NSError` 直转。JS 侧契约本就只看 `valid`
+  （`src/updater/native-signature-verifier.ts` 的 `Boolean(res && res.valid)`），
+  故不再赌 CoreFoundation 访问器的导入形态：错误串改为「是否带回 CFError」，
+  细节留给真机阶段用 lldb 读。同时把 runner 的 SDK 版本记进 TODO——废弃符号是否已被
+  移除，取决于它而不是取决于本机想象。
 
 ### Fixed（启动链路收口：死代码删除 + OTA 真正落地 + clientId 噪声，2026-10-26）
 

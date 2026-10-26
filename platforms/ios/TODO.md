@@ -62,6 +62,11 @@
   且 iOS introducedAt 10.0 → 改用 `SecKeyVerifySignature`。
   ⚠️ 这三轮全是「无 Mac 预写 Swift」的代价：改动 iOS 原生后必须跑一轮 `build-ios`
   并读 annotations，别把「看着对」当编译通过。
+- 进展（第四轮）：`'CFError' is not convertible to 'NSError'` → 不再解析 CFError 文案
+  （JS 只看 `valid`）。**runner 环境事实（截图读数）**：Xcode 26.6、
+  `SDKROOT = iphonesimulator26.5`、可用模拟器 OS 26.2/26.4.1/26.5。
+  判断某 API 是否还能用，以这个 SDK 为准——`SecKeyVerify` 就是被 iOS 26 清掉的。
+  下一轮若再红，仍先看 annotations 再改，不做无读数的猜测。
 
 ### 4. 签名与出 ipa ⬜
 

@@ -56,13 +56,11 @@ class BaseH5: NSObject, RCTBridgeModule {
       sig as CFData,
       &cfError
     )
-    var errDesc = ""
-    if let cfError = cfError {
-      // CFError 与 NSError toll-free 桥接，直接 cast 取 localizedDescription，
-      // 不依赖 CFError 是否 conform 到 Swift Error
-      errDesc = (cfError.takeRetainedValue() as NSError).localizedDescription
-    }
-    resolve(["valid": ok, "error": errDesc])
+    // 不解析 CFError 文案：iOS 26 SDK 里 CFError 不能直接 as NSError（CI 第 4 轮
+    // error: 'CFError' is not convertible to 'NSError'），而 JS 侧只用 valid
+    // （src/updater/native-signature-verifier.ts 里 `Boolean(res && res.valid)`）。
+    // 原生侧要看细节留到真机阶段用 lldb 读 cfError，不在这赌 CF 访问器的导入形态。
+    resolve(["valid": ok, "error": ok ? "" : "SecKeyVerifySignature 返回 false（cfError=\(cfError != nil)）"])
   }
 
   // MARK: - 公钥解析
