@@ -5,7 +5,7 @@
 
 ## [Unreleased]
 
-### Fixed（首次真红 CI 的四处收口：单测跟随本机品牌、iOS 原生首次进编译、jest 忽略规则锚定、brand 守卫在干净检出恒红，2026-10-26）
+### Fixed（`c6dc069` 起 CI 三轮红的逐轮收口：单测不再依赖本机品牌、jest 忽略规则锚定、brand 守卫在干净检出恒红、iOS Swift 首次进编译的三处必错，2026-10-26）
 
 `c6dc069` 推上去后 CI 两条检查同时红。逐条按 CI 的文件状态复现（`git worktree` 检出该提交 +
 CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就下结论：
@@ -59,6 +59,18 @@ CI 那份中性 `version.json`），不是在本机活动品牌下跑一遍就�
   `rsaSignatureMessagePKCS1v15SHA256` 与 JS 侧 WebCrypto 语义等价的结论也随之从「推定」
   变成有「用 PKCS#1 直接验签通过」作证。**Android/鸿蒙不受影响**（走 JS 侧 verifier），
   iOS 侧真机端到端仍待 Apple 账号就绪后验证。
+- **iOS 侧 SecKey 符号名（第三轮 CI 的 2 条 error）**：annotation 回读
+  `BaseH5.swift:48 cannot find 'SecKeyVerify' in scope` 与同行的
+  `cannot infer contextual base in reference to member 'rsaSignatureMessagePKCS1v15SHA256'`
+  （后者是前者的连带：函数没解析成功，`.` 前缀推不出 `SecKeyAlgorithm`）。这一轮同时证明
+  桥接头生效——四个 Swift 模块的 `RCTBridgeModule` 报错全部消失。改用
+  `SecKeyVerifySignature`：先按 Apple 文档 JSON 端点核对（`seckeyverify` 与
+  `seckeyverify(_:_:_:_:_:)` 均 404，`seckeyverifysignature(_:_:_:_:_:)` 200 且
+  platforms 记 iOS introducedAt 10.0，高于本工程 15.1 门槛），与 CI 编译器的读数一致。
+  错误描述取 `CFError` → `as NSError` 再读 `localizedDescription`，不再假设 CFError
+  直接带该属性。Message 类算法的第 3 入参是原文，与 WebCrypto `subtle.verify(..., data)`
+  口径不变。**仍待真机端到端**（本机无 Mac，这一层只能到「编译通过」；验签闭环要等
+  Apple 账号就绪后装机）。
 
 ### Fixed（启动链路收口：死代码删除 + OTA 真正落地 + clientId 噪声，2026-10-26）
 

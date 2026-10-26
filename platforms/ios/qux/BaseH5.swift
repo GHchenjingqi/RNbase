@@ -44,10 +44,25 @@ class BaseH5: NSObject, RCTBridgeModule {
     }
     var cfError: Unmanaged<CFError>?
     // rsaSignatureMessagePKCS1v15SHA256：对原始消息内部先做 SHA-256 再 PKCS1v15 签名验证，
-    // 与 Web Crypto subtle.verify({ 'RSASSA-PKCS1-v1_5' }, ..., data) 语义一致。
-    let ok = SecKeyVerify(key, .rsaSignatureMessagePKCS1v15SHA256, data as CFData, sig as CFData, &cfError)
-    let errDesc = cfError?.takeRetainedValue().localizedDescription
-    resolve(["valid": ok, "error": errDesc ?? ""])
+    // 与 Web Crypto subtle.verify({ 'RSASSA-PKCS1-v1_5' }, ..., data) 语义一致；
+    // Message 类算法的第 3 个入参是**原文**而非摘要。
+    // 用 SecKeyVerifySignature，不是 SecKeyVerify：CI 的 SDK 里搜不到后者
+    // （cannot find 'SecKeyVerify' in scope），Apple 文档现只收录
+    // SecKeyVerifySignature(_:_:_:_:_:)（iOS 10.0+，本工程 deployment target 15.1 已覆盖）。
+    let ok = SecKeyVerifySignature(
+      key,
+      .rsaSignatureMessagePKCS1v15SHA256,
+      data as CFData,
+      sig as CFData,
+      &cfError
+    )
+    var errDesc = ""
+    if let cfError = cfError {
+      // CFError 与 NSError toll-free 桥接，直接 cast 取 localizedDescription，
+      // 不依赖 CFError 是否 conform 到 Swift Error
+      errDesc = (cfError.takeRetainedValue() as NSError).localizedDescription
+    }
+    resolve(["valid": ok, "error": errDesc])
   }
 
   // MARK: - 公钥解析

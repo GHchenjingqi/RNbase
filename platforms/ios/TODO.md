@@ -53,8 +53,15 @@
   `qux/qux-Bridging-Header.h` 并在 App Target Debug/Release 设 `SWIFT_OBJC_BRIDGING_HEADER`；
   `call to method 'statusFor' in closure requires explicit use of 'self'` → 逃逸闭包显式 `self.`。
   另用 Node 生成的 RSA SPKI 对照实测，修掉 `BaseH5.rsaPublicKeyBytes` 的 DER 走查错位
-  （原实现对任何合法 SPKI 都返回 nil，签名校验必失败）；桥接头能否让四个 Swift 模块全过，
-  仍需下一轮 CI/真机确认。
+  （原实现对任何合法 SPKI 都返回 nil，签名校验必失败）；按 Node 生成的 RSA SPKI 对照，
+  修后与 pkcs1 导出逐字节相等。
+- 进展（第三轮，annotation 回读）：**桥接头生效**——四个 Swift 模块的 `RCTBridgeModule`
+  报错全部消失，只剩 `BaseH5.swift:48 cannot find 'SecKeyVerify' in scope`（同一行的
+  `cannot infer contextual base ... rsaSignatureMessagePKCS1v15SHA256` 是它的连带）。
+  按 Apple 文档 JSON 端点核对：`seckeyverify` 404、`seckeyverifysignature(_:_:_:_:_:)` 200
+  且 iOS introducedAt 10.0 → 改用 `SecKeyVerifySignature`。
+  ⚠️ 这三轮全是「无 Mac 预写 Swift」的代价：改动 iOS 原生后必须跑一轮 `build-ios`
+  并读 annotations，别把「看着对」当编译通过。
 
 ### 4. 签名与出 ipa ⬜
 
