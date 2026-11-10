@@ -443,7 +443,11 @@ class BaseCapabilitiesModule(private val reactContext: ReactApplicationContext) 
             )
 
             val builder = androidx.core.app.NotificationCompat.Builder(reactContext, channelId)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                // 通知小图标直接用品牌彩色桌面图（applicationInfo.icon，钉钉同款模式）：ColorOS 等
+                // OEM 对 App 自带彩色资源照原色渲染；**不要用 android.R.* 系统资源**——OEM 会以
+                // 系统默认机器人图标兜底（青底机器人的根因）。原生 AOSP/模拟器会灰化，平台差异
+                .setSmallIcon(reactContext.applicationInfo.icon)
+                // deliberately 不设 largeIcon：通知行右侧不再重复渲染一颗品牌图（与 jyapp 基座同口径）
                 .setContentTitle(effectiveTitle)
                 .setContentText(content)
                 .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(content))
