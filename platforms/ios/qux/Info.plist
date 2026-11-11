@@ -24,8 +24,19 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- 打开外部 App（包名→scheme 映射见 BaseCapabilities.swift）：
+	     目标 scheme 必须登记在 LSApplicationQueriesSchemes，canOpenURL 才返回 true -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>weixin</string>
+		<string>mqq</string>
+		<string>alipay</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- NFC 读写（BaseCapabilities.nfcAvailable/nfcReadTag/nfcWriteNdef） -->
+	<key>NFCReaderUsageDescription</key>
+	<string>用于靠近 NFC 标签读取或写入业务物料/设备标识</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 	  <!-- Do not change NSAllowsArbitraryLoads to true, or you will risk app rejection! -->
@@ -44,6 +55,9 @@
 	<string>用于保存业务图片到相册</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>用于拍摄带语音备注的业务视频</string>
+	<!-- 新架构开关（RN 0.84 默认开启，与 Android newArchEnabled=true 对齐；上游基座同款） -->
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

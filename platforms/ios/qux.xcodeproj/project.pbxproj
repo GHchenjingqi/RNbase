@@ -11,12 +11,14 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		761782112CA45674006654EE /* BaseCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782012CA45674006654EE /* BaseCapabilities.swift */; };
-		761782122CA45674006654EE /* BaseCapabilities.m in Sources */ = {isa = PBXBuildFile; fileRef = 761782022CA45674006654EE /* BaseCapabilities.m */; };
 		761782132CA45674006654EE /* BaseH5.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782032CA45674006654EE /* BaseH5.swift */; };
-		761782142CA45674006654EE /* BaseH5.m in Sources */ = {isa = PBXBuildFile; fileRef = 761782042CA45674006654EE /* BaseH5.m */; };
 		761782152CA45674006654EE /* BaseNetwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782052CA45674006654EE /* BaseNetwork.swift */; };
-		761782162CA45674006654EE /* BaseNetwork.m in Sources */ = {isa = PBXBuildFile; fileRef = 761782062CA45674006654EE /* BaseNetwork.m */; };
 		761782172CA45674006654EE /* BasePermissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782072CA45674006654EE /* BasePermissions.swift */; };
+		761782182CA45674006654EE /* BaseLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782082CA45674006654EE /* BaseLog.swift */; };
+		761782192CA45674006654EE /* BaseSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761782092CA45674006654EE /* BaseSystem.swift */; };
+		7617821A2CA45674006654EE /* BaseUpdate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7617820A2CA45674006654EE /* BaseUpdate.swift */; };
+		7617821B2CA45674006654EE /* BaseBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 7617820B2CA45674006654EE /* BaseBridge.m */; };
+		7A0E1BD8CE04A6F4A526F4AF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
@@ -30,12 +32,13 @@
 		5DCACB8F33CDC322A6C60F78 /* libPods-qux.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-qux.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = qux/AppDelegate.swift; sourceTree = "<group>"; };
 		761782012CA45674006654EE /* BaseCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseCapabilities.swift; path = qux/BaseCapabilities.swift; sourceTree = "<group>"; };
-		761782022CA45674006654EE /* BaseCapabilities.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BaseCapabilities.m; path = qux/BaseCapabilities.m; sourceTree = "<group>"; };
 		761782032CA45674006654EE /* BaseH5.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseH5.swift; path = qux/BaseH5.swift; sourceTree = "<group>"; };
-		761782042CA45674006654EE /* BaseH5.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BaseH5.m; path = qux/BaseH5.m; sourceTree = "<group>"; };
 		761782052CA45674006654EE /* BaseNetwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseNetwork.swift; path = qux/BaseNetwork.swift; sourceTree = "<group>"; };
-		761782062CA45674006654EE /* BaseNetwork.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BaseNetwork.m; path = qux/BaseNetwork.m; sourceTree = "<group>"; };
 		761782072CA45674006654EE /* BasePermissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BasePermissions.swift; path = qux/BasePermissions.swift; sourceTree = "<group>"; };
+		761782082CA45674006654EE /* BaseLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseLog.swift; path = qux/BaseLog.swift; sourceTree = "<group>"; };
+		761782092CA45674006654EE /* BaseSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseSystem.swift; path = qux/BaseSystem.swift; sourceTree = "<group>"; };
+		7617820A2CA45674006654EE /* BaseUpdate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BaseUpdate.swift; path = qux/BaseUpdate.swift; sourceTree = "<group>"; };
+		7617820B2CA45674006654EE /* BaseBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BaseBridge.m; path = qux/BaseBridge.m; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = qux/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
@@ -58,12 +61,13 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				761782012CA45674006654EE /* BaseCapabilities.swift */,
-				761782022CA45674006654EE /* BaseCapabilities.m */,
 				761782032CA45674006654EE /* BaseH5.swift */,
-				761782042CA45674006654EE /* BaseH5.m */,
 				761782052CA45674006654EE /* BaseNetwork.swift */,
-				761782062CA45674006654EE /* BaseNetwork.m */,
 				761782072CA45674006654EE /* BasePermissions.swift */,
+				761782082CA45674006654EE /* BaseLog.swift */,
+				761782092CA45674006654EE /* BaseSystem.swift */,
+				7617820A2CA45674006654EE /* BaseUpdate.swift */,
+				7617820B2CA45674006654EE /* BaseBridge.m */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -132,6 +136,7 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
+				FBEAFC0AE2C8862F6F1FA07F /* Copy H5 Assets */,
 			);
 			buildRules = (
 			);
@@ -180,6 +185,7 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				7A0E1BD8CE04A6F4A526F4AF /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -258,6 +264,27 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-qux/Pods-qux-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		FBEAFC0AE2C8862F6F1FA07F /* Copy H5 Assets */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy H5 Assets";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			// 仓库根目录的 h5/ 拷进 .app（本工程在 platforms/ios 下，故为 ../../h5）；
+			// 本地模式入口 BaseCapabilities.H5BundleBasePath + /h5/index.html 依赖这一步，
+			// 与上游基座的 "Copy H5 Assets" 阶段同款，取代手工 folder reference。
+			shellScript = "set -e\nH5_SRC=\"${SRCROOT}/../../h5\"\nH5_DEST=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/h5\"\nif [ -d \"$H5_SRC\" ]; then\n  rm -rf \"$H5_DEST\"\n  mkdir -p \"$H5_DEST\"\n  cp -R \"$H5_SRC\"/. \"$H5_DEST\"\n  echo \"Copied H5 assets to $H5_DEST\"\nelse\n  echo \"warning: h5/ 不存在，iOS 离线包入口将缺失（先执行 npm run sync:api 或 sync:base 生成）\"\nfi\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -267,12 +294,13 @@
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				761782112CA45674006654EE /* BaseCapabilities.swift in Sources */,
-				761782122CA45674006654EE /* BaseCapabilities.m in Sources */,
 				761782132CA45674006654EE /* BaseH5.swift in Sources */,
-				761782142CA45674006654EE /* BaseH5.m in Sources */,
 				761782152CA45674006654EE /* BaseNetwork.swift in Sources */,
-				761782162CA45674006654EE /* BaseNetwork.m in Sources */,
 				761782172CA45674006654EE /* BasePermissions.swift in Sources */,
+				761782182CA45674006654EE /* BaseLog.swift in Sources */,
+				761782192CA45674006654EE /* BaseSystem.swift in Sources */,
+				7617821A2CA45674006654EE /* BaseUpdate.swift in Sources */,
+				7617821B2CA45674006654EE /* BaseBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -400,6 +428,10 @@
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -407,8 +439,13 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				USE_HERMES = true;
 			};
 			name = Debug;
 		};
@@ -465,6 +502,10 @@
 					"\"$(inherited)\"",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
+				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DFOLLY_NO_CONFIG",
@@ -472,8 +513,12 @@
 					"-DFOLLY_USE_LIBCPP=1",
 					"-DFOLLY_CFG_NO_COROUTINES=1",
 					"-DFOLLY_HAVE_CLOCK_GETTIME=1",
+					"-DRCT_REMOVE_LEGACY_ARCH=1",
 				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

@@ -5,6 +5,21 @@
 > 分配值**的事项，每项附步骤与验收标准，拿到环境后可逐项勾销。
 >
 > 维护约定：完成一项打一个 ✅ 并注明日期；新增待办追加到对应分区末尾。
+>
+> **进展（2026-11-11）：iOS 原生能力整体对齐上游基座最新实现**——qux/ 下按上游同款
+> 架构重写/新增 7 个 Swift 模块 + 1 个桥接声明：
+> `BaseCapabilities`（扫码自建页 / PHPicker 多选 / 定位超时与权限 / NFC / 通知深链
+> `baseNotificationTap` / 角标 / 提示音 / `H5BundleBasePath` 常量 / `getDeviceIntegrity`）、
+> `BaseH5`（H5 子包版本管理 + zip 解压 + `sha256` + `getBundledEntry` + 包签名校验）、
+> `BasePermissions`（通知权限真实异步查询 / 定位 manager 成员化防提前释放）、
+> `BaseLog` / `BaseSystem` / `BaseUpdate` / `BaseNetwork`（保持不变）、
+> `BaseBridge.m`（统一 RCT_EXTERN_MODULE 声明，取代原三个散装 .m；旧
+> BaseCapabilities.m / BaseH5.m / BaseNetwork.m 已删除）。
+> 工程：新增 "Copy H5 Assets" 构建阶段（仓库根 h5/ 自动拷进 .app，替代手工
+> folder reference）、PrivacyInfo.xcprivacy 挂进 Resources、Info.plist 补
+> LSApplicationQueriesSchemes / NFCReaderUsageDescription / RCTNewArchEnabled、
+> project 级构建配置对齐 RN 0.84 模板（RCT_REMOVE_LEGACY_ARCH 等）。
+> 方法名全部以本仓 JS 适配器契约为准（与上游的 ERP 前缀差异已逐一映射）。
 
 ---
 
@@ -19,54 +34,28 @@
 
 ## 二、需要 Xcode（Mac）
 
-### 2. h5 资源加入 App Target（folder reference） ⬜
+### 2. h5 资源加入 App Target（folder reference） ✅ 2026-11-11（改为构建阶段方案）
 
-- 背景：iOS 本地模式入口为 `.app/h5/index.html`（经 `BaseCapabilities.H5BundleBasePath` 拼接），
-  资源必须随包分发；工程侧 `npm run ios:sync-h5` 已把 `h5/` 同步到 `platforms/ios/qux/h5/`。
-- 步骤：
-  1. Xcode 打开 `platforms/ios/qux.xcodeproj`；
-  2. 右键 App target → Add Files to "qux" → 选择 `h5` 目录；
-  3. **必须勾选「Create folder references」（蓝色文件夹），不能是 groups（黄色）**；
-  4. 确认 Target Membership 勾选了 App target。
-- 验收：Build 后检查 `.app` 包内存在 `h5/index.html`（`find ~/Library/Developer/Xcode/DerivedData -name "*.app" -maxdepth 6`）。
+- 原方案（Xcode 手工加 folder reference）已废弃：project.pbxproj 新增
+  **"Copy H5 Assets" 构建阶段**，每次构建把仓库根 `h5/` 拷进 `.app/h5/`
+  （`${SRCROOT}/../../h5`，缺目录时只 warning 不 fail）。上游基座同款做法，
+  无需 Mac 手工操作，`npm run ios:doctor` 的 h5 检查项仍有效（本地调试可继续用
+  `npm run ios:sync-h5` 同步到 platforms/ios/qux/h5）。
+- 验收：Build 后检查 `.app` 包内存在 `h5/index.html`
+  （`find ~/Library/Developer/Xcode/DerivedData -name "*.app" -maxdepth 6`）。
 
 ### 3. 验证 Swift 新增代码的编译与行为 ⬜
 
-- 本轮在无 Mac 环境下预写了三个原生改动，**全部待 Xcode 编译验证**：
-  | 文件 | 改动 | 验收 |
-  |---|---|---|
-  | `BaseCapabilities.swift` | 新增 `getDeviceIntegrity` 越狱探针（文件存在性 + 沙盒外写入探测） | 编译通过；真机返回 `secure`；越狱设备（如有）返回 `compromised` |
-  | `BaseCapabilities.m` | 对应 `RCT_EXTERN_METHOD(getDeviceIntegrity...)` | JS 侧 `NativeModules.BaseCapabilities.getDeviceIntegrity()` 可调用 |
-  | `BaseH5.swift` / `BaseH5.m` | 新模块：`verifyPackageSignature(base64Data, signature, publicKey)`（SecKey RSASSA-PKCS1v15-SHA256，PEM/SPKI 公钥） | 编译通过；用 Node 测试向量（见 `__tests__/updater/signature-verify.test.ts` 同源密钥）验证 valid=true；篡改数据后 valid=false |
-- 注意：`BaseH5` 若与现有类名冲突（全仓 grep `class BaseH5`），改名并在 JS 侧
-  `src/updater/native-signature-verifier.ts` 的 `NATIVE_MODULE_NAME` 常量同步。
-- 进展（2026-10-26）：这批文件已进 `project.pbxproj` 的 App Target，因此**首次真的参与编译**，
-  CI 的 `build-ios` 随即红（exit 65）。本机无 Mac，只能静态审查，已改掉四处必错项：
-  `constantsToExport` 多余的 `override`、`objc_setAssociatedObject` 拿 String 当
-  `UnsafeRawPointer` 键、`UIDocumentPickerViewController` 上不存在的 `completionHandler`
-  与 `[String]` 形参（改走 delegate）、`URL.mimeType`（改 `UTType.preferredMIMEType`）、
-  `BasePermissions.swift` 用了 `CLLocationManager` 却没 `import CoreLocation`。
-  **仍待 Xcode 验证**；若再次失败，直接看 Actions 该 job 的 annotations（已把 `error:` 行
-  提成公开 annotation，无需登录即可用 API 读到）。
-- 进展（第二轮，annotation 回读）：`cannot find type 'RCTBridgeModule' in scope` → Podfile 未
-  `use_frameworks!`，静态库下 ObjC pod 没有 Swift 可 import 的 clang module，新增
-  `qux/qux-Bridging-Header.h` 并在 App Target Debug/Release 设 `SWIFT_OBJC_BRIDGING_HEADER`；
-  `call to method 'statusFor' in closure requires explicit use of 'self'` → 逃逸闭包显式 `self.`。
-  另用 Node 生成的 RSA SPKI 对照实测，修掉 `BaseH5.rsaPublicKeyBytes` 的 DER 走查错位
-  （原实现对任何合法 SPKI 都返回 nil，签名校验必失败）；按 Node 生成的 RSA SPKI 对照，
-  修后与 pkcs1 导出逐字节相等。
-- 进展（第三轮，annotation 回读）：**桥接头生效**——四个 Swift 模块的 `RCTBridgeModule`
-  报错全部消失，只剩 `BaseH5.swift:48 cannot find 'SecKeyVerify' in scope`（同一行的
-  `cannot infer contextual base ... rsaSignatureMessagePKCS1v15SHA256` 是它的连带）。
-  按 Apple 文档 JSON 端点核对：`seckeyverify` 404、`seckeyverifysignature(_:_:_:_:_:)` 200
-  且 iOS introducedAt 10.0 → 改用 `SecKeyVerifySignature`。
-  ⚠️ 这三轮全是「无 Mac 预写 Swift」的代价：改动 iOS 原生后必须跑一轮 `build-ios`
-  并读 annotations，别把「看着对」当编译通过。
-- 进展（第四轮）：`'CFError' is not convertible to 'NSError'` → 不再解析 CFError 文案
-  （JS 只看 `valid`）。**runner 环境事实（截图读数）**：Xcode 26.6、
-  `SDKROOT = iphonesimulator26.5`、可用模拟器 OS 26.2/26.4.1/26.5。
-  判断某 API 是否还能用，以这个 SDK 为准——`SecKeyVerify` 就是被 iOS 26 清掉的。
-  下一轮若再红，仍先看 annotations 再改，不做无读数的猜测。
+- **2026-11-11 更新**：上一轮「无 Mac 预写的 7 个源文件」已整体替换为上游基座
+  在 MacBook 模拟器上跑通的同一套实现（口径 2026-11-11，方法名按本仓 JS 契约
+  改成 Base 前缀）。上游侧的已知编译坑（SecKeyVerify、CFError→NSError、
+  self. 显式引用、SPKI DER 解析、CLLocationManager import 等）已随实现一并规避；
+  本仓工程侧差异：Podfile 未 use_frameworks!（静态库），Swift 仍依赖
+  `qux/qux-Bridging-Header.h`（SWIFT_OBJC_BRIDGING_HEADER），文件里 `import React`
+  才能解析 RCTEventEmitter / RCTPromiseResolveBlock。
+- **仍待跑一轮 `build-ios` 并读 annotations**：改动原生后必须编译验证，
+  别把「上游能编译」当本仓能编译（xcconfig / SDK 版本可能有差异）。
+- 验收：`ci-ios` workflow 绿；JS 侧 `NativeModules.Base*` 各方法可调用。
 
 ### 4. 签名与出 ipa ⬜
 
@@ -96,11 +85,14 @@
 - 装包后确认：本地模式加载 `.app/h5/index.html` 正常（对应 `resolve-h5-entry.ts` iOS 分支）；
   无网时远程模式 30s 超时兜底错误页出现（`REMOTE_H5_LOAD_TIMEOUT_MS`）。
 
-### 7. 占位能力接入（产品决策项，非本轮引入） ⬜
+### 7. 占位能力接入（产品决策项，非本轮引入） ⬜（部分完成）
 
-- `BaseCapabilities.scan` 当前返回 `NOT_IMPLEMENTED`：需接入 VisionKit
-  （`DataScannerViewController`，iOS 16+）或三方扫码方案；
-- 通知（`NOTIFICATION.*`）：需接入 APNs / RN 推送库；
+- ✅ 2026-11-11：`BaseCapabilities.scan` 已接入 AVFoundation 自建扫码页
+  （格式参数→AVMetadataObject 映射齐全，UPC-A 走 EAN-13 兜底），不再是
+  `NOT_IMPLEMENTED` 占位；NFC 读写（`nfcAvailable / nfcReadTag / nfcWriteNdef`）
+  已接 CoreNFC——iOS 拿不到标签 UID，`tagId` 恒为空串、内容放 `data.content`。
+- ⬜ 通知（`NOTIFICATION.*`）仍需 APNs / RN 推送库接入（本地通知与通知点击
+  深链已实现，见 `AppDelegate` 的 UNUserNotificationCenterDelegate）；
 - 以上 JS 侧均按 `DEVICE_UNSUPPORTED` 降级，不接入不阻塞基座。
 
 ## 四、安全原生接入（对应方案文档 §P2，属加固项非阻塞项）
@@ -124,3 +116,4 @@
 - ✅ iOS CI workflow（P1，待首跑验证 = 待办 #5）
 - ✅ `getDeviceIntegrity` JS 策略层 + 原生 Swift 实现（P2，编译验证 = 待办 #3）
 - ✅ `BaseH5.verifyPackageSignature` 原生实现 + JS 适配器（P2，编译验证 = 待办 #3）
+- ✅ iOS 原生能力对齐上游基座最新实现（2026-11-11，见文件头「进展」与待办 #2/#3/#7）

@@ -3,7 +3,10 @@
 > 适用项目：`rn-base`（RN 壳 + H5 前端子应用）
 > 配套中间件：`scripts/api.js`（H5 侧统一调用入口的**唯一真源**，暴露 `window.RN`，
 > 由 `npm run sync:api` 同步到各子应用与 `h5/js/api.js`）
-> 最近更新：2026-10-10
+> 最近更新：2026-11-11（iOS Swift 原生能力整体对齐上游基座最新实现：BaseCapabilities /
+> BaseH5 / BaseLog / BaseSystem / BaseUpdate / BasePermissions 全部落地，模块名按本仓
+> Base 前缀、方法名与 Android 契约逐一对齐；iOS release 配 app bundle 内置 H5 + 离线子包；
+> 通知点击事件 `baseNotificationTap` 三端一致；详见 `platforms/ios/TODO.md` 头部「进展」）
 
 本文档说明本基座向 H5 暴露的全部**设备能力**：如何获取、如何调用、调用后返回什么数据结构，
 以及 H5 侧推荐的统一调用方式（`RN.CAMERA.TAKEPHOTO()` 范式）。

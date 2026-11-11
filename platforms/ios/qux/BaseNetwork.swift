@@ -1,20 +1,17 @@
 /**
  * iOS 网络状态原生模块（Skill 规则 46/51）。
  *
- * 对应 RN 侧 src/network/nativeNetworkAdapter.ts 调用的
+ * 对应 RN 侧 src/middleware/network/native-network-adapter.ts 调用的
  * NativeModules.BaseNetwork。
  *
- * 注册方式：将本文件加入 Xcode 的 App Target。
- * 桥接文件 BaseNetwork.m 会自动注册。
+ * 桥接：RCT_EXTERN_MODULE 声明在 BaseBridge.m（Swift 类不会自动注册）。
  */
 import Foundation
 import Network
 import React
 
 @objc(BaseNetwork)
-class BaseNetwork: NSObject, RCTBridgeModule {
-  static func moduleName() -> String! { "BaseNetwork" }
-  static func requiresMainQueueSetup() -> Bool { false }
+class BaseNetwork: NSObject {
 
   private let monitor = NWPathMonitor()
   private let queue = DispatchQueue(label: "BaseNetworkMonitor")
